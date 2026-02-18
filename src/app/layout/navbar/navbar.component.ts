@@ -8,7 +8,7 @@ import { ThemeToggleComponent } from '../../shared/components/theme-toggle/theme
   imports: [ThemeToggleComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <header class="sticky top-0 z-10 flex items-center h-16 px-4 lg:px-6 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700 gap-4">
+    <header class="sticky top-0 z-10 flex items-center h-16 px-4 lg:px-6 bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 gap-4">
       <!-- Mobile menu button -->
       <button
         class="lg:hidden p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors text-neutral-600 dark:text-neutral-300"

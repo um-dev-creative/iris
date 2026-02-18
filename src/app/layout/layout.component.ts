@@ -11,7 +11,7 @@ import { DashboardStore } from '../core/services';
   imports: [RouterOutlet, SidebarComponent, NavbarComponent, AppNotificationComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex h-screen overflow-hidden bg-neutral-50 dark:bg-neutral-950">
+    <div class="flex h-screen overflow-hidden bg-neutral-50 dark:bg-neutral-900">
       <!-- Sidebar -->
       <app-sidebar />
 
