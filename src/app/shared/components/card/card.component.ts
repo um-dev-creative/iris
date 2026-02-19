@@ -6,14 +6,14 @@ import { Component, ChangeDetectionStrategy, input } from '@angular/core';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
-      class="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm overflow-hidden"
+      class="bg-card rounded-xl border border-border shadow-sm overflow-hidden"
       [class.p-0]="noPadding()"
     >
       @if (title()) {
-        <div class="px-6 py-4 border-b border-neutral-200 dark:border-neutral-700">
-          <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">{{ title() }}</h3>
+        <div class="px-6 py-4 border-b border-border">
+          <h3 class="text-lg font-semibold text-card-foreground">{{ title() }}</h3>
           @if (subtitle()) {
-            <p class="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">{{ subtitle() }}</p>
+            <p class="text-sm text-muted-foreground mt-0.5">{{ subtitle() }}</p>
           }
         </div>
       }

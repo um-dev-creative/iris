@@ -22,4 +22,11 @@ export const DASHBOARD_ROUTES: Routes = [
         (m) => m.SettingsPageComponent
       ),
   },
+  {
+    path: 'showcase',
+    loadComponent: () =>
+      import('./pages/showcase-page/showcase-page.component').then(
+        (m) => m.ShowcasePageComponent
+      ),
+  },
 ];

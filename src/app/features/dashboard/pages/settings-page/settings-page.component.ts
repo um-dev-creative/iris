@@ -12,6 +12,7 @@ import {
 } from '../../../../shared/components';
 import { ApiService, NotificationService } from '../../../../core/services';
 import { ApiConfig } from '../../../../core/models';
+import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'app-settings-page',
@@ -21,8 +22,8 @@ import { ApiConfig } from '../../../../core/models';
   template: `
     <!-- Page header -->
     <div class="mb-6">
-      <h2 class="text-2xl font-bold text-neutral-900 dark:text-neutral-100">Settings</h2>
-      <p class="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+      <h2 class="text-2xl font-bold text-foreground">Settings</h2>
+      <p class="text-sm text-muted-foreground mt-1">
         Configura la conexión a APIs externas
       </p>
     </div>
@@ -33,7 +34,7 @@ import { ApiConfig } from '../../../../core/models';
         <form class="space-y-5" (ngSubmit)="saveConfig()">
           <!-- Base URL -->
           <div>
-            <label class="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">
+            <label class="block text-sm font-medium text-foreground mb-1.5">
               Base URL
             </label>
             <input
@@ -42,16 +43,16 @@ import { ApiConfig } from '../../../../core/models';
               (ngModelChange)="updateField('baseUrl', $event)"
               name="baseUrl"
               placeholder="https://api.example.com"
-              class="w-full px-4 py-2.5 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none transition-colors dark:bg-neutral-800 dark:text-neutral-100"
+              class="w-full px-4 py-2.5 border border-input rounded-lg text-sm focus:border-ring focus:ring-1 focus:ring-ring outline-none transition-colors bg-background text-foreground"
             />
-            <p class="text-xs text-neutral-400 mt-1">
+            <p class="text-xs text-muted-foreground mt-1">
               URL base del servidor API (sin / al final)
             </p>
           </div>
 
           <!-- API Key -->
           <div>
-            <label class="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">
+            <label class="block text-sm font-medium text-foreground mb-1.5">
               API Key / Token
             </label>
             <input
@@ -60,20 +61,20 @@ import { ApiConfig } from '../../../../core/models';
               (ngModelChange)="updateField('apiKey', $event)"
               name="apiKey"
               placeholder="Tu clave de API o token"
-              class="w-full px-4 py-2.5 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none transition-colors dark:bg-neutral-800 dark:text-neutral-100"
+              class="w-full px-4 py-2.5 border border-input rounded-lg text-sm focus:border-ring focus:ring-1 focus:ring-ring outline-none transition-colors bg-background text-foreground"
             />
           </div>
 
           <!-- Auth Type -->
           <div>
-            <label class="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">
+            <label class="block text-sm font-medium text-foreground mb-1.5">
               Tipo de autenticación
             </label>
             <select
               [ngModel]="config().authType"
               (ngModelChange)="updateField('authType', $event)"
               name="authType"
-              class="w-full px-4 py-2.5 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none bg-white dark:bg-neutral-800 dark:text-neutral-100 transition-colors"
+              class="w-full px-4 py-2.5 border border-input rounded-lg text-sm focus:border-ring focus:ring-1 focus:ring-ring outline-none bg-background text-foreground transition-colors"
             >
               <option value="none">Sin autenticación</option>
               <option value="bearer">Bearer Token</option>
@@ -82,7 +83,7 @@ import { ApiConfig } from '../../../../core/models';
           </div>
 
           <!-- Actions -->
-          <div class="flex items-center gap-3 pt-4 border-t border-neutral-200 dark:border-neutral-700">
+          <div class="flex items-center gap-3 pt-4 border-t border-border">
             <app-button type="submit" variant="primary">
               Guardar configuración
             </app-button>
@@ -103,7 +104,7 @@ import { ApiConfig } from '../../../../core/models';
             @if (testResult()) {
               <span
                 class="text-sm font-medium"
-                [class]="testResult() === 'success' ? 'text-success-600' : 'text-danger-600'"
+                [class]="testResult() === 'success' ? 'text-chart-2' : 'text-destructive'"
               >
                 {{ testResult() === 'success' ? '✓ Conexión exitosa' : '✗ Error de conexión' }}
               </span>
@@ -141,7 +142,7 @@ export class SettingsPageComponent implements OnInit {
 
   resetConfig(): void {
     const defaults: ApiConfig = {
-      baseUrl: 'https://jsonplaceholder.typicode.com',
+      baseUrl: environment.apiBaseUrl,
       apiKey: '',
       authType: 'none',
     };
@@ -160,7 +161,7 @@ export class SettingsPageComponent implements OnInit {
     try {
       // Guardamos temporalmente la config para testearla
       this.apiService.updateConfig(this.config());
-      const response = await fetch(`${this.config().baseUrl}/posts/1`);
+      const response = await fetch(`${this.config().baseUrl}`);
       if (response.ok) {
         this.testResult.set('success');
         this.notificationService.success('Conexión exitosa', 'La API está respondiendo correctamente.');

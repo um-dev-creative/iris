@@ -1,27 +1,2 @@
-export interface Post {
-  userId: number;
-  id: number;
-  title: string;
-  body: string;
-}
-
-export interface Comment {
-  postId: number;
-  id: number;
-  name: string;
-  email: string;
-  body: string;
-}
-
-export interface Todo {
-  userId: number;
-  id: number;
-  title: string;
-  completed: boolean;
-}
-
-export interface Album {
-  userId: number;
-  id: number;
-  title: string;
-}
+// Legacy API models removed — the project now uses monitoring models
+// from src/app/features/dashboard/models/monitoring.model.ts

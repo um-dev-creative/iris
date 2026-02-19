@@ -11,7 +11,7 @@ import { DashboardStore } from '../core/services';
   imports: [RouterOutlet, SidebarComponent, NavbarComponent, AppNotificationComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex h-screen overflow-hidden bg-neutral-50 dark:bg-neutral-900">
+    <div class="flex h-screen overflow-hidden bg-background">
       <!-- Sidebar -->
       <app-sidebar />
 
@@ -28,8 +28,8 @@ import { DashboardStore } from '../core/services';
         <main class="flex-1 overflow-y-auto p-4 lg:p-6">
           <!-- Loading bar -->
           @if (store.loading()) {
-            <div class="fixed top-0 left-0 right-0 z-50 h-1 bg-primary-100">
-              <div class="h-full bg-primary-600 animate-pulse w-2/3 rounded-r"></div>
+            <div class="fixed top-0 left-0 right-0 z-50 h-1 bg-muted">
+              <div class="h-full bg-primary animate-pulse w-2/3 rounded-r"></div>
             </div>
           }
           <router-outlet />

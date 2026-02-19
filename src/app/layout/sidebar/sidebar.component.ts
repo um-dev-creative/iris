@@ -1,34 +1,35 @@
 import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { LucideAngularModule, PanelLeftClose, PanelLeftOpen, LayoutDashboard, Table2, Settings, Palette, LucideIconData } from 'lucide-angular';
 import { DashboardStore } from '../../core/services';
 
 interface NavItem {
   label: string;
-  icon: string;
+  icon: LucideIconData;
   route: string;
 }
 
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive],
+  imports: [RouterLink, RouterLinkActive, LucideAngularModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <aside
-      class="fixed inset-y-0 left-0 z-30 flex flex-col bg-neutral-900 dark:bg-neutral-950 text-white transition-all duration-300 ease-in-out"
+      class="fixed inset-y-0 left-0 z-30 flex flex-col bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out"
       [class.w-64]="store.sidebarOpen()"
       [class.w-16]="!store.sidebarOpen()"
       [class.-translate-x-full]="isMobileHidden"
       [class.translate-x-0]="!isMobileHidden"
     >
       <!-- Logo -->
-      <div class="flex items-center h-16 px-4 border-b border-neutral-800 dark:border-neutral-700 flex-shrink-0">
+      <div class="flex items-center h-16 px-4 border-b border-sidebar-border flex-shrink-0">
         <div class="flex items-center gap-3">
-          <div class="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center font-bold text-sm">
+          <div class="w-8 h-8 bg-sidebar-primary rounded-lg flex items-center justify-center font-bold text-sm text-sidebar-primary-foreground">
             IR
           </div>
           @if (store.sidebarOpen()) {
-            <span class="text-lg font-bold tracking-tight whitespace-nowrap">Iris</span>
+            <span class="text-lg font-bold tracking-tight whitespace-nowrap animate-fade-in">Iris</span>
           }
         </div>
       </div>
@@ -38,32 +39,31 @@ interface NavItem {
         @for (item of navItems; track item.route) {
           <a
             [routerLink]="item.route"
-            routerLinkActive="bg-primary-600 text-white"
+            routerLinkActive="bg-sidebar-primary text-sidebar-primary-foreground"
             [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }"
-            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-neutral-300 hover:bg-neutral-700 dark:hover:bg-neutral-800 hover:text-white transition-colors duration-200 group"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors duration-200 group"
             [class.justify-center]="!store.sidebarOpen()"
           >
-            <span class="text-lg flex-shrink-0" [innerHTML]="item.icon"></span>
+            <lucide-icon [img]="item.icon" [size]="20" strokeWidth="1.5" class="flex-shrink-0" />
             @if (store.sidebarOpen()) {
-              <span class="text-sm font-medium whitespace-nowrap">{{ item.label }}</span>
+              <span class="text-sm font-medium whitespace-nowrap animate-fade-in">{{ item.label }}</span>
             }
           </a>
         }
       </nav>
 
       <!-- Collapse toggle (desktop only) -->
-      <div class="hidden lg:flex items-center justify-center p-4 border-t border-neutral-800 dark:border-neutral-700">
+      <div class="hidden lg:flex items-center justify-center p-4 border-t border-sidebar-border">
         <button
-          class="p-2 rounded-lg hover:bg-neutral-700 transition-colors text-neutral-400 hover:text-white"
+          class="p-2 rounded-lg hover:bg-sidebar-accent transition-colors text-sidebar-foreground/50 hover:text-sidebar-foreground"
           (click)="store.toggleSidebar()"
+          aria-label="Toggle sidebar"
         >
-          <svg
-            class="w-5 h-5 transition-transform duration-300"
-            [class.rotate-180]="!store.sidebarOpen()"
-            fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-          </svg>
+          <lucide-icon
+            [img]="store.sidebarOpen() ? PanelLeftClose : PanelLeftOpen"
+            [size]="20"
+            strokeWidth="1.5"
+            class="transition-transform duration-300" />
         </button>
       </div>
     </aside>
@@ -80,22 +80,29 @@ interface NavItem {
 })
 export class SidebarComponent {
   readonly store = inject(DashboardStore);
+  readonly PanelLeftClose = PanelLeftClose;
+  readonly PanelLeftOpen = PanelLeftOpen;
 
   readonly navItems: NavItem[] = [
     {
       label: 'Overview',
-      icon: '📊',
+      icon: LayoutDashboard,
       route: '/dashboard',
     },
     {
       label: 'Data View',
-      icon: '📋',
+      icon: Table2,
       route: '/dashboard/data',
     },
     {
       label: 'Settings',
-      icon: '⚙️',
+      icon: Settings,
       route: '/dashboard/settings',
+    },
+    {
+      label: 'Showcase',
+      icon: Palette,
+      route: '/dashboard/showcase',
     },
   ];
 

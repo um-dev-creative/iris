@@ -1,3 +1,5 @@
+import { LucideIconData } from 'lucide-angular';
+
 export interface ApiConfig {
   baseUrl: string;
   apiKey: string;
@@ -30,6 +32,6 @@ export interface KpiCard {
   value: string | number;
   change?: number;
   changeLabel?: string;
-  icon: string;
+  icon: LucideIconData;
   color: 'primary' | 'secondary' | 'success' | 'warning' | 'danger';
 }

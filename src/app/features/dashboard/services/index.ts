@@ -1,1 +1,1 @@
-export { DashboardDataService } from './dashboard-data.service';
+export { MonitoringDataService } from './monitoring-data.service';

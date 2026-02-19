@@ -13,9 +13,9 @@ import { AppCardComponent } from '../../../../shared/components';
         <div class="flex-1 relative">
           <svg class="w-full h-full" viewBox="0 0 400 200" preserveAspectRatio="none">
             <!-- Grid lines -->
-            <line x1="0" y1="50" x2="400" y2="50" class="stroke-neutral-200 dark:stroke-neutral-700" stroke-width="1"/>
-            <line x1="0" y1="100" x2="400" y2="100" class="stroke-neutral-200 dark:stroke-neutral-700" stroke-width="1"/>
-            <line x1="0" y1="150" x2="400" y2="150" class="stroke-neutral-200 dark:stroke-neutral-700" stroke-width="1"/>
+            <line x1="0" y1="50" x2="400" y2="50" class="stroke-border" stroke-width="1"/>
+            <line x1="0" y1="100" x2="400" y2="100" class="stroke-border" stroke-width="1"/>
+            <line x1="0" y1="150" x2="400" y2="150" class="stroke-border" stroke-width="1"/>
 
             <!-- Area fill -->
             <path
@@ -28,7 +28,7 @@ import { AppCardComponent } from '../../../../shared/components';
             <path
               [attr.d]="linePath()"
               fill="none"
-              stroke="#2563eb"
+              stroke="var(--chart-1)"
               stroke-width="2"
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -40,23 +40,23 @@ import { AppCardComponent } from '../../../../shared/components';
                 [attr.cx]="point.x"
                 [attr.cy]="point.y"
                 r="4"
-                fill="#2563eb"
-                class="stroke-white dark:stroke-neutral-800"
+                fill="var(--chart-1)"
+                class="stroke-card"
                 stroke-width="2"
               />
             }
 
             <defs>
               <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#2563eb" stop-opacity="0.4"/>
-                <stop offset="100%" stop-color="#2563eb" stop-opacity="0"/>
+                <stop offset="0%" stop-color="var(--chart-1)" stop-opacity="0.4"/>
+                <stop offset="100%" stop-color="var(--chart-1)" stop-opacity="0"/>
               </linearGradient>
             </defs>
           </svg>
         </div>
 
         <!-- X-axis labels -->
-        <div class="flex justify-between text-xs text-neutral-400 mt-2 px-2">
+        <div class="flex justify-between text-xs text-muted-foreground mt-2 px-2">
           @for (label of labels(); track $index) {
             <span>{{ label }}</span>
           }

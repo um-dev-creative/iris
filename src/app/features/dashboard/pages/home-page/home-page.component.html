@@ -1,0 +1,214 @@
+<!-- Page Header -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+  <div>
+    <h2 class="text-2xl font-bold text-foreground">Monitoring Dashboard</h2>
+    <p class="text-sm text-muted-foreground mt-1">
+      Monitoreo en tiempo real y analíticas del sistema
+    </p>
+  </div>
+  <div class="flex items-center gap-2">
+    <button
+      class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-border bg-card text-card-foreground hover:bg-muted transition-colors"
+    >
+      <lucide-icon [img]="CalendarIcon" [size]="16" strokeWidth="1.5" />
+      <span>Last 24h</span>
+    </button>
+    <button
+      class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+      [class.animate-spin]="monitoringService.loading()"
+      (click)="onRefresh()"
+    >
+      <lucide-icon [img]="RefreshCwIcon" [size]="16" strokeWidth="1.5" />
+    </button>
+  </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+  @for (kpi of monitoringService.kpis(); track kpi.title; let i = $index) {
+    <div
+      class="bg-card rounded-xl border border-border shadow-sm p-5 hover:shadow-md transition-shadow animate-fade-in"
+      [style.animation-delay]="i * 100 + 'ms'"
+    >
+      <div class="flex items-start justify-between">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-3">
+            <div
+              [class]="
+                'w-8 h-8 rounded-lg flex items-center justify-center ' +
+                kpi.iconBgClass +
+                ' ' +
+                kpi.iconTextClass
+              "
+            >
+              <lucide-icon [img]="kpi.icon" [size]="16" strokeWidth="1.5" />
+            </div>
+            <p class="text-xs font-medium text-muted-foreground truncate">
+              {{ kpi.title }}
+            </p>
+          </div>
+          <p class="text-2xl font-bold text-card-foreground mb-1">
+            {{ kpi.value }}
+          </p>
+          <div class="flex items-center gap-1">
+            <lucide-icon
+              [img]="kpi.trend >= 0 ? TrendingUpIcon : TrendingDownIcon"
+              [size]="14"
+              strokeWidth="2"
+              [class]="trendColorClass(kpi)"
+            />
+            <span [class]="'text-xs font-medium ' + trendColorClass(kpi)">
+              {{ kpi.trend >= 0 ? '+' : '' }}{{ kpi.trend }}{{ kpi.trendSuffix }}
+            </span>
+            <span class="text-xs text-muted-foreground">
+              {{ kpi.trendLabel }}
+            </span>
+          </div>
+        </div>
+        <div class="w-24 h-10 ml-3 shrink-0 self-center">
+          <app-sparkline
+            [data]="kpi.sparklineData"
+            [color]="kpi.sparklineColor"
+          />
+        </div>
+      </div>
+    </div>
+  }
+</div>
+
+<!-- Real-time Logs Table -->
+<div
+  class="bg-card rounded-xl border border-border shadow-sm mb-8 animate-fade-in"
+  style="animation-delay: 400ms"
+>
+  <div class="flex items-center justify-between p-5 border-b border-border">
+    <div>
+      <h3 class="text-lg font-semibold text-card-foreground">
+        Logs en Tiempo Real
+      </h3>
+      <p class="text-xs text-muted-foreground mt-0.5">
+        Últimos mensajes procesados
+      </p>
+    </div>
+    <button
+      class="text-xs font-medium text-primary hover:underline transition-colors"
+    >
+      Ver todos
+    </button>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead>
+        <tr class="border-b border-border">
+          <th
+            class="text-left text-xs font-medium text-muted-foreground px-5 py-3"
+          >
+            ID
+          </th>
+          <th
+            class="text-left text-xs font-medium text-muted-foreground px-5 py-3"
+          >
+            Destinatario
+          </th>
+          <th
+            class="text-left text-xs font-medium text-muted-foreground px-5 py-3"
+          >
+            Proveedor
+          </th>
+          <th
+            class="text-left text-xs font-medium text-muted-foreground px-5 py-3"
+          >
+            Estado
+          </th>
+          <th
+            class="text-left text-xs font-medium text-muted-foreground px-5 py-3"
+          >
+            Timestamp
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (log of monitoringService.logs(); track log.id) {
+          <tr
+            class="border-b border-border last:border-b-0 hover:bg-muted/50 transition-colors"
+          >
+            <td class="px-5 py-3">
+              <span class="text-sm font-mono text-card-foreground">
+                {{ log.id }}
+              </span>
+            </td>
+            <td class="px-5 py-3">
+              <span class="text-sm text-card-foreground">
+                {{ log.recipient }}
+              </span>
+            </td>
+            <td class="px-5 py-3">
+              <span
+                [class]="
+                  'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium ' +
+                  providerClasses(log.provider)
+                "
+              >
+                <lucide-icon
+                  [img]="providerIcon(log.provider)"
+                  [size]="12"
+                  strokeWidth="1.5"
+                />
+                {{ providerLabel(log.provider) }}
+              </span>
+            </td>
+            <td class="px-5 py-3">
+              <span
+                [class]="
+                  'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ' +
+                  statusClasses(log.status)
+                "
+              >
+                <span
+                  [class]="'w-1.5 h-1.5 rounded-full ' + statusDotClass(log.status)"
+                ></span>
+                {{ statusLabel(log.status) }}
+              </span>
+            </td>
+            <td class="px-5 py-3">
+              <span class="text-sm text-muted-foreground font-mono">
+                {{ log.timestamp }}
+              </span>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Service Status -->
+<div class="animate-fade-in" style="animation-delay: 500ms">
+  <div class="flex items-center justify-between mb-4">
+    <h3 class="text-lg font-semibold text-foreground">Estado de Servicios</h3>
+    <span
+      [class]="
+        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ' +
+        overallStatusClasses()
+      "
+    >
+      <span
+        [class]="'w-1.5 h-1.5 rounded-full ' + overallDotClass()"
+      ></span>
+      {{ overallStatusLabel() }}
+    </span>
+  </div>
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    @for (
+      service of monitoringService.services();
+      track service.name;
+      let i = $index
+    ) {
+      <app-service-status-card
+        [service]="service"
+        class="animate-fade-in"
+        [style.animation-delay]="i * 80 + 600 + 'ms'"
+      />
+    }
+  </div>
+</div>

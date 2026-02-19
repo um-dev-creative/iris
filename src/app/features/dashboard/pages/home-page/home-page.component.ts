@@ -2,178 +2,136 @@ import {
   Component,
   ChangeDetectionStrategy,
   inject,
-  OnInit,
   computed,
 } from '@angular/core';
-import { KpiCardComponent } from '../../components/kpi-card/kpi-card.component';
-import { ChartPlaceholderComponent } from '../../components/chart-placeholder/chart-placeholder.component';
-import { AppCardComponent, AppTableComponent, AppSkeletonComponent, AppBadgeComponent } from '../../../../shared/components';
-import { DashboardDataService } from '../../services';
-import { KpiCard, TableColumn, Post } from '../../../../core/models';
+import {
+  LucideAngularModule,
+  LucideIconData,
+  Calendar,
+  RefreshCw,
+  TrendingUp,
+  TrendingDown,
+  Smartphone,
+  MessageCircle,
+  Mail,
+} from 'lucide-angular';
+import { SparklineComponent } from '../../components/sparkline/sparkline.component';
+import { ServiceStatusCardComponent } from '../../components/service-status-card/service-status-card.component';
+import { MonitoringDataService } from '../../services/monitoring-data.service';
+import { MonitoringKpi } from '../../models/monitoring.model';
 
 @Component({
   selector: 'app-home-page',
   standalone: true,
   imports: [
-    KpiCardComponent,
-    ChartPlaceholderComponent,
-    AppCardComponent,
-    AppTableComponent,
-    AppSkeletonComponent,
-    AppBadgeComponent,
+    LucideAngularModule,
+    SparklineComponent,
+    ServiceStatusCardComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <!-- Page header -->
-    <div class="mb-6">
-      <h2 class="text-2xl font-bold text-neutral-900 dark:text-neutral-100">Overview</h2>
-      <p class="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-        Resumen general del sistema con datos de JSONPlaceholder
-      </p>
-    </div>
-
-    <!-- KPI Cards -->
-    @if (dataService.loading()) {
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        @for (_ of [1,2,3,4]; track $index) {
-          <div class="bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6">
-            <app-skeleton height="16px" width="60%" />
-            <app-skeleton height="36px" width="40%" />
-            <app-skeleton height="14px" width="50%" />
-          </div>
-        }
-      </div>
-    } @else {
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        @for (kpi of kpiCards(); track kpi.title) {
-          <app-kpi-card [data]="kpi" />
-        }
-      </div>
-    }
-
-    <!-- Chart + Recent activity -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-      <div class="lg:col-span-2">
-        <app-chart-placeholder
-          title="Actividad de posts"
-          [dataPoints]="chartData()"
-          [labels]="chartLabels"
-        />
-      </div>
-
-      <app-card title="Usuarios recientes">
-        @if (dataService.loading()) {
-          <div class="space-y-3">
-            @for (_ of [1,2,3,4,5]; track $index) {
-              <div class="flex items-center gap-3">
-                <app-skeleton width="40px" height="40px" variant="circle" />
-                <div class="flex-1">
-                  <app-skeleton height="14px" width="70%" />
-                  <app-skeleton height="12px" width="50%" />
-                </div>
-              </div>
-            }
-          </div>
-        } @else {
-          <div class="space-y-3">
-            @for (user of dataService.users().slice(0, 5); track user.id) {
-              <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors">
-                <div class="w-10 h-10 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">
-                  {{ user.name.charAt(0) }}
-                </div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">{{ user.name }}</p>
-                  <p class="text-xs text-neutral-500 dark:text-neutral-400 truncate">{{ user.email }}</p>
-                </div>
-                <app-badge color="success">Active</app-badge>
-              </div>
-            }
-          </div>
-        }
-      </app-card>
-    </div>
-
-    <!-- Recent posts table -->
-    <app-card title="Posts recientes" subtitle="Últimos posts del sistema" [noPadding]="true">
-      @if (dataService.loading()) {
-        <div class="p-6 space-y-3">
-          @for (_ of [1,2,3,4,5]; track $index) {
-            <app-skeleton height="40px" />
-          }
-        </div>
-      } @else {
-        <app-table
-          [columns]="postColumns"
-          [data]="recentPosts()"
-          [pageSize]="5"
-        />
-      }
-    </app-card>
-  `,
+  templateUrl: './home-page.component.html',
   styleUrl: './home-page.component.css',
 })
-export class HomePageComponent implements OnInit {
-  readonly dataService = inject(DashboardDataService);
+export class HomePageComponent {
+  readonly monitoringService = inject(MonitoringDataService);
 
-  readonly postColumns: TableColumn[] = [
-    { key: 'id', label: 'ID', sortable: true },
-    { key: 'title', label: 'Título', sortable: true },
-    { key: 'body', label: 'Contenido' },
-  ];
+  /* ── Lucide icons ── */
+  readonly CalendarIcon = Calendar;
+  readonly RefreshCwIcon = RefreshCw;
+  readonly TrendingUpIcon = TrendingUp;
+  readonly TrendingDownIcon = TrendingDown;
 
-  readonly chartLabels = ['Usr 1', 'Usr 2', 'Usr 3', 'Usr 4', 'Usr 5', 'Usr 6', 'Usr 7', 'Usr 8', 'Usr 9', 'Usr 10'];
+  /* ── Provider helpers ── */
+  private readonly providerIcons: Record<string, LucideIconData> = {
+    sms: Smartphone,
+    whatsapp: MessageCircle,
+    email: Mail,
+  };
 
-  readonly kpiCards = computed<KpiCard[]>(() => [
-    {
-      title: 'Total Usuarios',
-      value: this.dataService.totalUsers(),
-      change: 12,
-      changeLabel: 'vs mes anterior',
-      icon: '👥',
-      color: 'primary',
-    },
-    {
-      title: 'Total Posts',
-      value: this.dataService.totalPosts(),
-      change: 8,
-      changeLabel: 'vs mes anterior',
-      icon: '📝',
-      color: 'success',
-    },
-    {
-      title: 'Tareas completas',
-      value: this.dataService.completedTodos(),
-      change: 24,
-      changeLabel: 'completadas',
-      icon: '✅',
-      color: 'secondary',
-    },
-    {
-      title: 'Tareas pendientes',
-      value: this.dataService.pendingTodos(),
-      change: -5,
-      changeLabel: 'vs semana anterior',
-      icon: '⏳',
-      color: 'warning',
-    },
-  ]);
+  providerIcon(provider: string): LucideIconData {
+    return this.providerIcons[provider] ?? Mail;
+  }
 
-  readonly chartData = computed(() => {
-    const users = this.dataService.users();
-    const posts = this.dataService.posts();
-    // Cantidad de posts por usuario (primeros 10)
-    return users.slice(0, 10).map(
-      (u) => posts.filter((p) => p.userId === u.id).length
+  providerLabel(provider: string): string {
+    return (
+      ({ sms: 'SMS', whatsapp: 'WhatsApp', email: 'Email' } as Record<string, string>)[provider] ?? provider
     );
+  }
+
+  providerClasses(provider: string): string {
+    return (
+      ({
+        sms: 'bg-chart-1/10 text-chart-1 border border-chart-1/25',
+        whatsapp: 'bg-chart-2/10 text-chart-2 border border-chart-2/25',
+        email: 'bg-chart-4/10 text-chart-4 border border-chart-4/25',
+      } as Record<string, string>)[provider] ?? ''
+    );
+  }
+
+  /* ── Status helpers ── */
+  statusLabel(status: string): string {
+    return (
+      ({ delivered: 'Delivered', failed: 'Failed', pending: 'Pending' } as Record<string, string>)[
+        status
+      ] ?? status
+    );
+  }
+
+  statusClasses(status: string): string {
+    return (
+      ({
+        delivered: 'bg-chart-2/15 text-chart-2 border border-chart-2/25',
+        failed: 'bg-destructive/15 text-destructive border border-destructive/25',
+        pending: 'bg-orange/15 text-orange border border-orange/25',
+      } as Record<string, string>)[status] ?? ''
+    );
+  }
+
+  statusDotClass(status: string): string {
+    return (
+      ({
+        delivered: 'bg-chart-2',
+        failed: 'bg-destructive',
+        pending: 'bg-orange',
+      } as Record<string, string>)[status] ?? ''
+    );
+  }
+
+  /* ── Trend colour ── */
+  trendColorClass(kpi: MonitoringKpi): string {
+    const isGood = kpi.invertTrend ? kpi.trend < 0 : kpi.trend >= 0;
+    return isGood ? 'text-chart-2' : 'text-destructive';
+  }
+
+  /* ── Overall service status ── */
+  readonly overallStatusLabel = computed(() => {
+    const map: Record<string, string> = {
+      'all-operational': 'All Operational',
+      'partial-degradation': 'Partial Degradation',
+      'major-outage': 'Major Outage',
+    };
+    return map[this.monitoringService.overallStatus()] ?? '';
   });
 
-  readonly recentPosts = computed(() =>
-    this.dataService.posts().slice(0, 20) as unknown as Record<string, unknown>[]
-  );
+  readonly overallStatusClasses = computed(() => {
+    const map: Record<string, string> = {
+      'all-operational': 'bg-chart-2/15 text-chart-2 border border-chart-2/25',
+      'partial-degradation': 'bg-orange/15 text-orange border border-orange/25',
+      'major-outage': 'bg-destructive/15 text-destructive border border-destructive/25',
+    };
+    return map[this.monitoringService.overallStatus()] ?? '';
+  });
 
-  ngOnInit(): void {
-    if (this.dataService.posts().length === 0) {
-      this.dataService.loadAll();
-    }
+  readonly overallDotClass = computed(() => {
+    const map: Record<string, string> = {
+      'all-operational': 'bg-chart-2',
+      'partial-degradation': 'bg-orange',
+      'major-outage': 'bg-destructive',
+    };
+    return map[this.monitoringService.overallStatus()] ?? '';
+  });
+
+  onRefresh(): void {
+    this.monitoringService.refresh();
   }
 }

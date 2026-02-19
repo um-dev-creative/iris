@@ -1,0 +1,288 @@
+<div class="mb-6">
+  <h2 class="text-2xl font-bold text-foreground">Design System Showcase</h2>
+  <p class="text-sm text-muted-foreground mt-1">
+    Componentes, tokens de color, tipografía e iconografía del sistema de diseño
+  </p>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- COLOR TOKENS                                -->
+<!-- ═══════════════════════════════════════════ -->
+<app-card title="Color Tokens" subtitle="oklch-based design tokens with automatic dark mode">
+  <div class="space-y-6">
+    <!-- Core colors -->
+    <div>
+      <h4 class="text-sm font-semibold text-foreground mb-3">Core</h4>
+      <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+        @for (swatch of coreSwatches; track swatch.label) {
+          <div class="space-y-1.5">
+            <div
+              class="h-14 rounded-lg border border-border"
+              [class]="swatch.bgClass"
+            ></div>
+            <p class="text-xs font-medium text-foreground">{{ swatch.label }}</p>
+            <p class="text-[10px] text-muted-foreground font-mono">{{ swatch.token }}</p>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Chart colors -->
+    <div>
+      <h4 class="text-sm font-semibold text-foreground mb-3">Charts</h4>
+      <div class="flex gap-3">
+        @for (i of [1,2,3,4,5]; track i) {
+          <div class="space-y-1.5 flex-1">
+            <div
+              class="h-10 rounded-lg"
+              [class]="'bg-chart-' + i"
+            ></div>
+            <p class="text-[10px] text-muted-foreground font-mono text-center">chart-{{ i }}</p>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Sidebar colors -->
+    <div>
+      <h4 class="text-sm font-semibold text-foreground mb-3">Sidebar</h4>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        @for (swatch of sidebarSwatches; track swatch.label) {
+          <div class="space-y-1.5">
+            <div
+              class="h-10 rounded-lg border border-border"
+              [class]="swatch.bgClass"
+            ></div>
+            <p class="text-xs font-medium text-foreground">{{ swatch.label }}</p>
+            <p class="text-[10px] text-muted-foreground font-mono">{{ swatch.token }}</p>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</app-card>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- TYPOGRAPHY                                  -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="mt-6">
+  <app-card title="Typography" subtitle="Inter font family with weight variants">
+    <div class="space-y-4">
+      <div>
+        <p class="text-xs text-muted-foreground mb-1">font-sans / 400</p>
+        <p class="text-base font-normal text-foreground">The quick brown fox jumps over the lazy dog</p>
+      </div>
+      <div>
+        <p class="text-xs text-muted-foreground mb-1">font-sans / 500</p>
+        <p class="text-base font-medium text-foreground">The quick brown fox jumps over the lazy dog</p>
+      </div>
+      <div>
+        <p class="text-xs text-muted-foreground mb-1">font-sans / 600</p>
+        <p class="text-base font-semibold text-foreground">The quick brown fox jumps over the lazy dog</p>
+      </div>
+      <div>
+        <p class="text-xs text-muted-foreground mb-1">font-sans / 700</p>
+        <p class="text-base font-bold text-foreground">The quick brown fox jumps over the lazy dog</p>
+      </div>
+      <div class="border-t border-border pt-4">
+        <p class="text-xs text-muted-foreground mb-1">Heading sizes</p>
+        <p class="text-4xl font-bold text-foreground">Heading 1</p>
+        <p class="text-3xl font-bold text-foreground mt-1">Heading 2</p>
+        <p class="text-2xl font-semibold text-foreground mt-1">Heading 3</p>
+        <p class="text-xl font-semibold text-foreground mt-1">Heading 4</p>
+        <p class="text-lg font-medium text-foreground mt-1">Heading 5</p>
+      </div>
+    </div>
+  </app-card>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- BUTTONS                                     -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="mt-6">
+  <app-card title="Buttons" subtitle="All variants and sizes">
+    <div class="space-y-6">
+      <!-- Variants -->
+      <div>
+        <p class="text-xs text-muted-foreground mb-3">Variants</p>
+        <div class="flex flex-wrap gap-3">
+          <app-button variant="primary">Primary</app-button>
+          <app-button variant="secondary">Secondary</app-button>
+          <app-button variant="danger">Danger</app-button>
+          <app-button variant="ghost">Ghost</app-button>
+          <app-button variant="primary" [disabled]="true">Disabled</app-button>
+        </div>
+      </div>
+
+      <!-- Sizes -->
+      <div>
+        <p class="text-xs text-muted-foreground mb-3">Sizes</p>
+        <div class="flex flex-wrap items-center gap-3">
+          <app-button variant="primary" size="sm">Small</app-button>
+          <app-button variant="primary" size="md">Medium</app-button>
+          <app-button variant="primary" size="lg">Large</app-button>
+        </div>
+      </div>
+    </div>
+  </app-card>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- BADGES                                      -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="mt-6">
+  <app-card title="Badges" subtitle="Status indicators and labels">
+    <div class="flex flex-wrap gap-3">
+      <app-badge color="default">Default</app-badge>
+      <app-badge color="primary">Primary</app-badge>
+      <app-badge color="secondary">Secondary</app-badge>
+      <app-badge color="destructive">Destructive</app-badge>
+      <app-badge color="success">Success</app-badge>
+      <app-badge color="warning">Warning (amber)</app-badge>
+      <app-badge color="neutral">Neutral</app-badge>
+      <app-badge color="outline">Outline</app-badge>
+    </div>
+  </app-card>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- ICONS (Lucide)                              -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="mt-6">
+  <app-card title="Icons" subtitle="Lucide Angular icon library — all icons used in the project">
+    <div class="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-8 gap-4">
+      @for (icon of iconList; track icon.name) {
+        <div class="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-muted transition-colors">
+          <lucide-icon [img]="icon.ref" [size]="22" strokeWidth="1.5" class="text-foreground" />
+          <span class="text-[10px] text-muted-foreground text-center">{{ icon.name }}</span>
+        </div>
+      }
+    </div>
+  </app-card>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- SKELETON LOADERS                            -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="mt-6">
+  <app-card title="Skeleton Loaders" subtitle="Loading placeholders with pulse animation">
+    <div class="space-y-4">
+      <div>
+        <p class="text-xs text-muted-foreground mb-2">Size: sm</p>
+        <app-skeleton size="sm" />
+      </div>
+      <div>
+        <p class="text-xs text-muted-foreground mb-2">Size: md (default)</p>
+        <app-skeleton size="md" />
+      </div>
+      <div>
+        <p class="text-xs text-muted-foreground mb-2">Size: lg</p>
+        <app-skeleton size="lg" />
+      </div>
+      <div>
+        <p class="text-xs text-muted-foreground mb-2">Size: xl</p>
+        <app-skeleton size="xl" />
+      </div>
+      <div>
+        <p class="text-xs text-muted-foreground mb-2">Circle variant</p>
+        <div class="flex gap-3">
+          <app-skeleton width="40px" height="40px" variant="circle" />
+          <app-skeleton width="48px" height="48px" variant="circle" />
+          <app-skeleton width="56px" height="56px" variant="circle" />
+        </div>
+      </div>
+      <div>
+        <p class="text-xs text-muted-foreground mb-2">Card-like composition</p>
+        <div class="flex items-center gap-3">
+          <app-skeleton width="48px" height="48px" variant="circle" />
+          <div class="flex-1 space-y-2">
+            <app-skeleton height="14px" width="60%" />
+            <app-skeleton height="12px" width="40%" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </app-card>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- ANIMATIONS (tw-animate-css)                 -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="mt-6">
+  <app-card title="Animations" subtitle="tw-animate-css animation classes">
+    <div class="space-y-6">
+      <div>
+        <p class="text-xs text-muted-foreground mb-3">Click to replay animations</p>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          @for (anim of animations; track anim.name) {
+            <button
+              (click)="replayAnimation(anim.name)"
+              class="p-4 rounded-lg border border-border bg-card hover:bg-muted transition-colors text-center"
+            >
+              <div
+                class="w-10 h-10 mx-auto rounded-lg bg-primary mb-2"
+                [class]="activeAnimation() === anim.name ? anim.class : ''"
+              ></div>
+              <p class="text-xs font-medium text-foreground">{{ anim.name }}</p>
+              <p class="text-[10px] text-muted-foreground font-mono">{{ anim.class }}</p>
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+  </app-card>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- THEME TOGGLE                                -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="mt-6">
+  <app-card title="Theme Toggle" subtitle="Switch between light and dark mode with spin animation">
+    <div class="flex items-center gap-4">
+      <app-theme-toggle />
+      <span class="text-sm text-muted-foreground">Click the button to toggle theme</span>
+    </div>
+  </app-card>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- NOTIFICATIONS / TOASTS                      -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="mt-6 mb-8">
+  <app-card title="Notifications" subtitle="Toast notification variants">
+    <div class="flex flex-wrap gap-3">
+      <app-button variant="primary" (click)="showToast('success')">
+        Success Toast
+      </app-button>
+      <app-button variant="secondary" (click)="showToast('info')">
+        Info Toast
+      </app-button>
+      <app-button variant="ghost" (click)="showToast('warning')">
+        Warning Toast
+      </app-button>
+      <app-button variant="danger" (click)="showToast('error')">
+        Error Toast
+      </app-button>
+    </div>
+  </app-card>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- RADIUS TOKENS                               -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="mt-6 mb-8">
+  <app-card title="Border Radius" subtitle="Radius tokens scale">
+    <div class="flex flex-wrap items-end gap-6">
+      @for (r of radiusTokens; track r.name) {
+        <div class="flex flex-col items-center gap-2">
+          <div
+            class="w-16 h-16 bg-primary"
+            [class]="r.class"
+          ></div>
+          <p class="text-xs font-medium text-foreground">{{ r.name }}</p>
+          <p class="text-[10px] text-muted-foreground font-mono">{{ r.class }}</p>
+        </div>
+      }
+    </div>
+  </app-card>
+</div>

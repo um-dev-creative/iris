@@ -6,36 +6,47 @@ import {
   computed,
   signal,
 } from '@angular/core';
+import { LucideAngularModule, ChevronsUpDown, ArrowUp, ArrowDown, SearchX, ChevronLeft, ChevronRight } from 'lucide-angular';
 import { TableColumn, PaginationState } from '../../../core/models';
 
 @Component({
   selector: 'app-table',
   standalone: true,
+  imports: [LucideAngularModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="overflow-x-auto">
       <table class="w-full text-sm text-left">
-        <thead class="bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
+        <thead class="bg-muted border-b border-border">
           <tr>
             @for (col of columns(); track col.key) {
               <th
-                class="px-4 py-3 font-semibold text-neutral-600 dark:text-neutral-300 uppercase text-xs tracking-wider"
+                class="px-4 py-3 font-semibold text-muted-foreground uppercase text-xs tracking-wider"
                 [class.cursor-pointer]="col.sortable"
                 (click)="col.sortable && onSort(col.key)"
               >
-                {{ col.label }}
-                @if (col.sortable && sortKey() === col.key) {
-                  <span class="ml-1">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
-                }
+                <span class="inline-flex items-center gap-1">
+                  {{ col.label }}
+                  @if (col.sortable) {
+                    @if (sortKey() === col.key) {
+                      <lucide-icon
+                        [img]="sortDirection() === 'asc' ? ArrowUp : ArrowDown"
+                        [size]="14"
+                        strokeWidth="2" />
+                    } @else {
+                      <lucide-icon [img]="ChevronsUpDown" [size]="14" strokeWidth="1.5" class="opacity-40" />
+                    }
+                  }
+                </span>
               </th>
             }
           </tr>
         </thead>
-        <tbody class="divide-y divide-neutral-100 dark:divide-neutral-700">
+        <tbody class="divide-y divide-border">
           @for (row of paginatedData(); track $index) {
-            <tr class="hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+            <tr class="hover:bg-muted/50 transition-colors">
               @for (col of columns(); track col.key) {
-                <td class="px-4 py-3 text-neutral-800 dark:text-neutral-200">
+                <td class="px-4 py-3 text-foreground">
                   {{ getNestedValue(row, col.key) }}
                 </td>
               }
@@ -44,9 +55,12 @@ import { TableColumn, PaginationState } from '../../../core/models';
             <tr>
               <td
                 [attr.colspan]="columns().length"
-                class="px-4 py-8 text-center text-neutral-400 dark:text-neutral-500"
+                class="px-4 py-8 text-center text-muted-foreground"
               >
-                No hay datos disponibles
+                <div class="flex flex-col items-center gap-2">
+                  <lucide-icon [img]="SearchX" [size]="24" strokeWidth="1.5" />
+                  <span>No hay datos disponibles</span>
+                </div>
               </td>
             </tr>
           }
@@ -57,17 +71,19 @@ import { TableColumn, PaginationState } from '../../../core/models';
     <!-- Paginación -->
     @if (totalPages() > 1) {
       <div
-        class="flex items-center justify-between px-4 py-3 border-t border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900"
+        class="flex items-center justify-between px-4 py-3 border-t border-border bg-card"
       >
-        <span class="text-sm text-neutral-500 dark:text-neutral-400">
+        <span class="text-sm text-muted-foreground">
           Mostrando {{ startIndex() + 1 }}–{{ endIndex() }} de {{ data().length }}
         </span>
         <div class="flex gap-1">
           <button
-            class="px-3 py-1 text-sm rounded-md border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            class="inline-flex items-center gap-1 px-3 py-1 text-sm rounded-md border border-border hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             [disabled]="currentPage() === 1"
             (click)="goToPage(currentPage() - 1)"
+            aria-label="Previous page"
           >
+            <lucide-icon [img]="ChevronLeft" [size]="14" strokeWidth="1.5" />
             Anterior
           </button>
           @for (page of visiblePages(); track page) {
@@ -75,8 +91,8 @@ import { TableColumn, PaginationState } from '../../../core/models';
               class="px-3 py-1 text-sm rounded-md border transition-colors"
               [class]="
                 page === currentPage()
-                  ? 'bg-primary-600 text-white border-primary-600'
-                  : 'border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-700'
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'border-border hover:bg-accent'
               "
               (click)="goToPage(page)"
             >
@@ -84,11 +100,13 @@ import { TableColumn, PaginationState } from '../../../core/models';
             </button>
           }
           <button
-            class="px-3 py-1 text-sm rounded-md border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            class="inline-flex items-center gap-1 px-3 py-1 text-sm rounded-md border border-border hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             [disabled]="currentPage() === totalPages()"
             (click)="goToPage(currentPage() + 1)"
+            aria-label="Next page"
           >
             Siguiente
+            <lucide-icon [img]="ChevronRight" [size]="14" strokeWidth="1.5" />
           </button>
         </div>
       </div>
@@ -101,6 +119,13 @@ export class AppTableComponent<T extends Record<string, unknown>> {
   readonly data = input<T[]>([]);
   readonly pageSize = input<number>(10);
   readonly pageChange = output<PaginationState>();
+
+  readonly ChevronsUpDown = ChevronsUpDown;
+  readonly ArrowUp = ArrowUp;
+  readonly ArrowDown = ArrowDown;
+  readonly SearchX = SearchX;
+  readonly ChevronLeft = ChevronLeft;
+  readonly ChevronRight = ChevronRight;
 
   readonly currentPage = signal(1);
   readonly sortKey = signal<string>('');

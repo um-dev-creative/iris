@@ -2,138 +2,210 @@ import {
   Component,
   ChangeDetectionStrategy,
   inject,
-  OnInit,
   signal,
   computed,
+  effect,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { AppCardComponent, AppTableComponent, AppSkeletonComponent, AppBadgeComponent, AppButtonComponent } from '../../../../shared/components';
-import { DashboardDataService } from '../../services';
-import { TableColumn } from '../../../../core/models';
+import {
+  LucideAngularModule,
+  LucideIconData,
+  Search,
+  FilterX,
+  X,
+  SearchX,
+  ArrowUp,
+  ArrowDown,
+  ChevronLeft,
+  ChevronRight,
+  Smartphone,
+  MessageCircle,
+  Mail,
+} from 'lucide-angular';
+import { AppBadgeComponent, AppButtonComponent } from '../../../../shared/components';
+import { MonitoringDataService } from '../../services/monitoring-data.service';
+import { LogEntry } from '../../models/monitoring.model';
 
 @Component({
   selector: 'app-data-view-page',
   standalone: true,
   imports: [
     FormsModule,
-    AppCardComponent,
-    AppTableComponent,
-    AppSkeletonComponent,
+    LucideAngularModule,
     AppBadgeComponent,
     AppButtonComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <!-- Page header -->
-    <div class="mb-6">
-      <h2 class="text-2xl font-bold text-neutral-900 dark:text-neutral-100">Data View</h2>
-      <p class="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-        Explora y filtra datos de la API externa (JSONPlaceholder)
-      </p>
-    </div>
-
-    <!-- Filters -->
-    <app-card>
-      <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-        <div class="flex-1">
-          <label class="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">Buscar por título</label>
-          <input
-            type="text"
-            [ngModel]="searchTerm()"
-            (ngModelChange)="searchTerm.set($event)"
-            placeholder="Escribe para filtrar..."
-            class="w-full px-4 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none transition-colors dark:bg-neutral-800 dark:text-neutral-100"
-          />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">Filtrar por usuario</label>
-          <select
-            [ngModel]="selectedUserId()"
-            (ngModelChange)="selectedUserId.set($event)"
-            class="w-full px-4 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none bg-white dark:bg-neutral-800 dark:text-neutral-100 transition-colors"
-          >
-            <option [ngValue]="0">Todos los usuarios</option>
-            @for (user of dataService.users(); track user.id) {
-              <option [ngValue]="user.id">{{ user.name }}</option>
-            }
-          </select>
-        </div>
-        <div class="self-end">
-          <app-button variant="ghost" (click)="clearFilters()">Limpiar filtros</app-button>
-        </div>
-      </div>
-    </app-card>
-
-    <!-- Results count -->
-    <div class="flex items-center justify-between my-4">
-      <p class="text-sm text-neutral-500 dark:text-neutral-400">
-        {{ filteredPosts().length }} resultado(s) encontrado(s)
-      </p>
-      <app-badge color="primary">
-        Posts totales: {{ dataService.posts().length }}
-      </app-badge>
-    </div>
-
-    <!-- Data table -->
-    <app-card [noPadding]="true">
-      @if (dataService.loading()) {
-        <div class="p-6 space-y-3">
-          @for (_ of [1,2,3,4,5,6,7,8]; track $index) {
-            <app-skeleton height="40px" />
-          }
-        </div>
-      } @else {
-        <app-table
-          [columns]="columns"
-          [data]="filteredPosts()"
-          [pageSize]="10"
-        />
-      }
-    </app-card>
-  `,
+  templateUrl: './data-view-page.component.html',
   styleUrl: './data-view-page.component.css',
 })
-export class DataViewPageComponent implements OnInit {
-  readonly dataService = inject(DashboardDataService);
+export class DataViewPageComponent {
+  readonly monitoringService = inject(MonitoringDataService);
 
+  /* ── Icons ── */
+  readonly SearchIcon = Search;
+  readonly FilterXIcon = FilterX;
+  readonly XIcon = X;
+  readonly SearchXIcon = SearchX;
+  readonly ArrowUpIcon = ArrowUp;
+  readonly ArrowDownIcon = ArrowDown;
+  readonly ChevronLeftIcon = ChevronLeft;
+  readonly ChevronRightIcon = ChevronRight;
+
+  /* ── Filter state ── */
   readonly searchTerm = signal('');
-  readonly selectedUserId = signal<number>(0);
+  readonly selectedProvider = signal<string>('all');
+  readonly selectedStatus = signal<string>('all');
+  readonly sortKey = signal<string>('id');
+  readonly sortDir = signal<'asc' | 'desc'>('desc');
+  readonly currentPage = signal(1);
+  readonly pageSize = 10;
 
-  readonly columns: TableColumn[] = [
-    { key: 'id', label: 'ID', sortable: true },
-    { key: 'userId', label: 'Usuario ID', sortable: true },
-    { key: 'title', label: 'Título', sortable: true },
-    { key: 'body', label: 'Contenido' },
+  readonly columns = [
+    { key: 'id', label: 'ID' },
+    { key: 'recipient', label: 'Destinatario' },
+    { key: 'provider', label: 'Proveedor' },
+    { key: 'status', label: 'Estado' },
+    { key: 'timestamp', label: 'Timestamp' },
   ];
 
-  readonly filteredPosts = computed(() => {
-    let posts = this.dataService.posts();
+  constructor() {
+    // Reset to page 1 when filters change
+    effect(() => {
+      this.searchTerm();
+      this.selectedProvider();
+      this.selectedStatus();
+      this.currentPage.set(1);
+    }, { allowSignalWrites: true });
+  }
+
+  /* ── Computed data ── */
+  readonly filteredLogs = computed(() => {
+    let logs = this.monitoringService.allLogs();
     const search = this.searchTerm().toLowerCase();
-    const userId = this.selectedUserId();
+    const provider = this.selectedProvider();
+    const status = this.selectedStatus();
+    const key = this.sortKey();
+    const dir = this.sortDir();
 
     if (search) {
-      posts = posts.filter(
-        (p) =>
-          p.title.toLowerCase().includes(search) ||
-          p.body.toLowerCase().includes(search)
+      logs = logs.filter(
+        (l) =>
+          l.id.toLowerCase().includes(search) ||
+          l.recipient.includes(search)
       );
     }
-
-    if (userId > 0) {
-      posts = posts.filter((p) => p.userId === userId);
+    if (provider !== 'all') {
+      logs = logs.filter((l) => l.provider === provider);
+    }
+    if (status !== 'all') {
+      logs = logs.filter((l) => l.status === status);
     }
 
-    return posts as unknown as Record<string, unknown>[];
+    // Sort
+    logs = [...logs].sort((a, b) => {
+      const aVal = a[key as keyof LogEntry] ?? '';
+      const bVal = b[key as keyof LogEntry] ?? '';
+      const cmp = String(aVal).localeCompare(String(bVal));
+      return dir === 'asc' ? cmp : -cmp;
+    });
+
+    return logs;
   });
+
+  readonly totalPages = computed(() =>
+    Math.max(1, Math.ceil(this.filteredLogs().length / this.pageSize))
+  );
+
+  readonly pageStart = computed(() => (this.currentPage() - 1) * this.pageSize);
+  readonly pageEnd = computed(() =>
+    Math.min(this.pageStart() + this.pageSize, this.filteredLogs().length)
+  );
+
+  readonly paginatedLogs = computed(() =>
+    this.filteredLogs().slice(this.pageStart(), this.pageEnd())
+  );
+
+  readonly pageNumbers = computed(() => {
+    const total = this.totalPages();
+    return Array.from({ length: total }, (_, i) => i + 1);
+  });
+
+  readonly hasActiveFilters = computed(
+    () =>
+      this.searchTerm() !== '' ||
+      this.selectedProvider() !== 'all' ||
+      this.selectedStatus() !== 'all'
+  );
+
+  /* ── Stat counts ── */
+  readonly deliveredCount = computed(
+    () => this.monitoringService.allLogs().filter((l) => l.status === 'delivered').length
+  );
+  readonly failedCount = computed(
+    () => this.monitoringService.allLogs().filter((l) => l.status === 'failed').length
+  );
+  readonly pendingCount = computed(
+    () => this.monitoringService.allLogs().filter((l) => l.status === 'pending').length
+  );
+
+  /* ── Provider helpers ── */
+  private readonly providerIcons: Record<string, LucideIconData> = {
+    sms: Smartphone,
+    whatsapp: MessageCircle,
+    email: Mail,
+  };
+
+  providerIcon(provider: string): LucideIconData {
+    return this.providerIcons[provider] ?? Mail;
+  }
+
+  providerLabel(provider: string): string {
+    return ({ sms: 'SMS', whatsapp: 'WhatsApp', email: 'Email' } as Record<string, string>)[provider] ?? provider;
+  }
+
+  providerClasses(provider: string): string {
+    return ({
+      sms: 'bg-chart-1/10 text-chart-1 border border-chart-1/25',
+      whatsapp: 'bg-chart-2/10 text-chart-2 border border-chart-2/25',
+      email: 'bg-chart-4/10 text-chart-4 border border-chart-4/25',
+    } as Record<string, string>)[provider] ?? '';
+  }
+
+  /* ── Status helpers ── */
+  statusLabel(status: string): string {
+    return ({ delivered: 'Delivered', failed: 'Failed', pending: 'Pending' } as Record<string, string>)[status] ?? status;
+  }
+
+  statusClasses(status: string): string {
+    return ({
+      delivered: 'bg-chart-2/15 text-chart-2 border border-chart-2/25',
+      failed: 'bg-destructive/15 text-destructive border border-destructive/25',
+      pending: 'bg-orange/15 text-orange border border-orange/25',
+    } as Record<string, string>)[status] ?? '';
+  }
+
+  statusDotClass(status: string): string {
+    return ({
+      delivered: 'bg-chart-2',
+      failed: 'bg-destructive',
+      pending: 'bg-orange',
+    } as Record<string, string>)[status] ?? '';
+  }
+
+  /* ── Actions ── */
+  toggleSort(key: string): void {
+    if (this.sortKey() === key) {
+      this.sortDir.set(this.sortDir() === 'asc' ? 'desc' : 'asc');
+    } else {
+      this.sortKey.set(key);
+      this.sortDir.set('asc');
+    }
+  }
 
   clearFilters(): void {
     this.searchTerm.set('');
-    this.selectedUserId.set(0);
-  }
-
-  ngOnInit(): void {
-    if (this.dataService.posts().length === 0) {
-      this.dataService.loadAll();
-    }
+    this.selectedProvider.set('all');
+    this.selectedStatus.set('all');
   }
 }

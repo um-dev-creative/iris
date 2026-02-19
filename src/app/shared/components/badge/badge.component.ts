@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, input } from '@angular/core';
 
-type BadgeColor = 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'neutral';
+type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
 
 @Component({
   selector: 'app-badge',
@@ -14,17 +14,20 @@ type BadgeColor = 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | '
   styleUrl: './badge.component.css',
 })
 export class AppBadgeComponent {
-  readonly color = input<BadgeColor>('primary');
+  readonly color = input<BadgeVariant | 'primary' | 'success' | 'warning' | 'danger' | 'neutral'>('default');
 
   badgeClasses(): string {
-    const colorMap: Record<BadgeColor, string> = {
-      primary: 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300',
-      secondary: 'bg-secondary-100 text-secondary-700 dark:bg-secondary-900 dark:text-secondary-300',
-      success: 'bg-success-100 text-success-700 dark:bg-success-900 dark:text-success-300',
-      warning: 'bg-warning-100 text-warning-700 dark:bg-warning-900 dark:text-warning-300',
-      danger: 'bg-danger-100 text-danger-700 dark:bg-danger-900 dark:text-danger-300',
-      neutral: 'bg-neutral-100 text-neutral-700 dark:bg-neutral-700 dark:text-neutral-300',
+    const colorMap: Record<string, string> = {
+      default: 'bg-primary text-primary-foreground',
+      primary: 'bg-primary text-primary-foreground',
+      secondary: 'bg-secondary text-secondary-foreground',
+      destructive: 'bg-destructive text-destructive-foreground',
+      danger: 'bg-destructive text-destructive-foreground',
+      outline: 'border border-border text-foreground',
+      success: 'bg-chart-2 text-primary-foreground',
+      warning: 'bg-chart-5 text-primary-foreground',
+      neutral: 'bg-muted text-muted-foreground',
     };
-    return colorMap[this.color()];
+    return colorMap[this.color()] ?? colorMap['default'];
   }
 }

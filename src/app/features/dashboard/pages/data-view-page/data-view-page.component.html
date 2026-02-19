@@ -1,0 +1,258 @@
+<!-- Page Header -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+  <div>
+    <h2 class="text-2xl font-bold text-foreground">Data View</h2>
+    <p class="text-sm text-muted-foreground mt-1">
+      Explorar y filtrar el historial de mensajes del sistema
+    </p>
+  </div>
+  <div class="flex items-center gap-2">
+    <app-badge color="primary">
+      {{ filteredLogs().length }} de {{ monitoringService.allLogs().length }} registros
+    </app-badge>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="bg-card rounded-xl border border-border shadow-sm p-5 mb-6 animate-fade-in">
+  <div class="flex flex-col lg:flex-row gap-4 items-start lg:items-end">
+    <!-- Search -->
+    <div class="flex-1 w-full">
+      <label class="block text-xs font-medium text-muted-foreground mb-1.5">
+        Buscar por ID o destinatario
+      </label>
+      <div class="relative">
+        <lucide-icon
+          [img]="SearchIcon"
+          [size]="16"
+          strokeWidth="1.5"
+          class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+        />
+        <input
+          type="text"
+          [ngModel]="searchTerm()"
+          (ngModelChange)="searchTerm.set($event)"
+          placeholder="MSG-28401, +34 612..."
+          class="w-full pl-9 pr-4 py-2 border border-input rounded-lg text-sm focus:border-ring focus:ring-1 focus:ring-ring outline-none transition-colors bg-background text-foreground"
+        />
+      </div>
+    </div>
+
+    <!-- Provider filter -->
+    <div class="w-full lg:w-44">
+      <label class="block text-xs font-medium text-muted-foreground mb-1.5">
+        Proveedor
+      </label>
+      <select
+        [ngModel]="selectedProvider()"
+        (ngModelChange)="selectedProvider.set($event)"
+        class="w-full px-3 py-2 border border-input rounded-lg text-sm focus:border-ring focus:ring-1 focus:ring-ring outline-none bg-background text-foreground transition-colors"
+      >
+        <option value="all">Todos</option>
+        <option value="sms">SMS</option>
+        <option value="whatsapp">WhatsApp</option>
+        <option value="email">Email</option>
+      </select>
+    </div>
+
+    <!-- Status filter -->
+    <div class="w-full lg:w-44">
+      <label class="block text-xs font-medium text-muted-foreground mb-1.5">
+        Estado
+      </label>
+      <select
+        [ngModel]="selectedStatus()"
+        (ngModelChange)="selectedStatus.set($event)"
+        class="w-full px-3 py-2 border border-input rounded-lg text-sm focus:border-ring focus:ring-1 focus:ring-ring outline-none bg-background text-foreground transition-colors"
+      >
+        <option value="all">Todos</option>
+        <option value="delivered">Delivered</option>
+        <option value="failed">Failed</option>
+        <option value="pending">Pending</option>
+      </select>
+    </div>
+
+    <!-- Clear filters -->
+    <app-button variant="ghost" (click)="clearFilters()">
+      <div class="flex items-center gap-1.5">
+        <lucide-icon [img]="FilterXIcon" [size]="14" strokeWidth="1.5" />
+        <span>Limpiar</span>
+      </div>
+    </app-button>
+  </div>
+
+  <!-- Active filter pills -->
+  @if (hasActiveFilters()) {
+    <div class="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-border">
+      <span class="text-xs text-muted-foreground">Filtros activos:</span>
+      @if (searchTerm()) {
+        <button
+          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+          (click)="searchTerm.set('')"
+        >
+          Búsqueda: "{{ searchTerm() }}"
+          <lucide-icon [img]="XIcon" [size]="12" strokeWidth="2" />
+        </button>
+      }
+      @if (selectedProvider() !== 'all') {
+        <button
+          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-accent text-accent-foreground hover:bg-accent/80 transition-colors"
+          (click)="selectedProvider.set('all')"
+        >
+          {{ providerLabel(selectedProvider()) }}
+          <lucide-icon [img]="XIcon" [size]="12" strokeWidth="2" />
+        </button>
+      }
+      @if (selectedStatus() !== 'all') {
+        <button
+          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-chart-2/10 text-chart-2 hover:bg-chart-2/20 transition-colors"
+          (click)="selectedStatus.set('all')"
+        >
+          {{ statusLabel(selectedStatus()) }}
+          <lucide-icon [img]="XIcon" [size]="12" strokeWidth="2" />
+        </button>
+      }
+    </div>
+  }
+</div>
+
+<!-- Stats pills -->
+<div class="grid grid-cols-3 gap-3 mb-6">
+  <div class="bg-chart-2/10 border border-chart-2/20 rounded-lg p-3 text-center">
+    <p class="text-lg font-bold text-chart-2">{{ deliveredCount() }}</p>
+    <p class="text-xs text-muted-foreground">Delivered</p>
+  </div>
+  <div class="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-center">
+    <p class="text-lg font-bold text-destructive">{{ failedCount() }}</p>
+    <p class="text-xs text-muted-foreground">Failed</p>
+  </div>
+  <div class="bg-orange/10 border border-orange/20 rounded-lg p-3 text-center">
+    <p class="text-lg font-bold text-orange">{{ pendingCount() }}</p>
+    <p class="text-xs text-muted-foreground">Pending</p>
+  </div>
+</div>
+
+<!-- Data table -->
+<div class="bg-card rounded-xl border border-border shadow-sm animate-fade-in" style="animation-delay: 200ms">
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead>
+        <tr class="border-b border-border">
+          @for (col of columns; track col.key) {
+            <th
+              class="text-left text-xs font-medium text-muted-foreground px-5 py-3 cursor-pointer select-none hover:text-foreground transition-colors"
+              (click)="toggleSort(col.key)"
+            >
+              <span class="inline-flex items-center gap-1">
+                {{ col.label }}
+                @if (sortKey() === col.key) {
+                  <lucide-icon
+                    [img]="sortDir() === 'asc' ? ArrowUpIcon : ArrowDownIcon"
+                    [size]="12"
+                    strokeWidth="2"
+                  />
+                }
+              </span>
+            </th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (log of paginatedLogs(); track log.id) {
+          <tr
+            class="border-b border-border last:border-b-0 hover:bg-muted/50 transition-colors"
+          >
+            <td class="px-5 py-3">
+              <span class="text-sm font-mono font-medium text-card-foreground">
+                {{ log.id }}
+              </span>
+            </td>
+            <td class="px-5 py-3">
+              <span class="text-sm text-card-foreground">{{ log.recipient }}</span>
+            </td>
+            <td class="px-5 py-3">
+              <span
+                [class]="
+                  'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium ' +
+                  providerClasses(log.provider)
+                "
+              >
+                <lucide-icon
+                  [img]="providerIcon(log.provider)"
+                  [size]="12"
+                  strokeWidth="1.5"
+                />
+                {{ providerLabel(log.provider) }}
+              </span>
+            </td>
+            <td class="px-5 py-3">
+              <span
+                [class]="
+                  'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ' +
+                  statusClasses(log.status)
+                "
+              >
+                <span [class]="'w-1.5 h-1.5 rounded-full ' + statusDotClass(log.status)"></span>
+                {{ statusLabel(log.status) }}
+              </span>
+            </td>
+            <td class="px-5 py-3">
+              <span class="text-sm text-muted-foreground font-mono">
+                {{ log.timestamp }}
+              </span>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="5" class="px-5 py-12 text-center">
+              <div class="flex flex-col items-center gap-2">
+                <lucide-icon [img]="SearchXIcon" [size]="32" strokeWidth="1" class="text-muted-foreground" />
+                <p class="text-sm text-muted-foreground">No se encontraron registros</p>
+                <button
+                  class="text-xs text-primary hover:underline"
+                  (click)="clearFilters()"
+                >
+                  Limpiar filtros
+                </button>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  @if (totalPages() > 1) {
+    <div class="flex items-center justify-between px-5 py-3 border-t border-border">
+      <p class="text-xs text-muted-foreground">
+        Mostrando {{ pageStart() + 1 }}-{{ pageEnd() }} de {{ filteredLogs().length }}
+      </p>
+      <div class="flex items-center gap-1">
+        <button
+          class="p-1.5 rounded-md hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed text-muted-foreground hover:text-foreground transition-colors"
+          [disabled]="currentPage() === 1"
+          (click)="currentPage.set(currentPage() - 1)"
+        >
+          <lucide-icon [img]="ChevronLeftIcon" [size]="16" strokeWidth="1.5" />
+        </button>
+        @for (p of pageNumbers(); track p) {
+          <button
+            class="w-8 h-8 rounded-md text-xs font-medium transition-colors"
+            [class]="p === currentPage() ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'"
+            (click)="currentPage.set(p)"
+          >
+            {{ p }}
+          </button>
+        }
+        <button
+          class="p-1.5 rounded-md hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed text-muted-foreground hover:text-foreground transition-colors"
+          [disabled]="currentPage() === totalPages()"
+          (click)="currentPage.set(currentPage() + 1)"
+        >
+          <lucide-icon [img]="ChevronRightIcon" [size]="16" strokeWidth="1.5" />
+        </button>
+      </div>
+    </div>
+  }
+</div>
