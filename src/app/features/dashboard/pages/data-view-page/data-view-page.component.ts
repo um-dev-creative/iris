@@ -179,17 +179,17 @@ export class DataViewPageComponent {
 
   statusClasses(status: string): string {
     return ({
-      delivered: 'bg-chart-2/15 text-chart-2 border border-chart-2/25',
+      delivered: 'bg-success/15 text-success border border-success/25',
       failed: 'bg-destructive/15 text-destructive border border-destructive/25',
-      pending: 'bg-orange/15 text-orange border border-orange/25',
+      pending: 'bg-chart-1/15 text-chart-1 border border-chart-1/25',
     } as Record<string, string>)[status] ?? '';
   }
 
   statusDotClass(status: string): string {
     return ({
-      delivered: 'bg-chart-2',
+      delivered: 'bg-success',
       failed: 'bg-destructive',
-      pending: 'bg-orange',
+      pending: 'bg-chart-1',
     } as Record<string, string>)[status] ?? '';
   }
 

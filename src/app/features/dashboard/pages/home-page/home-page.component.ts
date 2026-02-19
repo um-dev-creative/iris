@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   inject,
   computed,
+  signal,
 } from '@angular/core';
 import {
   LucideAngularModule,
@@ -14,6 +15,7 @@ import {
   Smartphone,
   MessageCircle,
   Mail,
+  Filter,
 } from 'lucide-angular';
 import { SparklineComponent } from '../../components/sparkline/sparkline.component';
 import { ServiceStatusCardComponent } from '../../components/service-status-card/service-status-card.component';
@@ -40,6 +42,21 @@ export class HomePageComponent {
   readonly RefreshCwIcon = RefreshCw;
   readonly TrendingUpIcon = TrendingUp;
   readonly TrendingDownIcon = TrendingDown;
+  readonly FilterIcon = Filter;
+
+  /* ── Log status filter ── */
+  readonly logStatusFilter = signal<'all' | 'delivered' | 'failed' | 'pending'>('all');
+  readonly logStatusOptions: { value: 'all' | 'delivered' | 'failed' | 'pending'; label: string }[] = [
+    { value: 'all', label: 'All' },
+    { value: 'delivered', label: 'Delivered' },
+    { value: 'failed', label: 'Failed' },
+    { value: 'pending', label: 'Pending' },
+  ];
+  readonly filteredLogs = computed(() => {
+    const filter = this.logStatusFilter();
+    const logs = this.monitoringService.logs();
+    return filter === 'all' ? logs : logs.filter(l => l.status === filter);
+  });
 
   /* ── Provider helpers ── */
   private readonly providerIcons: Record<string, LucideIconData> = {
@@ -80,9 +97,9 @@ export class HomePageComponent {
   statusClasses(status: string): string {
     return (
       ({
-        delivered: 'bg-chart-2/15 text-chart-2 border border-chart-2/25',
+        delivered: 'bg-success/15 text-success border border-success/25',
         failed: 'bg-destructive/15 text-destructive border border-destructive/25',
-        pending: 'bg-orange/15 text-orange border border-orange/25',
+        pending: 'bg-chart-1/15 text-chart-1 border border-chart-1/25',
       } as Record<string, string>)[status] ?? ''
     );
   }
@@ -90,9 +107,9 @@ export class HomePageComponent {
   statusDotClass(status: string): string {
     return (
       ({
-        delivered: 'bg-chart-2',
+        delivered: 'bg-success',
         failed: 'bg-destructive',
-        pending: 'bg-orange',
+        pending: 'bg-chart-1',
       } as Record<string, string>)[status] ?? ''
     );
   }
@@ -100,7 +117,7 @@ export class HomePageComponent {
   /* ── Trend colour ── */
   trendColorClass(kpi: MonitoringKpi): string {
     const isGood = kpi.invertTrend ? kpi.trend < 0 : kpi.trend >= 0;
-    return isGood ? 'text-chart-2' : 'text-destructive';
+    return isGood ? 'text-success' : 'text-destructive';
   }
 
   /* ── Overall service status ── */
@@ -115,8 +132,8 @@ export class HomePageComponent {
 
   readonly overallStatusClasses = computed(() => {
     const map: Record<string, string> = {
-      'all-operational': 'bg-chart-2/15 text-chart-2 border border-chart-2/25',
-      'partial-degradation': 'bg-orange/15 text-orange border border-orange/25',
+      'all-operational': 'bg-success/15 text-success border border-success/25',
+      'partial-degradation': 'bg-chart-3/15 text-chart-3 border border-chart-3/25',
       'major-outage': 'bg-destructive/15 text-destructive border border-destructive/25',
     };
     return map[this.monitoringService.overallStatus()] ?? '';
@@ -124,8 +141,8 @@ export class HomePageComponent {
 
   readonly overallDotClass = computed(() => {
     const map: Record<string, string> = {
-      'all-operational': 'bg-chart-2',
-      'partial-degradation': 'bg-orange',
+      'all-operational': 'bg-success',
+      'partial-degradation': 'bg-chart-3',
       'major-outage': 'bg-destructive',
     };
     return map[this.monitoringService.overallStatus()] ?? '';

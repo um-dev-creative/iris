@@ -24,8 +24,8 @@ export class AppBadgeComponent {
       destructive: 'bg-destructive text-destructive-foreground',
       danger: 'bg-destructive text-destructive-foreground',
       outline: 'border border-border text-foreground',
-      success: 'bg-chart-2 text-primary-foreground',
-      warning: 'bg-chart-5 text-primary-foreground',
+      success: 'bg-success text-success-foreground',
+      warning: 'bg-warning text-warning-foreground',
       neutral: 'bg-muted text-muted-foreground',
     };
     return colorMap[this.color()] ?? colorMap['default'];

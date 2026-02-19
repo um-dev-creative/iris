@@ -76,8 +76,8 @@ export class ServiceStatusCardComponent {
 
   readonly statusBadgeClasses = computed(() => {
     const map: Record<string, string> = {
-      operational: 'bg-chart-2/15 text-chart-2 border border-chart-2/25',
-      degraded: 'bg-chart-5/15 text-chart-5 border border-chart-5/25',
+      operational: 'bg-success/15 text-success border border-success/25',
+      degraded: 'bg-warning/15 text-warning border border-warning/25',
       down: 'bg-destructive/15 text-destructive border border-destructive/25',
     };
     return map[this.service().status];
@@ -85,8 +85,8 @@ export class ServiceStatusCardComponent {
 
   readonly dotClass = computed(() => {
     const map: Record<string, string> = {
-      operational: 'bg-chart-2',
-      degraded: 'bg-chart-5',
+      operational: 'bg-success',
+      degraded: 'bg-warning',
       down: 'bg-destructive',
     };
     return map[this.service().status];
@@ -94,8 +94,8 @@ export class ServiceStatusCardComponent {
 
   readonly iconClasses = computed(() => {
     const map: Record<string, string> = {
-      operational: 'bg-chart-2/10 text-chart-2',
-      degraded: 'bg-chart-5/10 text-chart-5',
+      operational: 'bg-success/10 text-success',
+      degraded: 'bg-warning/10 text-warning',
       down: 'bg-destructive/10 text-destructive',
     };
     return map[this.service().status];

@@ -28,10 +28,10 @@ import { KpiCard } from '../../../../core/models';
             [img]="data().change! >= 0 ? TrendingUp : TrendingDown"
             [size]="14"
             strokeWidth="2"
-            [class]="data().change! >= 0 ? 'text-chart-2' : 'text-destructive'" />
+            [class]="data().change! >= 0 ? 'text-success' : 'text-destructive'" />
           <span
             class="text-sm font-medium"
-            [class]="data().change! >= 0 ? 'text-chart-2' : 'text-destructive'"
+            [class]="data().change! >= 0 ? 'text-success' : 'text-destructive'"
           >
             {{ data().change! >= 0 ? data().change : -data().change! }}%
           </span>

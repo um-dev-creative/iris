@@ -33,7 +33,7 @@
           [ngModel]="searchTerm()"
           (ngModelChange)="searchTerm.set($event)"
           placeholder="MSG-28401, +34 612..."
-          class="w-full pl-9 pr-4 py-2 border border-input rounded-lg text-sm focus:border-ring focus:ring-1 focus:ring-ring outline-none transition-colors bg-background text-foreground"
+          class="w-full pl-10 pr-4 py-2 border border-input rounded-lg text-sm focus:border-ring focus:ring-1 focus:ring-ring outline-none transition-colors bg-background text-foreground"
         />
       </div>
     </div>
@@ -105,7 +105,7 @@
       }
       @if (selectedStatus() !== 'all') {
         <button
-          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-chart-2/10 text-chart-2 hover:bg-chart-2/20 transition-colors"
+          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-success/10 text-success hover:bg-success/20 transition-colors"
           (click)="selectedStatus.set('all')"
         >
           {{ statusLabel(selectedStatus()) }}
@@ -118,16 +118,16 @@
 
 <!-- Stats pills -->
 <div class="grid grid-cols-3 gap-3 mb-6">
-  <div class="bg-chart-2/10 border border-chart-2/20 rounded-lg p-3 text-center">
-    <p class="text-lg font-bold text-chart-2">{{ deliveredCount() }}</p>
+  <div class="bg-success/10 border border-success/20 rounded-lg p-3 text-center">
+    <p class="text-lg font-bold text-success">{{ deliveredCount() }}</p>
     <p class="text-xs text-muted-foreground">Delivered</p>
   </div>
   <div class="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-center">
     <p class="text-lg font-bold text-destructive">{{ failedCount() }}</p>
     <p class="text-xs text-muted-foreground">Failed</p>
   </div>
-  <div class="bg-orange/10 border border-orange/20 rounded-lg p-3 text-center">
-    <p class="text-lg font-bold text-orange">{{ pendingCount() }}</p>
+  <div class="bg-chart-1/10 border border-chart-1/20 rounded-lg p-3 text-center">
+    <p class="text-lg font-bold text-chart-1">{{ pendingCount() }}</p>
     <p class="text-xs text-muted-foreground">Pending</p>
   </div>
 </div>

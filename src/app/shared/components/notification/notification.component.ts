@@ -21,13 +21,13 @@ import {
           <div class="flex-shrink-0 mt-0.5">
             @switch (toast.type) {
               @case ('success') {
-                <lucide-icon [img]="CircleCheck" [size]="20" strokeWidth="1.5" class="text-chart-2" />
+                <lucide-icon [img]="CircleCheck" [size]="20" strokeWidth="1.5" class="text-success" />
               }
               @case ('error') {
                 <lucide-icon [img]="CircleX" [size]="20" strokeWidth="1.5" class="text-destructive" />
               }
               @case ('warning') {
-                <lucide-icon [img]="TriangleAlert" [size]="20" strokeWidth="1.5" class="text-chart-5" />
+                <lucide-icon [img]="TriangleAlert" [size]="20" strokeWidth="1.5" class="text-warning" />
               }
               @default {
                 <lucide-icon [img]="Info" [size]="20" strokeWidth="1.5" class="text-primary" />
