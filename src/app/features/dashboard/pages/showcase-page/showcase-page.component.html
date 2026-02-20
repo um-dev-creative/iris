@@ -319,7 +319,7 @@
             <div class="flex-1 flex items-end gap-3 px-2">
               @for (val of barChartData; track $index) {
                 <div
-                  class="flex-1 rounded-t-md bg-chart-1 transition-all duration-300 hover:bg-chart-2 min-h-[4px]"
+                  class="flex-1 rounded-t-md bg-chart-1 transition-all duration-300 hover:bg-chart-2 min-h-1"
                   [style.height]="val + '%'"
                 ></div>
               }

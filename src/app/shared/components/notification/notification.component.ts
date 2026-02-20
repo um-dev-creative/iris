@@ -18,7 +18,7 @@ import {
           [class]="toastClasses(toast)"
         >
           <!-- Icon -->
-          <div class="flex-shrink-0 mt-0.5">
+          <div class="shrink-0 mt-0.5">
             @switch (toast.type) {
               @case ('success') {
                 <lucide-icon [img]="CircleCheck" [size]="20" strokeWidth="1.5" class="text-success" />
@@ -43,7 +43,7 @@ import {
 
           <!-- Dismiss -->
           <button
-            class="flex-shrink-0 text-muted-foreground hover:text-foreground transition-opacity"
+            class="shrink-0 text-muted-foreground hover:text-foreground transition-opacity"
             (click)="notificationService.dismiss(toast.id)"
             aria-label="Dismiss notification"
           >
