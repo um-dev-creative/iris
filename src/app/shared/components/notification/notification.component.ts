@@ -14,7 +14,7 @@ import {
     <div class="fixed top-4 right-4 z-50 flex flex-col gap-3 max-w-sm w-full pointer-events-none">
       @for (toast of notificationService.toasts(); track toast.id) {
         <div
-          class="pointer-events-auto rounded-lg shadow-lg border p-4 flex items-start gap-3 animate-slide-in-from-right"
+          class="pointer-events-auto rounded-lg shadow-lg border p-4 flex items-start gap-3 animate-in slide-in-from-right duration-300"
           [class]="toastClasses(toast)"
         >
           <!-- Icon -->
@@ -27,7 +27,7 @@ import {
                 <lucide-icon [img]="CircleX" [size]="20" strokeWidth="1.5" class="text-destructive" />
               }
               @case ('warning') {
-                <lucide-icon [img]="TriangleAlert" [size]="20" strokeWidth="1.5" class="text-warning" />
+                <lucide-icon [img]="TriangleAlert" [size]="20" strokeWidth="1.5" class="text-warning-foreground dark:text-warning" />
               }
               @default {
                 <lucide-icon [img]="Info" [size]="20" strokeWidth="1.5" class="text-primary" />
@@ -64,10 +64,10 @@ export class AppNotificationComponent {
 
   toastClasses(toast: ToastMessage): string {
     const map: Record<string, string> = {
-      success: 'bg-card border-border text-card-foreground',
-      error: 'bg-card border-destructive/50 text-card-foreground',
-      warning: 'bg-card border-border text-card-foreground',
-      info: 'bg-card border-border text-card-foreground',
+      success: 'bg-card border-success text-card-foreground',
+      error: 'bg-card border-destructive text-card-foreground',
+      warning: 'bg-card border-warning text-card-foreground',
+      info: 'bg-card border-primary text-card-foreground',
     };
     return map[toast.type] ?? map['info'];
   }

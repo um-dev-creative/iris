@@ -29,6 +29,7 @@ import {
   Info,
   X,
   TrendingUp,
+  TrendingDown,
   Users,
   ShoppingCart,
   Activity,
@@ -38,6 +39,9 @@ import {
   Type,
   Square,
   Circle,
+  MessageSquare,
+  CircleCheckBig,
+  Clock,
 } from 'lucide-angular';
 import {
   AppCardComponent,
@@ -47,6 +51,9 @@ import {
   ThemeToggleComponent,
 } from '../../../../shared/components';
 import { NotificationService } from '../../../../core/services';
+import {
+  SparklineComponent,
+} from '../../components';
 
 @Component({
   selector: 'app-showcase-page',
@@ -58,6 +65,7 @@ import { NotificationService } from '../../../../core/services';
     AppBadgeComponent,
     AppSkeletonComponent,
     ThemeToggleComponent,
+    SparklineComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './showcase-page.component.html',
@@ -122,18 +130,83 @@ export class ShowcasePageComponent {
     { label: 'Sidebar Border', token: 'bg-sidebar-border', bgClass: 'bg-sidebar-border' },
   ];
 
+  readonly chartSwatches = [
+    { label: 'chart-1', bgClass: 'bg-chart-1' },
+    { label: 'chart-2', bgClass: 'bg-chart-2' },
+    { label: 'chart-3', bgClass: 'bg-chart-3' },
+    { label: 'chart-4', bgClass: 'bg-chart-4' },
+    { label: 'chart-5', bgClass: 'bg-chart-5' },
+  ];
+
   // ── Animations ──
   readonly animations = [
-    { name: 'Fade In', class: 'animate-fade-in' },
-    { name: 'Slide In Right', class: 'animate-slide-in-from-right' },
-    { name: 'Slide In Bottom', class: 'animate-slide-in-from-bottom' },
-    { name: 'Zoom In', class: 'animate-zoom-in' },
+    { name: 'Fade In', class: 'animate-in fade-in duration-700' },
+    { name: 'Slide In Right', class: 'animate-in slide-in-from-right duration-700' },
+    { name: 'Slide In Bottom', class: 'animate-in slide-in-from-bottom duration-700' },
+    { name: 'Zoom In', class: 'animate-in zoom-in duration-700' },
     { name: 'Spin', class: 'animate-spin' },
     { name: 'Pulse', class: 'animate-pulse' },
     { name: 'Bounce', class: 'animate-bounce' },
-    { name: 'Fade Out', class: 'animate-fade-out' },
+    { name: 'Fade Out', class: 'animate-out fade-out duration-700' },
   ];
 
+  // ── KPI card showcase data ──
+  readonly TrendingUp = TrendingUp;
+  readonly TrendingDown = TrendingDown;
+  readonly showcaseKpis = [
+    {
+      title: 'Mensajes Totales (24h)',
+      value: '1,284,392',
+      trend: 12.5,
+      trendLabel: '%',
+      positive: true,
+      icon: MessageSquare,
+      sparkData: [30, 35, 28, 42, 38, 50, 45, 55, 48, 60, 52, 58],
+      sparkColor: 'var(--chart-1)',
+      iconBg: 'bg-chart-1/15',
+      iconText: 'text-chart-1',
+    },
+    {
+      title: 'Tasa de Entrega',
+      value: '98.7%',
+      trend: 0.3,
+      trendLabel: '%',
+      positive: true,
+      icon: CircleCheckBig,
+      sparkData: [95, 96, 97, 96, 98, 97, 98, 99, 98, 99, 98, 99],
+      sparkColor: 'var(--success)',
+      iconBg: 'bg-success/15',
+      iconText: 'text-success',
+    },
+    {
+      title: 'Latencia Promedio',
+      value: '142 ms',
+      trend: -8.2,
+      trendLabel: '%',
+      positive: false,
+      icon: Clock,
+      sparkData: [160, 155, 150, 148, 145, 142, 148, 140, 145, 138, 142, 140],
+      sparkColor: 'var(--chart-3)',
+      iconBg: 'bg-chart-3/15',
+      iconText: 'text-chart-3',
+    },
+    {
+      title: 'Errores Activos',
+      value: '23',
+      trend: 5,
+      trendLabel: '',
+      positive: false,
+      icon: TriangleAlert,
+      sparkData: [12, 15, 18, 14, 20, 22, 19, 25, 21, 28, 24, 23],
+      sparkColor: 'var(--destructive)',
+      iconBg: 'bg-destructive/15',
+      iconText: 'text-destructive',
+    },
+  ];
+
+  // ── Chart sample data ──
+  readonly barChartData = [65, 45, 80, 35, 70, 55, 90];
+  readonly barChartLabels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul'];
   // ── Radius tokens ──
   readonly radiusTokens = [
     { name: 'sm', class: 'rounded-sm' },

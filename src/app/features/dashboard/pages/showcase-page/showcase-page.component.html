@@ -31,13 +31,10 @@
     <div>
       <h4 class="text-sm font-semibold text-foreground mb-3">Charts</h4>
       <div class="flex gap-3">
-        @for (i of [1,2,3,4,5]; track i) {
+        @for (swatch of chartSwatches; track swatch.label) {
           <div class="space-y-1.5 flex-1">
-            <div
-              class="h-10 rounded-lg"
-              [class]="'bg-chart-' + i"
-            ></div>
-            <p class="text-[10px] text-muted-foreground font-mono text-center">chart-{{ i }}</p>
+            <div class="h-10 rounded-lg" [class]="swatch.bgClass"></div>
+            <p class="text-[10px] text-muted-foreground font-mono text-center">{{ swatch.label }}</p>
           </div>
         }
       </div>
@@ -263,6 +260,118 @@
       <app-button variant="danger" (click)="showToast('error')">
         Error Toast
       </app-button>
+    </div>
+  </app-card>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- KPI CARDS                                   -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="mt-6">
+  <app-card title="KPI Cards" subtitle="Metric cards with sparklines, trend indicators and icons">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      @for (kpi of showcaseKpis; track kpi.title) {
+        <div class="bg-card rounded-xl border border-border shadow-sm p-5 hover:shadow-md transition-shadow">
+          <div class="flex items-start justify-between">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-3">
+                <div
+                  [class]="'w-8 h-8 rounded-lg flex items-center justify-center ' + kpi.iconBg + ' ' + kpi.iconText"
+                >
+                  <lucide-icon [img]="kpi.icon" [size]="16" strokeWidth="1.5" />
+                </div>
+                <p class="text-xs font-medium text-muted-foreground truncate">{{ kpi.title }}</p>
+                <div
+                  [class]="'ml-auto flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ' +
+                    (kpi.positive ? 'bg-success/15 text-success' : 'bg-destructive/15 text-destructive')"
+                >
+                  <lucide-icon
+                    [img]="kpi.positive ? TrendingUp : TrendingDown"
+                    [size]="12"
+                    strokeWidth="2"
+                  />
+                  <span>{{ kpi.trend >= 0 ? '+' : '' }}{{ kpi.trend }}{{ kpi.trendLabel }}</span>
+                </div>
+              </div>
+              <p class="text-2xl font-bold text-card-foreground">{{ kpi.value }}</p>
+            </div>
+          </div>
+          <div class="h-10 mt-3 -mx-1">
+            <app-sparkline [data]="kpi.sparkData" [color]="kpi.sparkColor" />
+          </div>
+        </div>
+      }
+    </div>
+  </app-card>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- CHARTS                                      -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="mt-6">
+  <app-card title="Charts" subtitle="SVG-based charts built with design tokens">
+    <div class="space-y-8">
+      <!-- Bar chart -->
+      <div>
+        <p class="text-xs text-muted-foreground mb-3">Bar Chart</p>
+        <app-card title="Ingresos mensuales">
+          <div class="h-64 flex flex-col">
+            <div class="flex-1 flex items-end gap-3 px-2">
+              @for (val of barChartData; track $index) {
+                <div
+                  class="flex-1 rounded-t-md bg-chart-1 transition-all duration-300 hover:bg-chart-2 min-h-[4px]"
+                  [style.height]="val + '%'"
+                ></div>
+              }
+            </div>
+            <div class="flex justify-between text-xs text-muted-foreground mt-2 px-2">
+              @for (label of barChartLabels; track $index) {
+                <span class="flex-1 text-center">{{ label }}</span>
+              }
+            </div>
+          </div>
+        </app-card>
+      </div>
+
+      <!-- Donut chart -->
+      <div>
+        <p class="text-xs text-muted-foreground mb-3">Donut Chart</p>
+        <app-card title="Distribución por canal">
+          <div class="flex flex-col sm:flex-row items-center gap-6">
+            <div class="w-48 h-48">
+              <svg viewBox="0 0 100 100" class="w-full h-full -rotate-90">
+                <circle cx="50" cy="50" r="38" fill="none" stroke="var(--chart-1)" stroke-width="12"
+                  stroke-dasharray="95.5 143.3" stroke-dashoffset="0" stroke-linecap="round" />
+                <circle cx="50" cy="50" r="38" fill="none" stroke="var(--chart-2)" stroke-width="12"
+                  stroke-dasharray="71.6 167.2" stroke-dashoffset="-95.5" stroke-linecap="round" />
+                <circle cx="50" cy="50" r="38" fill="none" stroke="var(--chart-3)" stroke-width="12"
+                  stroke-dasharray="47.7 191" stroke-dashoffset="-167.1" stroke-linecap="round" />
+                <circle cx="50" cy="50" r="38" fill="none" stroke="var(--chart-4)" stroke-width="12"
+                  stroke-dasharray="23.9 214.9" stroke-dashoffset="-214.8" stroke-linecap="round" />
+              </svg>
+            </div>
+            <div class="space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-chart-1"></span>
+                <span class="text-sm text-foreground">SMS — 40%</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-chart-2"></span>
+                <span class="text-sm text-foreground">WhatsApp — 30%</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-chart-3"></span>
+                <span class="text-sm text-foreground">Email — 20%</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-chart-4"></span>
+                <span class="text-sm text-foreground">Push — 10%</span>
+              </div>
+            </div>
+          </div>
+        </app-card>
+      </div>
+
     </div>
   </app-card>
 </div>
