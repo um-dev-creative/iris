@@ -1,0 +1,16 @@
+ssl:
+  enabled: SSL_ENABLED
+  certificateType: SSL_CERTIFICATE_TYPE
+  keyPath: SSL_KEY_PATH
+  certPath: SSL_CERT_PATH
+
+proxy:
+  http:
+    host: HTTP_PROXY_HOST
+    port: HTTP_PROXY_PORT
+  service:
+    map: API_SERVICE_MAP
+    requestTimeout: API_SERVICE_REQUEST_TIMEOUT
+    mercury:
+      url: API_MERCURY_MAP
+      requestTimeout: API_SERVICE_REQUEST_TIMEOUT
