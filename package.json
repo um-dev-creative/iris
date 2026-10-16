@@ -4,6 +4,7 @@
   "main": "server.js",
   "scripts": {
     "ng": "ng",
+    "prepare": "git config core.hooksPath .githooks",
     "start": "ng serve",
     "build": "cross-env ng build --configuration=$ENVM",
     "build:dev": "ng build --configuration development",
