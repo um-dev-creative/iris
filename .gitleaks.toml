@@ -1,0 +1,8 @@
+title = "iris gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Plantillas sin valores"
+paths = ['''default\.env\.example$''']
