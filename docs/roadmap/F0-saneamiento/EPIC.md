@@ -17,7 +17,7 @@ Dejar el repositorio seguro, versionado, con un solo servidor y con el quality g
 - [x] No hay secretos en el índice ni en el historial publicado
 - [ ] La rama `mer-1` está integrada en `main` mediante PR
 - [x] Existe un único punto de entrada del servidor
-- [ ] CI ejecuta build SSR + pruebas y bloquea si la cobertura < 85 %
+- [x] CI ejecuta build SSR + pruebas y bloquea si la cobertura < 85 %
 - [ ] `CHANGELOG.md`, README y plantillas de PR existen y están al día
 
 ## Tareas
@@ -34,5 +34,5 @@ Leyenda: ✅ completada · 🔄 en revisión · ⬜ pendiente
 | [F0-06](F0-06-vitest-quality-gate-85.md) | Migrar las pruebas a Vitest y configurar el quality gate de cobertura 85 % | Critical | ● | ● | ● | 2d | F0-02 | ✅ |
 | [F0-07](F0-07-backfill-pruebas-frontend.md) | Backfill de pruebas del frontend existente hasta 85 % | Critical | ● |  |  | 3d | F0-04, F0-06 | ✅ |
 | [F0-08](F0-08-backfill-pruebas-bff.md) | Backfill de pruebas del BFF hasta 85 % | Critical |  | ● |  | 4d | F0-03, F0-06 | ✅ |
-| [F0-09](F0-09-pipeline-ci.md) | Pipeline de CI con build SSR, pruebas y cobertura | Critical |  |  | ● | 1d | F0-06 | 🔄 1er run |
+| [F0-09](F0-09-pipeline-ci.md) | Pipeline de CI con build SSR, pruebas y cobertura | Critical |  |  | ● | 1d | F0-06 | ✅ |
 | [F0-10](F0-10-changelog-readme-plantillas.md) | Crear CHANGELOG, actualizar README y plantillas de PR | Major |  |  | ● | 0.5d | F0-05 | ⬜ |
