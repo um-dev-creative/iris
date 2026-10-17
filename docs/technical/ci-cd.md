@@ -2,7 +2,7 @@
 
 ## Pipeline (`.github/workflows/ci.yml`)
 
-Se ejecuta en cada `pull_request` y en `push` a `main`; un push nuevo cancela la ejecución anterior del mismo ref. Un solo job (`ci`, límite 10 min) con estas etapas:
+Se ejecuta en cada `pull_request` y en `push` a `main`; un push nuevo cancela la ejecución anterior del mismo ref. Dos jobs. `ci` (`Build, tests y cobertura`, límite 10 min) es el requerido y tiene estas etapas; `build-entornos` (`Build por entorno`) compila el SSR con cada `ENVM` válido en paralelo (ver [entornos](environments.md)).
 
 | # | Etapa | Comando | Falla si… |
 |---|---|---|---|

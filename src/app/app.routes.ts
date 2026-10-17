@@ -1,15 +1,16 @@
 import { Routes } from '@angular/router';
 import { LayoutComponent } from './layout/layout.component';
 import { authGuard } from './core/guards';
+import { ROUTE_PATHS } from './core/routes';
 
 export const routes: Routes = [
   {
-    path: '',
-    redirectTo: 'dashboard',
+    path: ROUTE_PATHS.ROOT,
+    redirectTo: ROUTE_PATHS.DASHBOARD,
     pathMatch: 'full',
   },
   {
-    path: 'dashboard',
+    path: ROUTE_PATHS.DASHBOARD,
     component: LayoutComponent,
     canActivate: [authGuard],
     loadChildren: () =>
@@ -18,7 +19,7 @@ export const routes: Routes = [
       ),
   },
   {
-    path: '**',
-    redirectTo: 'dashboard',
+    path: ROUTE_PATHS.WILDCARD,
+    redirectTo: ROUTE_PATHS.DASHBOARD,
   },
 ];
