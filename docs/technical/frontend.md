@@ -30,6 +30,18 @@ Para agregar una variable: declararla en `AppConfig`, darle su valor en `DEFAULT
 
 En pruebas se sobreescribe con `{ provide: API_BASE_URL, useValue: '/test/api' }` o con `provideAppConfig({ apiBaseUrl: '/test/api' })`.
 
+## Utilidades
+
+`src/app/shared/utils` (barrel `shared/utils`) reúne funciones puras, sin Angular, con JSDoc y cobertura del 100 %.
+
+| Archivo | Funciones |
+|---|---|
+| `type-guards.ts` | `isDefined` (no `undefined`), `isNonNull` (ni `null` ni `undefined`), `isString`, `isRecord` |
+| `mappers.ts` | `formatTimestamp(valor, { locale, timeZone })` (`''` si es inválido; `es-MX` por defecto), `formatNumber`, `toSelectOption` |
+| `pagination.ts` | `paginate(items, page, pageSize)` → `Page<T>` con `items`, `start`, `end`, `pageCount`; `pageCount` (mínimo 1); `clampPage` |
+
+`paginate` ajusta la página al rango válido, por lo que una página 0 o fuera de rango nunca devuelve una página vacía por error. `DataViewPageComponent` la usa para sus registros. Antes de escribir un helper nuevo en un componente o servicio, revisa si encaja aquí.
+
 ## SSR: acceso a APIs del navegador
 
 El build `build:ssr` genera también el bundle de servidor (`main.server.ts`), así que el código de `src/app` puede ejecutarse sin `window`, `document` ni `localStorage`.

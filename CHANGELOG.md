@@ -16,6 +16,7 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 
 ### Added
 
+- Utilidades compartidas de tipos, formateo y paginación. (F1-04)
 - Proxy de desarrollo para `ng serve` hacia el BFF local. (F1-01)
 - Integración del BFF Node con el servidor SSR de Angular: proxies a Mercury (`/mrc/api/v1/general`, `/auth`, `/d-image`) y Backbone (`/bkd/api/v1`), autenticación OAuth, sesiones y locks en Redis con fallback en memoria, soporte HTTPS y endpoints `/health` y `/health/redis`. (F0-02)
 - Configuraciones de entorno `dev`, `qa`, `dev-cloud` y `qa-cloud`.

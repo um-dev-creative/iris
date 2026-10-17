@@ -23,6 +23,7 @@ import {
   Mail,
 } from 'lucide-angular';
 import { AppBadgeComponent, AppButtonComponent } from '../../../../shared/components';
+import { paginate } from '../../../../shared/utils';
 import { MonitoringDataService } from '../../services/monitoring-data.service';
 import { LogEntry } from '../../models/monitoring.model';
 
@@ -113,18 +114,15 @@ export class DataViewPageComponent {
     return logs;
   });
 
-  readonly totalPages = computed(() =>
-    Math.max(1, Math.ceil(this.filteredLogs().length / this.pageSize))
+  /** La página actual de los registros filtrados; `paginate` la ajusta al rango válido. */
+  private readonly logsPage = computed(() =>
+    paginate(this.filteredLogs(), this.currentPage(), this.pageSize)
   );
 
-  readonly pageStart = computed(() => (this.currentPage() - 1) * this.pageSize);
-  readonly pageEnd = computed(() =>
-    Math.min(this.pageStart() + this.pageSize, this.filteredLogs().length)
-  );
-
-  readonly paginatedLogs = computed(() =>
-    this.filteredLogs().slice(this.pageStart(), this.pageEnd())
-  );
+  readonly totalPages = computed(() => this.logsPage().pageCount);
+  readonly pageStart = computed(() => this.logsPage().start);
+  readonly pageEnd = computed(() => this.logsPage().end);
+  readonly paginatedLogs = computed(() => this.logsPage().items);
 
   readonly pageNumbers = computed(() => {
     const total = this.totalPages();
