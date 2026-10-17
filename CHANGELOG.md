@@ -10,6 +10,7 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 
 ### Security
 
+- El proxy del BFF rechaza con 400 rutas con segmentos `..`, `//` inicial, barras invertidas o caracteres de control; los logs saneados evitan inyección de líneas; la subida multipart limita archivos, campos y partes. Se resolvieron los hallazgos de SonarCloud.
 - Se retiró `default.env` del control de versiones, se agregó `default.env.example` y se ampliaron las exclusiones de `.gitignore` para secretos y llaves TLS. (F0-01)
 
 ### Added
