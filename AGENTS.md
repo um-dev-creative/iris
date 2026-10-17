@@ -54,7 +54,7 @@
 - **API Routes**: Backend APIs are prefixed (`/mrc/api/v1/*`, `/bkd/api/v1/*`) and don't conflict with Angular routes.
 - **SSL Configuration**: Uses certificates in `/ssl` folder; falls back to HTTP if not available.
 - `SettingsPageComponent` updates runtime API config through `ApiService` and does a direct `fetch` connectivity check.
-- `authGuard` is currently a permissive MVP placeholder (`return true`); do not assume real auth enforcement exists.
+- Auth is real: `AuthService` + `authGuard`/`guestGuard` + `authInterceptor` (session in httpOnly cookies managed by the BFF; no tokens in the browser). Use `fakeAuth()` from `core/testing/auth.testing.ts` in component tests.
 
 ## Safe Change Guidelines for Agents
 - Keep route additions aligned with existing lazy-load split (`app.routes.ts` + `dashboard.routes.ts`).

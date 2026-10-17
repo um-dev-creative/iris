@@ -32,7 +32,7 @@ Two cooperating halves:
 - State is signal-first: `DashboardStore` is the UI state; `ThemeService` toggles `html.dark` and persists `app-theme`; `ApiService` holds the runtime API base config persisted as `api_config` in `localStorage`.
 - `httpErrorInterceptor` retries 5xx once and emits toasts through `NotificationService`. The toast UI renders once, in the layout shell.
 - Dark mode is the `.dark` class on `<html>` (`@custom-variant dark`), not `prefers-color-scheme`. Design tokens live in `src/styles.css` (`@theme inline`).
-- `authGuard` is a permissive placeholder (`return true`). There is no real auth enforcement on the frontend.
+- Auth: `AuthService` (signals `user`/`status`/`isAuthenticated`, restored at startup via `GET /auth/me`) is the source of the session; `authGuard` (on `canActivate` and `canActivateChild` of `/dashboard`) sends anonymous visitors to `/login?returnUrl=…`, `guestGuard` guards `/login`. `authInterceptor` (before `httpErrorInterceptor`) adds cookies and the CSRF header to BFF calls and turns a 401 into one "session expired" notice plus a redirect to login. See `docs/technical/frontend.md` and `security.md`.
 
 **Backend (`server.js` + `server/`)**: the BFF follows the same pattern as `stratum` and `zerobound-frontend`.
 - `server.js` is only the entry: dotenv, `settings-check` (exit 78 on a bad configuration), `createApp()` from `server/app.js`, optional HTTPS. `createApp({distPath})` has no side effects, which is what the tests rely on.
@@ -46,5 +46,5 @@ Two cooperating halves:
 
 - Standalone, mostly `OnPush` components; preserve signal patterns (expose readonly signals). Icons are class constants (`readonly Bell = Bell`).
 - `scripts/*.sh` are convenience wrappers around the pnpm scripts; `docs/history/` keeps the notes of the old BFF integration (Vault/Redis era).
-- Every environment sets `apiBaseUrl: '/mrc/api/v1'` (relative, through the BFF); config is injected via `APP_CONFIG`/`API_BASE_URL` (`src/app/core/config`), and only `provideAppConfig` imports `environments/environment`. The BFF requires the `x-iris-csrf: 1` header on API calls, which the frontend does not send yet (F2).
+- Every environment sets `apiBaseUrl: '/mrc/api/v1'` (relative, through the BFF); config is injected via `APP_CONFIG`/`API_BASE_URL` (`src/app/core/config`), and only `provideAppConfig` imports `environments/environment`. `authInterceptor` adds the `x-iris-csrf: 1` header the BFF requires.
 - Extra docs: `docs/` (roadmap, stories, technical, user), `DEVELOPMENT_SETUP.md`, `docs/history/` (historical).
