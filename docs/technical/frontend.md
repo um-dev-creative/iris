@@ -32,6 +32,17 @@ Las rutas viven en `src/app/core/routes/route-paths.ts` (`ROUTE_PATHS`, segmento
 
 En SSR `restoreSession()` no hace nada: el estado queda `unknown` y no hay llamadas (`app.config.server.ts` tampoco registra el inicializador). `DashboardStore.user` y `userInitials` salen de `AuthService.user`. En pruebas se sustituye con `fakeAuth()` (`core/testing/auth.testing.ts`).
 
+### Interceptores
+
+Orden en `provideHttpClient(withInterceptors([...]))` (`app.config.ts` y `app.config.server.ts`): **`authInterceptor` → `httpErrorInterceptor`**. El primero envuelve al segundo, así que el error ve primero al interceptor de errores y después al de autenticación.
+
+| Interceptor | Qué hace |
+|---|---|
+| `authInterceptor` | A toda llamada al BFF (`/mrc/api/**`, `/bkd/api/**`) le agrega `withCredentials` y la cabecera `x-iris-csrf: 1`; las demás URLs no se tocan. Ante un 401 de un recurso con sesión abierta: limpia el estado, avisa "Tu sesión expiró" y navega a `/login?returnUrl=<ruta actual>`. Los 401 simultáneos generan un solo aviso porque el primero deja el estado en `anonymous` |
+| `httpErrorInterceptor` | Reintenta una vez los 5xx (1 s) y muestra el aviso por código. No avisa de los 401 del BFF (los gestiona el anterior); sí los de APIs externas |
+
+Un 401 de `/auth/*` (login fallido, `/auth/me` sin sesión) es esperado: no avisa ni redirige.
+
 ### Guards
 
 - `authGuard` protege `/dashboard/**`: si `status` es `unknown` espera a `restoreSession()`; sin sesión devuelve un `UrlTree` a `/login?returnUrl=<ruta pedida>` (con su query, codificada). Con el inicializador de `app.config.ts` el estado ya se conoce antes del primer render, así que el dashboard no llega a pintarse para un visitante.

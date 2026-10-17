@@ -1,6 +1,7 @@
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { catchError, retry, throwError, timer } from 'rxjs';
+import { isBffUrl } from '../config';
 import { NotificationService } from '../services/notification.service';
 
 export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
@@ -18,6 +19,9 @@ export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
       },
     }),
     catchError((error: HttpErrorResponse) => {
+      // el 401 de una llamada al BFF lo gestiona authInterceptor (aviso único y vuelta al login)
+      if (error.status === 401 && isBffUrl(req.url)) return throwError(() => error);
+
       let title = 'Error';
       let message = 'Ha ocurrido un error inesperado.';
 

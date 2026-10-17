@@ -2,7 +2,7 @@ import { Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { API_BASE_URL, BFF_CSRF_HEADER, BFF_CSRF_VALUE } from '../config';
+import { API_BASE_URL } from '../config';
 import { AuthStatus, LoginCredentials, User } from '../models';
 
 interface SessionResponse {
@@ -12,7 +12,8 @@ interface SessionResponse {
 
 /**
  * Estado de autenticación de la aplicación. La sesión vive en cookies httpOnly que gestiona el BFF: aquí solo se
- * guarda quién es la persona (nunca tokens) y si hay sesión.
+ * guarda quién es la persona (nunca tokens) y si hay sesión. Las cookies y la cabecera CSRF las agrega
+ * `authInterceptor` a toda llamada al BFF.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -34,7 +35,7 @@ export class AuthService {
    */
   async login(credentials: LoginCredentials): Promise<void> {
     const response = await firstValueFrom(
-      this.http.post<SessionResponse>(`${this.authUrl}/access-token`, credentials, this.options()),
+      this.http.post<SessionResponse>(`${this.authUrl}/access-token`, credentials),
     );
     this.setSession(response.user);
   }
@@ -42,7 +43,7 @@ export class AuthService {
   /** Cierra la sesión. El estado local pasa a `anonymous` aunque el BFF falle: nunca se queda a medias. */
   async logout(): Promise<void> {
     try {
-      await firstValueFrom(this.http.post<void>(`${this.authUrl}/logout`, {}, this.options()));
+      await firstValueFrom(this.http.post<void>(`${this.authUrl}/logout`, {}));
     } catch {
       // el BFF borra las cookies de todos modos en su siguiente respuesta; localmente la sesión ya terminó
     } finally {
@@ -68,7 +69,7 @@ export class AuthService {
 
   private async fetchSession(): Promise<void> {
     try {
-      const response = await firstValueFrom(this.http.get<SessionResponse>(`${this.authUrl}/me`, this.options()));
+      const response = await firstValueFrom(this.http.get<SessionResponse>(`${this.authUrl}/me`));
       this.setSession(response.user);
     } catch {
       // 401 (sin sesión) o BFF inaccesible: se trata como anónimo y el guard llevará al login
@@ -83,9 +84,5 @@ export class AuthService {
     }
     this._user.set(user);
     this._status.set('authenticated');
-  }
-
-  private options() {
-    return { withCredentials: true, headers: { [BFF_CSRF_HEADER]: BFF_CSRF_VALUE } };
   }
 }
