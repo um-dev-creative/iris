@@ -22,6 +22,22 @@ Detección de secretos: `gitleaks detect --config .gitleaks.toml` (instalar con 
 
 El hook `pre-commit` (`.githooks/pre-commit`) ejecuta `gitleaks protect --staged` y bloquea el commit si hay hallazgos o si gitleaks no está instalado. Se activa con `pnpm install` (script `prepare`) o manualmente con `git config core.hooksPath .githooks`.
 
+## Desarrollo frontend con BFF
+
+`pnpm start` sirve el frontend en :4200 y reenvía `/mrc/**`, `/bkd/**` y `/health` al BFF mediante `proxy.conf.mjs` (referenciado en `angular.json` → `serve.options.proxyConfig`). El navegador solo habla con :4200, así que no hay CORS.
+
+```bash
+pnpm server          # terminal 1: BFF en http://localhost:4000
+pnpm start           # terminal 2: ng serve en :4200 con proxy al BFF
+curl localhost:4200/health   # {"status":"UP"}
+```
+
+| Variable | Qué hace |
+|---|---|
+| `IRIS_BFF_URL` | Destino del proxy. Por defecto `http://localhost:4000`. Con el BFF en HTTPS: `IRIS_BFF_URL=https://localhost:4001 pnpm start` (el proxy acepta certificados autofirmados, solo en desarrollo) |
+
+Las llamadas a `/mrc/api/v1/**` y `/bkd/api/v1/**` exigen la cabecera `x-iris-csrf: 1` y, salvo las públicas, una sesión.
+
 ## Issue Resolution: Concurrently Command Not Found
 
 The error `sh: concurrently: command not found` occurs when the `concurrently` package is not properly installed or accessible.

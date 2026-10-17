@@ -17,7 +17,7 @@ git clone https://github.com/um-dev-creative/iris.git
 cd iris
 pnpm install                      # también activa el hook pre-commit (.githooks)
 cp default.env.example default.env   # opcional: todas las variables tienen valor por defecto local
-pnpm start                        # solo frontend: http://localhost:4200
+pnpm start                        # frontend: http://localhost:4200 (proxy a /mrc, /bkd y /health hacia el BFF en :4000)
 ```
 
 Para ejecutar el stack completo (app + BFF con proxies a Mercury y Backbone):
@@ -32,7 +32,7 @@ Las variables de entorno están documentadas en [`default.env.example`](default.
 
 | Comando | Qué hace |
 |---|---|
-| `pnpm start` | `ng serve` en :4200 (solo frontend) |
+| `pnpm start` | `ng serve` en :4200; reenvía `/mrc`, `/bkd` y `/health` al BFF (`IRIS_BFF_URL`, por defecto :4000) |
 | `pnpm build:dev` | Build de desarrollo |
 | `pnpm build` / `pnpm build:ssr` | Build con `ENVM` (SSR en el segundo) |
 | `pnpm serve:integrated` | Build SSR y `node server.js` (BFF + app) |

@@ -50,18 +50,18 @@ Implementa AC1 de IRIS-001. Con `ng serve` (puerto 4200) las llamadas a `/mrc/**
 
 ## Criterios de aceptación
 
-- [ ] **AC1** — Con BFF y `ng serve` corriendo, `GET http://localhost:4200/health` devuelve el JSON del BFF
-- [ ] **AC2** — No hay URLs hardcodeadas en el archivo de proxy
-- [ ] **AC3** — Funciona con el BFF en HTTP y en HTTPS
+- [x] **AC1** — Con BFF y `ng serve` corriendo, `GET http://localhost:4200/health` devuelve el JSON del BFF
+- [x] **AC2** — No hay URLs hardcodeadas en el archivo de proxy
+- [x] **AC3** — Funciona con el BFF en HTTP y en HTTPS
 
 ## Definition of Done
 
 Cumple el [DoD general](../DEFINITION_OF_DONE.md) y además:
 
-- [ ] Flujo documentado en README
-- [ ] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
-- [ ] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
-- [ ] Documentación técnica actualizada (ver abajo)
+- [x] Flujo documentado en README
+- [x] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
+- [x] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
+- [x] Documentación técnica actualizada (ver abajo)
 - [ ] Comunicación a interesados enviada (ver abajo)
 
 ## Cobertura de pruebas (umbral ≥ 85 %)
@@ -73,7 +73,7 @@ Esta tarea no agrega lógica de aplicación. Debe verificarse que el gate de 85 
 
 ### Técnica
 
-- [ ] `DEVELOPMENT_SETUP.md` § Desarrollo frontend con BFF
+- [x] `DEVELOPMENT_SETUP.md` § Desarrollo frontend con BFF
 
 ### Usuario
 
@@ -92,3 +92,15 @@ Agregar en `CHANGELOG.md` → `[Unreleased]` → `### Added`:
 | A quién | Qué informar | Cuándo · canal |
 |---|---|---|
 | Equipo de desarrollo | Nuevo flujo `pnpm start` + BFF | Al hacer merge |
+
+## Reporte de validación
+
+Validado el 2026-10-17 en la rama `feat/f1-01-proxy-desarrollo-bff`.
+
+| Criterio | Resultado | Evidencia |
+|---|---|---|
+| AC1 `GET :4200/health` devuelve el JSON del BFF | PASS | BFF en :4000 + `ng serve`: `curl localhost:4200/health` → `200 {"status":"UP"}` con las cabeceras del BFF (`x-trace-id`, `ratelimit-*`). `/mrc/api/v1/nope` con `x-iris-csrf: 1` → `404 {"error":"Not found"}` del BFF |
+| AC2 sin URLs hardcodeadas | PASS | El destino sale de `IRIS_BFF_URL`; el único literal es el valor por defecto `http://localhost:4000`, no una URL de un entorno |
+| AC3 BFF en HTTP y en HTTPS | PASS | HTTP: AC1. HTTPS: BFF con certificado autofirmado en :4001 e `IRIS_BFF_URL=https://localhost:4001` → `200 {"status":"UP"}`, sin errores en el log de `ng serve` (`secure: false`) |
+
+Desviación: la tarea proponía `https://localhost:4001` por defecto, pero el BFF arranca en HTTP :4000 si no hay certificados (`server.js`); el default es `http://localhost:4000`. Hecho: `proxy.conf.mjs`, `angular.json` (`serve.options.proxyConfig`), `DEVELOPMENT_SETUP.md` § Desarrollo frontend con BFF, README, CLAUDE.md, AGENTS.md y CHANGELOG. Sin lógica de aplicación nueva: el gate de 85 % lo valida CI.

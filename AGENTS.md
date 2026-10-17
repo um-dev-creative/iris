@@ -36,7 +36,7 @@
 - Use one package manager consistently per session; avoid mixing lockfile updates.
 - **Project Name**: Use `dashboard` for Angular CLI commands (not `iris`); e.g., `ng build dashboard`.
 - Core scripts from `package.json`:
-  - `start` -> `ng serve` (frontend only)
+  - `start` -> `ng serve` with `proxy.conf.mjs` to the BFF (`IRIS_BFF_URL`, default `http://localhost:4000`)
   - `build` -> `ng build --configuration=$ENVM` (uses environment variable)
   - `build:ssr` -> builds both client and SSR server
   - `serve:integrated` -> builds and serves full-stack app with backend APIs

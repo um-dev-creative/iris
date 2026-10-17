@@ -12,7 +12,7 @@ See `AGENTS.md` for the detailed conventions and the multi-agent delivery model 
 
 The repo declares `packageManager: pnpm` (`pnpm-lock.yaml`); use pnpm and don't mix lockfiles.
 
-- `pnpm start`: `ng serve` on :4200, frontend only (no backend APIs).
+- `pnpm start`: `ng serve` on :4200; `proxy.conf.mjs` forwards `/mrc`, `/bkd` and `/health` to the BFF (`IRIS_BFF_URL`, default `http://localhost:4000`), so run `pnpm server` alongside.
 - `pnpm build:dev`: development build. `pnpm build` and `pnpm build:ssr` need `ENVM` set (see `default.env`; environments are in `src/environments/`: dev, qa, prod, cloud).
 - `pnpm serve:integrated`: SSR build and then `node server.js` (full stack; HTTPS only when `SSL_CERT_PATH` and `SSL_KEY_PATH` are set).
 - `pnpm dev:integrated:unix`: watches the SSR build and runs `node server.js`.
