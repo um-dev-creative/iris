@@ -51,18 +51,18 @@
 
 ## Criterios de aceptación
 
-- [ ] **AC1** — Abrir `/dashboard/data` sin sesión lleva a `/login?returnUrl=%2Fdashboard%2Fdata`
-- [ ] **AC2** — Con sesión, `/login` redirige a `/dashboard`
-- [ ] **AC3** — No hay parpadeo del dashboard antes de redirigir
+- [x] **AC1** — Abrir `/dashboard/data` sin sesión lleva a `/login?returnUrl=%2Fdashboard%2Fdata`
+- [x] **AC2** — Con sesión, `/login` redirige a `/dashboard`
+- [x] **AC3** — No hay parpadeo del dashboard antes de redirigir
 
 ## Definition of Done
 
 Cumple el [DoD general](../DEFINITION_OF_DONE.md) y además:
 
-- [ ] Se actualiza la nota de `AGENTS.md` que dice que el guard es permisivo
-- [ ] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
-- [ ] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
-- [ ] Documentación técnica actualizada (ver abajo)
+- [x] Se actualiza la nota de `AGENTS.md` que dice que el guard es permisivo
+- [x] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
+- [x] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
+- [x] Documentación técnica actualizada (ver abajo)
 
 ## Cobertura de pruebas (umbral ≥ 85 %)
 
@@ -81,8 +81,8 @@ Esta tarea agrega o modifica código ejecutable. Debe cumplir la [Política de c
 
 ### Técnica
 
-- [ ] `AGENTS.md` § Integration Notes
-- [ ] `docs/technical/frontend.md` § Rutas protegidas
+- [x] `AGENTS.md` § Integration Notes
+- [x] `docs/technical/frontend.md` § Rutas protegidas
 
 ### Usuario
 
@@ -99,3 +99,15 @@ Agregar en `CHANGELOG.md` → `[Unreleased]` → `### Security`:
 ## Comunicación a interesados
 
 Sin comunicación específica; se incluye en el [reporte semanal](../STAKEHOLDERS.md#reporte-semanal).
+
+## Reporte de validación
+
+Validado el 2026-10-17 en la rama `feat/f2-05-guards-reales` (apilada sobre F2-04).
+
+| Criterio | Resultado | Evidencia |
+|---|---|---|
+| AC1 `/dashboard/data` sin sesión → `/login?returnUrl=%2Fdashboard%2Fdata` | PASS | `auth.guard.spec.ts` (serializa el `UrlTree`) y `app.routes.spec.ts` (navegación real con el router: la URL final es exactamente esa); la query de la ruta pedida también se conserva codificada |
+| AC2 con sesión, `/login` → `/dashboard` | PASS | `guest.guard.spec.ts` y `app.routes.spec.ts` |
+| AC3 sin parpadeo del dashboard antes de redirigir | PASS (por construcción) | El guard espera `restoreSession()` mientras el estado es `unknown` y el inicializador de `app.config.ts` ya lo resuelve antes del primer render; `app.routes.spec.ts` comprueba que un visitante en `/login` ve el login y no existe `app-sidebar`. No lo observé en un navegador (la extensión de Chrome no estaba conectada) |
+
+Además: en SSR ambos guards permiten el render y no consultan la sesión (pruebas con `PLATFORM_ID = 'server'`). Hallazgo corregido durante la tarea: los `inject()` después de un `await` fallaban con NG0203; las pruebas lo detectaron y ahora todos van antes del primer `await`. Frontend: 300 pruebas, líneas 99.7 %.

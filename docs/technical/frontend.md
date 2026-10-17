@@ -32,6 +32,13 @@ Las rutas viven en `src/app/core/routes/route-paths.ts` (`ROUTE_PATHS`, segmento
 
 En SSR `restoreSession()` no hace nada: el estado queda `unknown` y no hay llamadas (`app.config.server.ts` tampoco registra el inicializador). `DashboardStore.user` y `userInitials` salen de `AuthService.user`. En pruebas se sustituye con `fakeAuth()` (`core/testing/auth.testing.ts`).
 
+### Guards
+
+- `authGuard` protege `/dashboard/**`: si `status` es `unknown` espera a `restoreSession()`; sin sesión devuelve un `UrlTree` a `/login?returnUrl=<ruta pedida>` (con su query, codificada). Con el inicializador de `app.config.ts` el estado ya se conoce antes del primer render, así que el dashboard no llega a pintarse para un visitante.
+- `guestGuard` protege `/login`: con sesión redirige a `/dashboard`.
+- En SSR ambos dejan pasar y la decisión la toma el navegador (que es quien tiene las cookies).
+- Un guard asíncrono debe hacer todos sus `inject()` **antes** del primer `await`; después se pierde el contexto de inyección.
+
 ### Página de login
 
 `features/auth/login-page` (ruta pública `/login`, fuera del layout). Formulario reactivo con usuario/correo y contraseña (mostrar/ocultar), validación requerida que impide enviar vacío y enfoca el primer campo con error, botón deshabilitado con spinner mientras envía y mensajes: 401 "Usuario o contraseña incorrectos" (sin indicar cuál), 429 "Demasiados intentos", y 5xx/red "El servicio no está disponible". Tras iniciar sesión navega a `?returnUrl=` si es una ruta interna (empieza con una sola `/`; cualquier otra cosa cae en `/dashboard`).
