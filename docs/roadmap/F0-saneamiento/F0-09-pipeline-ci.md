@@ -50,16 +50,16 @@ No existe integración continua. Se necesita un pipeline que ejecute en cada PR 
 
 ## Criterios de aceptación
 
-- [ ] **AC1** — Un PR con cobertura < 85 % falla en CI con mensaje claro
-- [ ] **AC2** — Un PR con un secreto de prueba falla en el paso `gitleaks`
-- [ ] **AC3** — El pipeline completo tarda < 10 min
+- [x] **AC1** — Un PR con cobertura < 85 % falla en CI con mensaje claro
+- [x] **AC2** — Un PR con un secreto de prueba falla en el paso `gitleaks`
+- [x] **AC3** — El pipeline completo tarda < 10 min
 
 ## Definition of Done
 
 Cumple el [DoD general](../DEFINITION_OF_DONE.md) y además:
 
 - [x] Badge de CI en el README
-- [ ] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
+- [x] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
 - [x] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
 - [x] Documentación técnica actualizada (ver abajo)
 - [ ] Comunicación a interesados enviada (ver abajo)
@@ -99,12 +99,12 @@ Agregar en `CHANGELOG.md` → `[Unreleased]` → `### Added`:
 
 ## Reporte de validación
 
-Validado el 2026-10-17 en la rama `ci/f0-09-pipeline-ci`. **GitHub Actions no se puede ejecutar desde aquí**: el workflow se validó con `actionlint` (sin errores) y cada etapa se reprodujo en local; falta confirmar el primer run real en el PR.
+Validado el 2026-10-17 con ejecuciones reales de GitHub Actions.
 
-| Criterio | Resultado | Evidencia local |
+| Criterio | Resultado | Evidencia |
 |---|---|---|
-| AC1 un PR con cobertura < 85 % falla con mensaje claro | PARCIAL | `pnpm vitest … --coverage.thresholds.lines=100` termina con código ≠ 0 y `ERROR: Coverage for lines (99.24%) does not meet global threshold (100%)`; el workflow añade `::error::`. Falta el PR de prueba que baje la cobertura |
-| AC2 un PR con un secreto falla en gitleaks | PARCIAL | Repo temporal con un token `ghp_…` falso: `gitleaks detect --config .gitleaks.toml` → `leaks found: 1`, código 1. Falta verlo en Actions |
-| AC3 pipeline < 10 min | PARCIAL | Copia limpia del repo: install `--frozen-lockfile` + `build:ssr` + ambas suites en 27 s; el job tiene `timeout-minutes: 10` |
+| AC1 un PR con cobertura < 85 % falla con mensaje claro | PASS | PR de prueba #40 (cerrado): el paso "Pruebas del BFF" falló con `ERROR: Coverage for lines (68.05%) does not meet global threshold (85%)` (y funciones 28,57 %, sentencias 44,83 %, ramas 47,55 %) más la anotación `::error title=BFF::…` |
+| AC2 un PR con un secreto de prueba falla en gitleaks | PASS | PR de prueba #41 (cerrado): el paso "Escaneo de secretos (gitleaks)" falló con `RuleID: github-pat`, `File: ci-secret-check.txt`, `leaks found: 1`, código 1 |
+| AC3 pipeline < 10 min | PASS | Run limpio del PR #38: 15 etapas en verde en 45 s (límite del job: 10 min) |
 
-Hecho: `.github/workflows/ci.yml` (pnpm con caché, Node 24, `fetch-depth: 0`, artefacto `coverage`, resumen en el job summary vía `scripts/coverage-summary.mjs`, gitleaks 8.30.1 por binario para no depender de licencia), badge en el README, `docs/technical/ci-cd.md`. Pendiente: primer run en GitHub, marcar el check como requerido en `main`, y los avisos a equipo y DevOps.
+Run en verde: https://github.com/um-dev-creative/iris/actions/runs/38993456322. Los PR de prueba y sus ramas `ci-test/*` se cerraron y borraron. Pendiente: marcar el check como requerido en `main` y los avisos a equipo y DevOps.
