@@ -25,6 +25,7 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 - El servidor se arranca desde un único punto (`createApp` en `server/app.js`); `server.js` queda como lanzador que valida la configuración. (F0-03)
 - pnpm es el único gestor de paquetes (`packageManager`, `engines`, lockfile versionado); documentación histórica reorganizada en `docs/history/` y scripts en `scripts/`. (F0-05)
 - Las pruebas usan Vitest con un umbral mínimo de cobertura del 85 % en frontend y backend. (F0-06)
+- Pruebas del frontend existente (servicios, interceptor, componentes compartidos, layout y páginas) con ≥ 85 % de cobertura; `showcase-page` queda excluida. (F0-07)
 - Actualización a Angular 22.2.3 con TypeScript 6.0.
 
 ### Fixed

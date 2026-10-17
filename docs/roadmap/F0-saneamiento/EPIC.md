@@ -32,7 +32,7 @@ Leyenda: ✅ completada · 🔄 en revisión · ⬜ pendiente
 | [F0-04](F0-04-ssr-localstorage-apiservice.md) | Corregir acceso a localStorage en ApiService durante SSR | Critical | ● |  |  | 0.5d | F0-02 | ✅ |
 | [F0-05](F0-05-higiene-repositorio.md) | Consolidar pnpm, limpiar archivos legados y reorganizar documentación | Major | ● |  | ● | 1d | F0-02 | ✅ |
 | [F0-06](F0-06-vitest-quality-gate-85.md) | Migrar las pruebas a Vitest y configurar el quality gate de cobertura 85 % | Critical | ● | ● | ● | 2d | F0-02 | ✅ |
-| [F0-07](F0-07-backfill-pruebas-frontend.md) | Backfill de pruebas del frontend existente hasta 85 % | Critical | ● |  |  | 3d | F0-04, F0-06 | ⬜ |
+| [F0-07](F0-07-backfill-pruebas-frontend.md) | Backfill de pruebas del frontend existente hasta 85 % | Critical | ● |  |  | 3d | F0-04, F0-06 | ✅ |
 | [F0-08](F0-08-backfill-pruebas-bff.md) | Backfill de pruebas del BFF hasta 85 % | Critical |  | ● |  | 4d | F0-03, F0-06 | ⬜ |
 | [F0-09](F0-09-pipeline-ci.md) | Pipeline de CI con build SSR, pruebas y cobertura | Critical |  |  | ● | 1d | F0-06 | ⬜ |
 | [F0-10](F0-10-changelog-readme-plantillas.md) | Crear CHANGELOG, actualizar README y plantillas de PR | Major |  |  | ● | 0.5d | F0-05 | ⬜ |
