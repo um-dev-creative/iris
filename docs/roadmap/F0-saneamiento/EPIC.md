@@ -14,18 +14,20 @@ Dejar el repositorio seguro, versionado, con un solo servidor y con el quality g
 
 ## Criterios de salida
 
-- [ ] No hay secretos en el índice ni en el historial publicado
+- [x] No hay secretos en el índice ni en el historial publicado
 - [ ] La rama `mer-1` está integrada en `main` mediante PR
-- [ ] Existe un único punto de entrada del servidor
+- [x] Existe un único punto de entrada del servidor
 - [ ] CI ejecuta build SSR + pruebas y bloquea si la cobertura < 85 %
 - [ ] `CHANGELOG.md`, README y plantillas de PR existen y están al día
 
 ## Tareas
 
+Leyenda: ✅ completada · 🔄 en revisión · ⬜ pendiente
+
 | ID | Tarea | Prioridad | FE | BE | Infra | Est. | Depende de | Estado |
 |---|---|---|:-:|:-:|:-:|---|---|:-:|
-| [F0-01](F0-01-remover-secretos-gitignore.md) | Remover secretos del repositorio y endurecer .gitignore | Show-stopper |  | ● | ● | 0.5d | — | ⬜ |
-| [F0-02](F0-02-integrar-rama-mer-1.md) | Commitear por bloques e integrar la rama mer-1 en main | Critical | ● | ● | ● | 1d | F0-01 | ⬜ |
+| [F0-01](F0-01-remover-secretos-gitignore.md) | Remover secretos del repositorio y endurecer .gitignore | Show-stopper |  | ● | ● | 0.5d | — | ✅ |
+| [F0-02](F0-02-integrar-rama-mer-1.md) | Commitear por bloques e integrar la rama mer-1 en main | Critical | ● | ● | ● | 1d | F0-01 | 🔄 PR #30 |
 | [F0-03](F0-03-unificar-entrada-servidor.md) | Unificar el punto de entrada del servidor | Critical |  | ● | ● | 2d | F0-02 | ✅ |
 | [F0-04](F0-04-ssr-localstorage-apiservice.md) | Corregir acceso a localStorage en ApiService durante SSR | Critical | ● |  |  | 0.5d | F0-02 | ⬜ |
 | [F0-05](F0-05-higiene-repositorio.md) | Consolidar pnpm, limpiar archivos legados y reorganizar documentación | Major | ● |  | ● | 1d | F0-02 | ⬜ |
