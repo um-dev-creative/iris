@@ -32,6 +32,10 @@ Las rutas viven en `src/app/core/routes/route-paths.ts` (`ROUTE_PATHS`, segmento
 
 En SSR `restoreSession()` no hace nada: el estado queda `unknown` y no hay llamadas (`app.config.server.ts` tampoco registra el inicializador). `DashboardStore.user` y `userInitials` salen de `AuthService.user`. En pruebas se sustituye con `fakeAuth()` (`core/testing/auth.testing.ts`).
 
+### Página de login
+
+`features/auth/login-page` (ruta pública `/login`, fuera del layout). Formulario reactivo con usuario/correo y contraseña (mostrar/ocultar), validación requerida que impide enviar vacío y enfoca el primer campo con error, botón deshabilitado con spinner mientras envía y mensajes: 401 "Usuario o contraseña incorrectos" (sin indicar cuál), 429 "Demasiados intentos", y 5xx/red "El servicio no está disponible". Tras iniciar sesión navega a `?returnUrl=` si es una ruta interna (empieza con una sola `/`; cualquier otra cosa cae en `/dashboard`).
+
 ## Configuración
 
 La configuración por entorno se inyecta con tokens (`src/app/core/config`, barrel `core/config`). `provideAppConfig()` (en `app.config.ts` y `app.config.server.ts`) es el **único** sitio de `src/app` que importa `environments/environment`; todo lo demás inyecta `APP_CONFIG` o `API_BASE_URL`.

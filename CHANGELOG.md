@@ -18,6 +18,7 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 
 ### Added
 
+- Página de inicio de sesión (`/login`) con validación, mensajes de error genéricos y redirección a `returnUrl`. (F2-04)
 - Servicio de autenticación con estado de sesión reactivo. (F2-03)
 - `GET /mrc/api/v1/auth/me` y el login devuelven el perfil con `name` y `expiresAt` (más `email`/`avatarUrl` si el token los trae) y las respuestas de `/auth/*` llevan `Cache-Control: no-store`. (F2-02)
 - Utilidades compartidas de tipos, formateo y paginación. (F1-04)
