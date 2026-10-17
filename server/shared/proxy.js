@@ -73,6 +73,19 @@ function sendUpstream(res, response) {
   return res.status(response.status).send(Buffer.from(data));
 }
 
+/** Renews the session through backbone once; returns the new token, or undefined (cookies cleared) if it cannot. */
+async function renewSession(req, res) {
+  const refreshToken = req.cookies?.[REFRESH_COOKIE];
+  if (!refreshToken) return undefined;
+  const renewed = await backbone.refresh(refreshToken);
+  if (renewed.status === 200 && renewed.token) {
+    setSessionCookies(res, renewed);
+    return renewed.token;
+  }
+  clearSessionCookies(res);
+  return undefined;
+}
+
 /**
  * Forward a request to `upstream` ('mercury' | 'backbone') at `path` (relative to the service root).
  *
@@ -93,25 +106,21 @@ async function proxyToApi(req, res, upstream, path, options = {}) {
   try {
     let response = await forward(req, url, token, options);
 
-    const refreshToken = req.cookies?.[REFRESH_COOKIE];
-    if (token && response.status === 401 && refreshToken) {
-      const renewed = await backbone.refresh(refreshToken);
-      if (renewed.status === 200 && renewed.token) {
-        token = renewed.token;
-        setSessionCookies(res, renewed);
-        response = await forward(req, url, token, options);
-      } else {
-        clearSessionCookies(res);
-      }
+    if (token && response.status === 401) {
+      const renewedToken = await renewSession(req, res);
+      if (renewedToken) response = await forward(req, url, renewedToken, options);
     }
 
     if (response.status >= 500 && req.trace) {
-      logger.warn(`${upstream} answered ${response.status} for ${req.method} ${clean(path)} traceId=${req.trace.traceId}`);
+      // only fixed values and the validated trace id are logged: nothing the caller typed
+      logger.warn(`${upstream} answered ${response.status} traceId=${req.trace.traceId}`);
     }
     return sendUpstream(res, response);
   } catch (err) {
     // err.code (e.g. DEPTH_ZERO_SELF_SIGNED_CERT) names a TLS trust failure explicitly
-    logger.error(clean(`Proxy error → ${url}: ${err.code ? `[${err.code}] ` : ''}${err.message}${req.trace ? ` traceId=${req.trace.traceId}` : ''}`));
+    const code = err.code ? `[${err.code}] ` : '';
+    const trace = req.trace ? ` traceId=${req.trace.traceId}` : '';
+    logger.error(clean(`Proxy error → ${upstream}: ${code}${err.message}${trace}`));
     return res.status(502).json({ error: 'Backend unavailable', ...(req.trace ? { traceId: req.trace.traceId } : {}) });
   }
 }

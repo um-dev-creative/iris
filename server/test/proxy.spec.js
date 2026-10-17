@@ -132,7 +132,7 @@ test('an upload without a file or with the wrong field is a 400', async () => {
 
 test('an oversized upload is a 413', async () => {
   const big = new FormData();
-  big.append('imageData', new Blob([Buffer.alloc(10 * 1024 * 1024 + 1)]), 'big.png');
+  big.append('imageData', new Blob([Buffer.alloc(8 * 1024 * 1024 + 1)]), 'big.png');
 
   assert.equal((await bff.call('/mrc/api/v1/d-image/users/profile', { method: 'POST', body: big, cookie: GOOD })).status, 413);
 });
