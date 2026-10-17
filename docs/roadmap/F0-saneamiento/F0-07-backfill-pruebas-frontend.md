@@ -52,18 +52,18 @@ Llevar el código Angular existente (`core`, `shared`, `layout`, `features/dashb
 
 ## Criterios de aceptación
 
-- [ ] **AC1** — `pnpm test` reporta ≥ 85 % en las cuatro métricas para `src/app`
-- [ ] **AC2** — Ninguna spec depende del orden de ejecución ni de la hora real (usar fake timers)
-- [ ] **AC3** — El tiempo total de la suite es < 60 s en CI
+- [x] **AC1** — `pnpm test` reporta ≥ 85 % en las cuatro métricas para `src/app`
+- [x] **AC2** — Ninguna spec depende del orden de ejecución ni de la hora real (usar fake timers)
+- [x] **AC3** — El tiempo total de la suite es < 60 s en CI
 
 ## Definition of Done
 
 Cumple el [DoD general](../DEFINITION_OF_DONE.md) y además:
 
 - [ ] Gate de 85 % del frontend marcado como bloqueante en CI
-- [ ] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
-- [ ] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
-- [ ] Documentación técnica actualizada (ver abajo)
+- [x] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
+- [x] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
+- [x] Documentación técnica actualizada (ver abajo)
 - [ ] Comunicación a interesados enviada (ver abajo)
 
 ## Cobertura de pruebas (umbral ≥ 85 %)
@@ -85,7 +85,7 @@ Esta tarea agrega o modifica código ejecutable. Debe cumplir la [Política de c
 
 ### Técnica
 
-- [ ] `docs/technical/testing.md` § Ejemplos: un ejemplo por tipo (servicio, componente, interceptor)
+- [x] `docs/technical/testing.md` § Ejemplos: un ejemplo por tipo (servicio, componente, interceptor)
 
 ### Usuario
 
@@ -104,3 +104,17 @@ Agregar en `CHANGELOG.md` → `[Unreleased]` → `### Added`:
 | A quién | Qué informar | Cuándo · canal |
 |---|---|---|
 | Product Owner / QA | El frontend existente queda cubierto; porcentaje alcanzado | Reporte semanal |
+
+## Reporte de validación
+
+Validado el 2026-10-17 en la rama `test/f0-07-backfill-pruebas-frontend`.
+
+| Criterio | Resultado | Evidencia |
+|---|---|---|
+| AC1 `pnpm test` ≥ 85 % en las cuatro métricas | PASS | 154 pruebas en 27 archivos. Sentencias 97,83 %, ramas 97,26 %, funciones 91,05 %, líneas 98,01 %; `pnpm test` termina con código 0 |
+| AC2 sin dependencia de orden ni de hora real | PASS | Suite ejecutada 3 veces con `sequence.shuffle: true`: 154/154 cada vez; el tiempo usa `vi.useFakeTimers()` |
+| AC3 suite < 60 s | PASS | Vitest reporta ≈ 3 s de ejecución (≈ 15 s con el build incluido) |
+
+Cobertura por alcance: `ThemeService`, `NotificationService`, `DashboardStore`, `ApiService`, `MonitoringDataService`; `httpErrorInterceptor` (5xx con un reintento a 1 s, toast por código, propagación); button, badge, card, table (orden, paginación), skeleton, notification, theme-toggle; sidebar (colapso, móvil, enlaces), navbar, layout; home, data-view (búsqueda, filtros, orden, paginación) y settings (guardar, restaurar, probar conexión con `fetch` simulado); más kpi-card, sparkline, chart-placeholder, service-status-card y `authGuard`. Excluidos: `showcase-page`, barrels, modelos, `main*.ts`, `environments`.
+
+Pendiente: el gate bloqueante en CI depende de F0-09; comunicación al equipo.
