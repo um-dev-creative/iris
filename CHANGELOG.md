@@ -18,6 +18,7 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 
 ### Added
 
+- `GET /mrc/api/v1/auth/me` y el login devuelven el perfil con `name` y `expiresAt` (más `email`/`avatarUrl` si el token los trae) y las respuestas de `/auth/*` llevan `Cache-Control: no-store`. (F2-02)
 - Utilidades compartidas de tipos, formateo y paginación. (F1-04)
 - Proxy de desarrollo para `ng serve` hacia el BFF local. (F1-01)
 - Integración del BFF Node con el servidor SSR de Angular: proxies a Mercury (`/mrc/api/v1/general`, `/auth`, `/d-image`) y Backbone (`/bkd/api/v1`), autenticación OAuth, sesiones y locks en Redis con fallback en memoria, soporte HTTPS y endpoints `/health` y `/health/redis`. (F0-02)
