@@ -6,7 +6,7 @@ Copia `default.env.example` a `default.env` (ignorado por git) y completa los va
 
 | Variable | Descripción |
 |---|---|
-| `ENVM` | Entorno de build de Angular (`dev`, `qa`, `prod`, `dev-cloud`, `qa-cloud`) |
+| `ENVM` | Entorno de build de Angular (`development`, `dev`, `qa`, `dev-cloud`, `qa-cloud`, `production`); equivalencias en [docs/technical/environments.md](docs/technical/environments.md) |
 | `NODE_ENV` | `production` exige las tres variables de Backbone siguientes |
 | `PORT` | Puerto del BFF (4000) |
 | `MERCURY_BASE_URL` / `MERCURY_API_PREFIX` | Gateway de Mercury y raíz de su API |
