@@ -16,9 +16,9 @@ The repo declares `packageManager: pnpm` (`pnpm-lock.yaml`); use pnpm and don't 
 - `pnpm build:dev`: development build. `pnpm build` and `pnpm build:ssr` need `ENVM` set (see `default.env`; environments are in `src/environments/`: dev, qa, prod, cloud).
 - `pnpm serve:integrated`: SSR build and then `node server.js` (full stack; HTTPS only when `SSL_CERT_PATH` and `SSL_KEY_PATH` are set).
 - `pnpm dev:integrated:unix`: watches the SSR build and runs `node server.js`.
-- `pnpm test`: Karma/Jasmine, headless with coverage. Single spec: `pnpm ng test --no-watch --browsers ChromeHeadlessNoSandbox --include='src/app/path/to/x.spec.ts'`. There are currently no `*.spec.ts` files, and schematics skip test generation.
+- `pnpm test`: Vitest via `@angular/build:unit-test`, with 85 % coverage thresholds (frontend stays below until F0-07). Single spec: `pnpm ng test --no-watch --include='src/app/path/to/x.spec.ts'`.
 - No lint script is configured.
-- `pnpm test:bff`: BFF tests (`node:test`, stub backbone and mercury, no network). `pnpm test:bff:coverage` fails under 85 % lines/branches/functions. One file: `node --test server/test/proxy.test.js`.
+- `pnpm test:server`: BFF tests (Vitest, stub backbone and mercury, no network), fails under 85 %. One file: `pnpm vitest run --config vitest.server.config.mjs server/test/proxy.spec.js`. `pnpm test:all` runs both projects; `docs/technical/testing.md` has the details.
 - BFF settings are env vars read at require time by `server/config/constants.js` (loaded from `.env`/`default.env` by dotenv); see `default.env.example`. In `NODE_ENV=production` the BFF exits with code 78 if the Backbone client settings are missing.
 
 ## Architecture

@@ -21,7 +21,7 @@ pnpm start        # http://localhost:4200
 | `pnpm serve:integrated` | Build SSR y `node server.js` (BFF + app) |
 | `pnpm dev:integrated:unix` | Watch del build y BFF |
 | `pnpm server` | Solo el BFF (`node server.js`) |
-| `pnpm test:bff` / `pnpm test:bff:coverage` | Pruebas del BFF (gate 85 %) |
+| `pnpm test` / `pnpm test:server` / `pnpm test:all` | Vitest frontend / BFF / ambos, con gate de cobertura 85 % ([política](docs/roadmap/COVERAGE_POLICY.md), [guía](docs/technical/testing.md)) |
 
 ## Stack
 
