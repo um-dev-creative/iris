@@ -18,7 +18,7 @@ Dejar el repositorio seguro, versionado, con un solo servidor y con el quality g
 - [ ] La rama `mer-1` está integrada en `main` mediante PR
 - [x] Existe un único punto de entrada del servidor
 - [ ] CI ejecuta build SSR + pruebas y bloquea si la cobertura < 85 %
-- [ ] `CHANGELOG.md`, README y plantillas de PR existen y están al día
+- [x] `CHANGELOG.md`, README y plantillas de PR existen y están al día
 
 ## Tareas
 
