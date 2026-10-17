@@ -19,7 +19,9 @@ test('login returns only the profile and sets httpOnly cookies', async () => {
   const res = await login();
 
   assert.equal(res.status, 200);
-  assert.deepEqual((await res.json()).user, { id: 'u-1', username: 'luis', firstname: 'Luis', lastname: 'Mata' });
+  const { expiresAt, ...user } = (await res.json()).user;
+  assert.deepEqual(user, { id: 'u-1', username: 'luis', firstname: 'Luis', lastname: 'Mata', name: 'Luis Mata' });
+  assert.ok(!Number.isNaN(Date.parse(expiresAt)));
   assert.match(cookies(res), /iris_session=.*HttpOnly/);
   assert.match(cookies(res), /iris_refresh=.*HttpOnly/);
   assert.deepEqual(bff.state.backboneCalls[0].body, { email: 'a@b.c', password: 'pw', applicationId: 'app-1' });
