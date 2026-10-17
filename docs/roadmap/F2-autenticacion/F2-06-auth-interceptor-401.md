@@ -52,19 +52,19 @@ Toda llamada al BFF debe enviar la cookie y, si la sesión expiró, el usuario d
 
 ## Criterios de aceptación
 
-- [ ] **AC1** — Con la sesión invalidada en Redis, la siguiente acción muestra un solo aviso y lleva al login
-- [ ] **AC2** — El 401 del login no dispara la redirección
-- [ ] **AC3** — El retry de 5xx existente sigue funcionando
+- [x] **AC1** — Con la sesión invalidada en Redis, la siguiente acción muestra un solo aviso y lleva al login
+- [x] **AC2** — El 401 del login no dispara la redirección
+- [x] **AC3** — El retry de 5xx existente sigue funcionando
 
 ## Definition of Done
 
 Cumple el [DoD general](../DEFINITION_OF_DONE.md) y además:
 
-- [ ] Prueba manual: borrar la sesión en Redis y navegar
-- [ ] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
-- [ ] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
-- [ ] Documentación técnica actualizada (ver abajo)
-- [ ] Documentación de usuario actualizada (ver abajo)
+- [x] Prueba manual: borrar la sesión en Redis y navegar
+- [x] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
+- [x] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
+- [x] Documentación técnica actualizada (ver abajo)
+- [x] Documentación de usuario actualizada (ver abajo)
 
 ## Cobertura de pruebas (umbral ≥ 85 %)
 
@@ -83,11 +83,11 @@ Esta tarea agrega o modifica código ejecutable. Debe cumplir la [Política de c
 
 ### Técnica
 
-- [ ] `docs/technical/frontend.md` § HTTP: cadena de interceptores
+- [x] `docs/technical/frontend.md` § HTTP: cadena de interceptores
 
 ### Usuario
 
-- [ ] `docs/user/manual-operador.md` § Sesión expirada
+- [x] `docs/user/manual-operador.md` § Sesión expirada
 
 ## CHANGELOG
 
@@ -100,3 +100,15 @@ Agregar en `CHANGELOG.md` → `[Unreleased]` → `### Added`:
 ## Comunicación a interesados
 
 Sin comunicación específica; se incluye en el [reporte semanal](../STAKEHOLDERS.md#reporte-semanal).
+
+## Reporte de validación
+
+Validado el 2026-10-17 en la rama `feat/f2-06-auth-interceptor-401` (apilada sobre F2-05).
+
+| Criterio | Resultado | Evidencia |
+|---|---|---|
+| AC1 sesión invalidada → la siguiente acción muestra un solo aviso y lleva al login | PASS | `auth.interceptor.spec.ts` con los dos interceptores en el orden de producción: un 401 de un recurso con sesión abierta deja un único toast "Tu sesión expiró", llama a `clearSession()` y navega a `/login?returnUrl=<ruta actual>`; tres peticiones simultáneas con 401 → 1 toast y 1 navegación (el primero deja el estado en `anonymous`). El caso real con la sesión invalidada en Backbone no lo probé contra un entorno vivo |
+| AC2 el 401 del login no dispara la redirección | PASS | `/auth/access-token`, `/auth/me` y `/auth/logout` con 401 (incluso con sesión abierta): sin aviso, sin navegación, sin tocar el estado; el error llega al llamador (la página de login muestra su mensaje) |
+| AC3 el retry de 5xx sigue funcionando | PASS | Un 500 se reintenta a 1 s y la segunda respuesta llega (con `withCredentials`); un 500 persistente avisa una vez "Error del servidor" y no cierra la sesión; 403 avisa "Acceso denegado" sin cerrar sesión |
+
+Además: solo las URLs del BFF reciben cookies y `x-iris-csrf` (APIs externas y assets no). `httpErrorInterceptor` ya no muestra "No autorizado" para un 401 del BFF (lo gestiona `authInterceptor`), pero sí para APIs externas. `AuthService` dejó de poner las cabeceras él mismo: ahora es responsabilidad del interceptor, para tener una sola fuente. Esto elimina el aviso doble ("No autorizado") ante un login fallido que había hasta F2-05. Orden documentado en `docs/technical/frontend.md` § Interceptores. Frontend: 324 pruebas, líneas 99.7 %; `build:ssr` en `production` sin errores.

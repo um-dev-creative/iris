@@ -33,15 +33,13 @@ describe('AuthService', () => {
   });
 
   describe('login (AC1)', () => {
-    it('envía las credenciales con cookies y cabecera CSRF y guarda el perfil', async () => {
+    it('envía las credenciales y guarda el perfil', async () => {
       const { auth, http } = setup();
 
       const done = auth.login({ email: 'luis@iris.dev', password: 'pw' });
       const req = http.expectOne(`${AUTH}/access-token`);
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual({ email: 'luis@iris.dev', password: 'pw' });
-      expect(req.request.withCredentials).toBe(true);
-      expect(req.request.headers.get('x-iris-csrf')).toBe('1');
       req.flush({ authenticated: true, user: USER });
       await done;
 
@@ -82,14 +80,12 @@ describe('AuthService', () => {
       return ctx;
     }
 
-    it('llama al BFF con cookies y CSRF y pasa a anonymous', async () => {
+    it('llama al BFF y pasa a anonymous', async () => {
       const { auth, http } = await signedIn();
 
       const done = auth.logout();
       const req = http.expectOne(`${AUTH}/logout`);
       expect(req.request.method).toBe('POST');
-      expect(req.request.withCredentials).toBe(true);
-      expect(req.request.headers.get('x-iris-csrf')).toBe('1');
       req.flush(null, { status: 204, statusText: 'No Content' });
       await done;
 
@@ -126,7 +122,6 @@ describe('AuthService', () => {
       const done = auth.restoreSession();
       const req = http.expectOne(`${AUTH}/me`);
       expect(req.request.method).toBe('GET');
-      expect(req.request.withCredentials).toBe(true);
       req.flush({ authenticated: true, user: USER });
       await done;
 
