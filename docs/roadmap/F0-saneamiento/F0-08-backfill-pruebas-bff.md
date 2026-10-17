@@ -52,18 +52,18 @@ El BFF (`server/`) no tiene pruebas automatizadas, solo scripts de validación m
 
 ## Criterios de aceptación
 
-- [ ] **AC1** — `pnpm test:server` reporta ≥ 85 % en las cuatro métricas para `server/`
-- [ ] **AC2** — La validación de dominios rechaza hosts fuera de la lista (`domainsList`) con prueba explícita
-- [ ] **AC3** — Ninguna prueba abre conexiones de red reales (falla si se intenta)
+- [x] **AC1** — `pnpm test:server` reporta ≥ 85 % en las cuatro métricas para `server/`
+- [x] **AC2** — La validación de dominios rechaza hosts fuera de la lista (`domainsList`) con prueba explícita
+- [x] **AC3** — Ninguna prueba abre conexiones de red reales (falla si se intenta)
 
 ## Definition of Done
 
 Cumple el [DoD general](../DEFINITION_OF_DONE.md) y además:
 
 - [ ] Gate de 85 % del backend marcado como bloqueante en CI
-- [ ] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
-- [ ] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
-- [ ] Documentación técnica actualizada (ver abajo)
+- [x] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
+- [x] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
+- [x] Documentación técnica actualizada (ver abajo)
 - [ ] Comunicación a interesados enviada (ver abajo)
 
 ## Cobertura de pruebas (umbral ≥ 85 %)
@@ -85,7 +85,7 @@ Esta tarea agrega o modifica código ejecutable. Debe cumplir la [Política de c
 
 ### Técnica
 
-- [ ] `docs/technical/backend.md` § Pruebas: cómo simular Mercury, Redis y Vault
+- [x] `docs/technical/backend.md` § Pruebas: cómo simular Mercury, Redis y Vault
 
 ### Usuario
 
@@ -104,3 +104,15 @@ Agregar en `CHANGELOG.md` → `[Unreleased]` → `### Added`:
 | A quién | Qué informar | Cuándo · canal |
 |---|---|---|
 | Seguridad | Pruebas que cubren validación de dominios y manejo de tokens | Al cerrar la tarea |
+
+## Reporte de validación
+
+Validado el 2026-10-17 en la rama `test/f0-08-backfill-pruebas-bff`.
+
+| Criterio | Resultado | Evidencia |
+|---|---|---|
+| AC1 `pnpm test:server` ≥ 85 % en las cuatro métricas | PASS | 73 pruebas / 10 archivos: sentencias 99,3 %, ramas 97,0 %, funciones 100 %, líneas 99,2 % |
+| AC2 la validación de destinos rechaza hosts fuera de la configuración | PASS (adaptado) | `domainsList` desapareció con el BFF anterior; `upstream-confinement.spec.js` prueba 7 rutas hostiles (`@evil.test`, `//evil.test`, `http://…`, `%2F…`, `..%2F…`) y verifica que ninguna sale del prefijo/host configurado |
+| AC3 ninguna prueba abre conexiones reales | PASS | `server/test/setup.js` hace fallar `net.Socket.connect` y `dns.lookup` hacia hosts no loopback; `network-guard.spec.js` lo demuestra |
+
+El alcance original (Redis, locks, OAuth/CryptoJS, controladores, `oauth-client`, `backbone-client`) se refería al BFF anterior, eliminado en el PR #31; el equivalente actual (rutas, `proxy.js`, `backbone.js`, `session.js`, `trace.js`, `constants.js`, `settings-check.js`, subida de archivos) ya está cubierto. Se añadieron `constants.spec.js`, `network-guard.spec.js`, `upstream-confinement.spec.js` y casos de 403 del cliente M2M. No se usó `supertest`; se llama con `fetch` a una instancia real. Pendiente: el gate bloqueante en CI (F0-09) y la comunicación.
