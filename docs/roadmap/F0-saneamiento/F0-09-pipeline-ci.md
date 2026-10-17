@@ -59,7 +59,7 @@ No existe integración continua. Se necesita un pipeline que ejecute en cada PR 
 Cumple el [DoD general](../DEFINITION_OF_DONE.md) y además:
 
 - [x] Badge de CI en el README
-- [x] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
+- [ ] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
 - [x] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
 - [x] Documentación técnica actualizada (ver abajo)
 - [ ] Comunicación a interesados enviada (ver abajo)
