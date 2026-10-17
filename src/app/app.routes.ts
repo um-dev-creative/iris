@@ -10,6 +10,11 @@ export const routes: Routes = [
     pathMatch: 'full',
   },
   {
+    path: ROUTE_PATHS.LOGIN,
+    loadComponent: () =>
+      import('./features/auth/login-page/login-page.component').then((m) => m.LoginPageComponent),
+  },
+  {
     path: ROUTE_PATHS.DASHBOARD,
     component: LayoutComponent,
     canActivate: [authGuard],

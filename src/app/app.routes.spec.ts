@@ -47,7 +47,11 @@ describe('app.routes', () => {
     expect(dashboard?.canActivate).toContain(authGuard);
   });
 
-  it('LOGIN está reservada pero aún no tiene ruta registrada', () => {
-    expect(routes.some((route) => route.path === ROUTE_PATHS.LOGIN)).toBe(false);
+  it('LOGIN es una ruta pública fuera del layout del dashboard', () => {
+    const login = routes.find((route) => route.path === ROUTE_PATHS.LOGIN);
+
+    expect(login?.loadComponent).toBeTypeOf('function');
+    expect(login?.component).toBeUndefined();
+    expect(login?.canActivate).toBeUndefined();
   });
 });
