@@ -49,6 +49,7 @@ describe('app.routes', () => {
     const dashboard = routes.find((route) => route.path === ROUTE_PATHS.DASHBOARD);
 
     expect(dashboard?.canActivate).toContain(authGuard);
+    expect(dashboard?.canActivateChild).toContain(authGuard);
   });
 
   it('LOGIN es una ruta fuera del layout del dashboard, solo para visitantes', () => {
@@ -71,15 +72,24 @@ describe('app.routes', () => {
     expect(url()).toBe('/dashboard');
   });
 
-  it('tras cerrar sesión, volver (atrás) a una página del dashboard lleva al login (F2-07 AC2)', async () => {
-    const { harness, auth, url } = await navigate('/dashboard');
-    expect(url()).toBe('/dashboard');
-
+  it('tras cerrar sesión, volver (atrás) al dashboard lleva al login (F2-07 AC2)', async () => {
+    const { harness, auth, url } = await navigate('/dashboard/data');
     auth.service.clearSession();
+    await harness.navigateByUrl('/login');
+
     await harness.navigateByUrl('/dashboard/data');
 
     expect(url()).toBe('/login?returnUrl=%2Fdashboard%2Fdata');
     expect((harness.fixture.nativeElement as HTMLElement).querySelector('app-sidebar')).toBeNull();
+  });
+
+  it('sin sesión, ni siquiera navegar entre páginas del dashboard ya abierto es posible', async () => {
+    const { harness, auth, url } = await navigate('/dashboard');
+    auth.service.clearSession();
+
+    await harness.navigateByUrl('/dashboard/settings');
+
+    expect(url()).toBe('/login?returnUrl=%2Fdashboard%2Fsettings');
   });
 
   it('sin sesión se ve el login y no el dashboard', async () => {

@@ -50,6 +50,7 @@ Un 401 de `/auth/*` (login fallido, `/auth/me` sin sesión) es esperado: no avis
 ### Guards
 
 - `authGuard` protege `/dashboard/**`: si `status` es `unknown` espera a `restoreSession()`; sin sesión devuelve un `UrlTree` a `/login?returnUrl=<ruta pedida>` (con su query, codificada). Con el inicializador de `app.config.ts` el estado ya se conoce antes del primer render, así que el dashboard no llega a pintarse para un visitante.
+- La ruta `/dashboard` lleva el guard en `canActivate` **y** en `canActivateChild`: `canActivate` solo corre al entrar al padre, así que sin el segundo se podría navegar entre páginas del dashboard con la sesión ya terminada.
 - `guestGuard` protege `/login`: con sesión redirige a `/dashboard`.
 - En SSR ambos dejan pasar y la decisión la toma el navegador (que es quien tiene las cookies).
 - Un guard asíncrono debe hacer todos sus `inject()` **antes** del primer `await`; después se pierde el contexto de inyección.
