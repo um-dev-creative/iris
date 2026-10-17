@@ -11,8 +11,9 @@ function decodePayload(token) {
   }
 }
 
+// Strict: the SPA and the BFF share an origin, so the browser never needs to send the session across sites.
 function cookieOptions(maxAgeMs) {
-  return { httpOnly: true, sameSite: 'lax', secure: COOKIE_SECURE, path: '/', maxAge: maxAgeMs };
+  return { httpOnly: true, sameSite: 'strict', secure: COOKIE_SECURE, path: '/', maxAge: maxAgeMs };
 }
 
 function setSessionCookies(res, { token, refreshToken }) {
@@ -23,7 +24,7 @@ function setSessionCookies(res, { token, refreshToken }) {
 }
 
 function clearSessionCookies(res) {
-  const opts = { httpOnly: true, sameSite: 'lax', secure: COOKIE_SECURE, path: '/' };
+  const opts = { httpOnly: true, sameSite: 'strict', secure: COOKIE_SECURE, path: '/' };
   res.clearCookie(SESSION_COOKIE, opts);
   res.clearCookie(REFRESH_COOKIE, opts);
 }
