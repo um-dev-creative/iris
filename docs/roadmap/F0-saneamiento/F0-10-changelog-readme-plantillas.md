@@ -52,8 +52,8 @@ No existe `CHANGELOG.md` y el README describe solo `npm start`. Los interesados 
 
 ## Criterios de aceptación
 
-- [ ] **AC1** — `CHANGELOG.md` tiene sección `[Unreleased]` y versiones previas con fecha
-- [ ] **AC2** — El README permite levantar el proyecto desde cero siguiendo solo sus pasos
+- [x] **AC1** — `CHANGELOG.md` tiene sección `[Unreleased]` y versiones previas con fecha
+- [x] **AC2** — El README permite levantar el proyecto desde cero siguiendo solo sus pasos
 - [ ] **AC3** — Los PR nuevos se abren con la plantilla
 
 ## Definition of Done
@@ -62,8 +62,8 @@ Cumple el [DoD general](../DEFINITION_OF_DONE.md) y además:
 
 - [ ] Un desarrollador ajeno al proyecto valida el README
 - [ ] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
-- [ ] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
-- [ ] Documentación técnica actualizada (ver abajo)
+- [x] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
+- [x] Documentación técnica actualizada (ver abajo)
 - [ ] Comunicación a interesados enviada (ver abajo)
 
 ## Cobertura de pruebas (umbral ≥ 85 %)
@@ -75,8 +75,8 @@ Esta tarea no agrega lógica de aplicación. Debe verificarse que el gate de 85 
 
 ### Técnica
 
-- [ ] README
-- [ ] `CONTRIBUTING.md` (opcional) con flujo de ramas y commits
+- [x] README
+- [x] `CONTRIBUTING.md` (opcional) con flujo de ramas y commits
 
 ### Usuario
 
@@ -95,3 +95,15 @@ Agregar en `CHANGELOG.md` → `[Unreleased]` → `### Added`:
 | A quién | Qué informar | Cuándo · canal |
 |---|---|---|
 | Todos los interesados | Dónde consultar cambios (`CHANGELOG.md`) y el roadmap | Al hacer merge · correo de kickoff |
+
+## Reporte de validación
+
+Validado el 2026-10-17 en la rama `docs/f0-10-changelog-readme-plantillas`.
+
+| Criterio | Resultado | Evidencia |
+|---|---|---|
+| AC1 `CHANGELOG.md` con `[Unreleased]` y versiones previas con fecha | PASS | `[Unreleased]`, `[0.0.3] - 2026-02-19`, `[0.0.2]` y `[0.0.1] - 2026-02-18`, con enlace de comparación desde `a54ad81` |
+| AC2 el README permite levantar el proyecto desde cero | PASS (por mí) | Copia limpia del repo: `pnpm install`, `cp default.env.example default.env`, `ENVM=development pnpm serve:integrated` → `/` 200 y `/health` `{"status":"UP"}`. Enlaces relativos del README sin roturas. Falta que una persona ajena al proyecto lo valide (DoD) |
+| AC3 los PR nuevos se abren con la plantilla | PENDIENTE | `.github/pull_request_template.md` creada; se comprueba al abrir el siguiente PR |
+
+Hecho: README reescrito (requisitos, setup con pnpm, stack completo, scripts, pruebas y calidad, contribución, tabla de documentación), plantilla de PR con checklist (AC, cobertura ≥ 85 %, CHANGELOG, docs técnica y de usuario, comunicación) y `docs/technical/contributing.md` con Conventional Commits. El CHANGELOG ya existía desde F0-01/F0-02, con historial desde febrero 2026.

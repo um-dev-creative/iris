@@ -1,6 +1,8 @@
 'use strict';
 
-const { test, before, after, beforeEach } = require('node:test');
+// vitest globals (see vitest.server.config.mjs)
+const before = beforeAll;
+const after = afterAll;
 const assert = require('node:assert/strict');
 const { start, tokens } = require('./harness');
 
@@ -46,6 +48,15 @@ test('a client backbone refuses is a configuration error answered as 502, never 
   bff.state.clientTokens = [];
   bff.state.clientTokenStatus = 401;
   // the cached token is revoked, so the retry asks for a new one and is refused
+  const res = await login();
+
+  assert.equal(res.status, 502);
+});
+
+test('un cliente que backbone no deja actuar para la aplicación (403) también es un 502', async () => {
+  bff.state.clientTokens = ['m2m-1'];
+  bff.state.loginStatus = 403;
+
   const res = await login();
 
   assert.equal(res.status, 502);

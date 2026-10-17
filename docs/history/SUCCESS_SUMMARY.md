@@ -2,7 +2,7 @@
 
 ## ✅ All Major Issues Resolved
 
-### 1. **localStorage SSR Issue** ✅ FIXED
+### 1. **localStorage SSR Issue** ✅ FIXED (corrección: **no lo estaba** cuando se escribió este resumen; `ApiService` seguía usando `localStorage` sin proteger y se corrigió de verdad en F0-04)
 - **Problem**: `localStorage is not defined` during server-side rendering
 - **Solution**: Added `isPlatformBrowser()` checks in `ApiService`
 - **Result**: Clean SSR builds with no localStorage errors

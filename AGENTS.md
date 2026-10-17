@@ -42,7 +42,7 @@
   - `serve:integrated` -> builds and serves full-stack app with backend APIs
   - `dev:integrated:unix` / `dev:integrated:win` -> watch mode with backend integration
   - `watch` -> `ng build --watch --configuration development`
-  - `test` -> `ng test --code-coverage --no-watch --browsers ChromeHeadlessNoSandbox`
+  - `test` -> Vitest (`ng test`), `test:server` -> Vitest for `server/`, `test:all` -> both
 - **Backend Development**: Use `serve:integrated` or `dev:integrated:*` scripts for full-stack development.
 - **HTTPS Support**: the BFF serves HTTPS when `SSL_CERT_PATH` and `SSL_KEY_PATH` are set; certificates stay out of git.
 - Angular schematics are configured to skip test generation (`angular.json`), and there are currently no `*.spec.ts` files.
@@ -72,7 +72,7 @@
   - Mercury Auth: `/mrc/api/v1/auth/*` (access-token, logout, me, create-user, verify-code)
   - Multimedia: `/mrc/api/v1/d-image/*` (file uploads with multer)
   - Backbone: `/bkd/api/v1/*` (backbone service proxy)
-- **Tests**: `pnpm test:bff` / `pnpm test:bff:coverage` (`node:test`, stub upstreams, ≥ 85 %).
+- **Tests**: `pnpm test:server` (Vitest, stub upstreams, ≥ 85 %).
 - **Middleware**: Rate limiting, compression, CORS (credentials), cookie-parser, W3C trace context.
 
 ## Multi-Agent Delivery Model

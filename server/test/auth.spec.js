@@ -1,6 +1,8 @@
 'use strict';
 
-const { test, before, after, beforeEach } = require('node:test');
+// vitest globals (see vitest.server.config.mjs)
+const before = beforeAll;
+const after = afterAll;
 const assert = require('node:assert/strict');
 const { start, tokens } = require('./harness');
 

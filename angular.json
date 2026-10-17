@@ -143,23 +143,33 @@
           "builder": "@angular/build:extract-i18n"
         },
         "test": {
-          "builder": "@angular/build:karma",
+          "builder": "@angular/build:unit-test",
           "options": {
-            "polyfills": [
-              "zone.js",
-              "zone.js/testing"
-            ],
+            "runner": "vitest",
+            "buildTarget": "dashboard:build:development",
             "tsConfig": "tsconfig.spec.json",
-            "assets": [
-              {
-                "glob": "**/*",
-                "input": "public"
-              }
+            "runnerConfig": "vitest.frontend.config.mjs",
+            "coverageInclude": [
+              "src/app/**/*.ts"
             ],
-            "styles": [
-              "src/styles.css"
+            "coverageExclude": [
+              "src/app/**/*.spec.ts",
+              "src/app/**/index.ts",
+              "src/app/**/*.model.ts",
+              "src/app/**/*.dto.ts",
+              "src/app/features/dashboard/pages/showcase-page/**"
             ],
-            "scripts": []
+            "coverageReporters": [
+              "text-summary",
+              "lcov",
+              "html"
+            ],
+            "coverageThresholds": {
+              "statements": 85,
+              "branches": 85,
+              "functions": 85,
+              "lines": 85
+            }
           }
         }
       }

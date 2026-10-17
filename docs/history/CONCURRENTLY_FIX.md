@@ -40,8 +40,8 @@ Added multiple fallback options that don't require concurrently:
 
 ### 3. ✅ Created Helper Scripts
 Created shell scripts for easy development:
-- `serve-integrated.sh` - Single command to build and serve
-- `start-dev.sh` - Development environment setup with diagnostics
+- `scripts/serve-integrated.sh` - Single command to build and serve
+- `scripts/start-dev.sh` - Development environment setup with diagnostics
 
 ### 4. ✅ Verified Dependencies
 Confirmed `concurrently` is properly installed:
@@ -75,7 +75,7 @@ pnpm run serve:integrated
 
 ### Option 4: Shell Script
 ```bash
-./serve-integrated.sh
+./scripts/serve-integrated.sh
 ```
 Direct shell script execution.
 
