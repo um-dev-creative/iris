@@ -2,16 +2,21 @@
 
 ## Variables de entorno
 
-Copia `default.env.example` a `default.env` (ignorado por git) y completa los valores.
+Copia `default.env.example` a `default.env` (ignorado por git) y completa los valores. El BFF las lee con dotenv y todas tienen valor por defecto para desarrollo local; el detalle de cada una está comentado en el ejemplo.
 
 | Variable | Descripción |
 |---|---|
-| `DEBUG_MODE` | Logs de depuración del BFF (`true`/`false`) |
-| `ENVM` | Entorno de build/configuración (`dev`, `qa`, `prod`, `dev-cloud`, `qa-cloud`) |
-| `NODE_ENV` | Entorno de Node |
-| `VAULT_PATH` | Ruta del secreto en Vault |
-| `VAULT_URL` | URL del servidor Vault |
-| `VAULT_TOKEN` | Token de Vault; solicitarlo a Seguridad/DevOps, nunca commitearlo |
+| `ENVM` | Entorno de build de Angular (`dev`, `qa`, `prod`, `dev-cloud`, `qa-cloud`) |
+| `NODE_ENV` | `production` exige las tres variables de Backbone siguientes |
+| `PORT` | Puerto del BFF (4000) |
+| `MERCURY_BASE_URL` / `MERCURY_API_PREFIX` | Gateway de Mercury y raíz de su API |
+| `BACKBONE_BASE_URL` / `BACKBONE_API_PREFIX` | Gateway de Backbone y raíz de su API |
+| `BACKBONE_APPLICATION_ID` | Aplicación Iris registrada en Backbone |
+| `BACKBONE_CLIENT_ID` / `BACKBONE_CLIENT_SECRET` | Cliente M2M de Iris; el secreto viene del gestor de secretos, nunca de git |
+| `COOKIE_SECURE`, `CORS_ORIGIN`, `TRUST_PROXY` | Cookies, CORS y proxies de confianza |
+| `SSL_CERT_PATH` / `SSL_KEY_PATH` | HTTPS opcional (ambas juntas) |
+
+Pruebas: `pnpm test:server` (BFF), `pnpm test` (frontend) y `pnpm test:all`; ver `docs/technical/testing.md`.
 
 Detección de secretos: `gitleaks detect --config .gitleaks.toml` (instalar con `brew install gitleaks`).
 
@@ -96,7 +101,7 @@ When the integrated server starts, it will be available at:
 
 3. Use the simple script:
    ```bash
-   ./serve-integrated.sh
+   ./scripts/serve-integrated.sh
    ```
 
 ### If build fails:

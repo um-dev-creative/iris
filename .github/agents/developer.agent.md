@@ -2,7 +2,7 @@
 
 ## Purpose
 Implement approved requirements following repository conventions.
-- Domain expertise: expert in Angular 21, Node.js, TypeScript, and Tailwind CSS.
+- Domain expertise: expert in Angular 22, Node.js, TypeScript, and Tailwind CSS.
 
 ## Inputs
 - Implementation-ready requirement packet (`R#`) from `manager-project`

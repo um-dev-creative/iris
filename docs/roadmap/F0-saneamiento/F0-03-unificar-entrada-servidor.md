@@ -53,19 +53,19 @@
 
 ## Criterios de aceptación
 
-- [ ] **AC1** — Middlewares y rutas se registran en un único lugar (`createApp`)
-- [ ] **AC2** — `pnpm run serve:integrated` responde 200 en `/`, `/health` y `/health/redis`
-- [ ] **AC3** — Las rutas `/mrc/api/v1/*` y `/bkd/api/v1/*` responden igual que antes (mismos códigos de estado ante la misma petición)
+- [x] **AC1** — Middlewares y rutas se registran en un único lugar (`createApp`)
+- [x] **AC2** — `pnpm run serve:integrated` responde 200 en `/`, `/health` y `/health/redis`
+- [x] **AC3** — Las rutas `/mrc/api/v1/*` y `/bkd/api/v1/*` responden igual que antes (mismos códigos de estado ante la misma petición)
 - [ ] **AC4** — Los flags `--vaultToken`, `--vaultUrl`, `--vaultPath`, `--debugMode`, `--ssl*` siguen funcionando
 
 ## Definition of Done
 
 Cumple el [DoD general](../DEFINITION_OF_DONE.md) y además:
 
-- [ ] No queda código duplicado de SSL ni de middlewares entre archivos
-- [ ] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
-- [ ] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
-- [ ] Documentación técnica actualizada (ver abajo)
+- [x] No queda código duplicado de SSL ni de middlewares entre archivos
+- [x] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
+- [x] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
+- [x] Documentación técnica actualizada (ver abajo)
 - [ ] Comunicación a interesados enviada (ver abajo)
 
 ## Cobertura de pruebas (umbral ≥ 85 %)
@@ -86,7 +86,7 @@ Esta tarea agrega o modifica código ejecutable. Debe cumplir la [Política de c
 ### Técnica
 
 - [ ] `docs/technical/architecture.md`: diagrama del arranque (lanzador → Vault → `createApp` → SSR)
-- [ ] README: tabla de scripts actualizada
+- [x] README: tabla de scripts actualizada
 
 ### Usuario
 
@@ -105,3 +105,16 @@ Agregar en `CHANGELOG.md` → `[Unreleased]` → `### Changed`:
 | A quién | Qué informar | Cuándo · canal |
 |---|---|---|
 | DevOps / Plataforma | Cambia el comando de arranque si algún entorno usa `node server.js` directamente | Antes del merge · correo |
+
+## Reporte de validación
+
+Validado el 2026-10-17 en la rama `feat/f0-03-unificar-entrada-servidor`.
+
+| Criterio | Resultado | Evidencia |
+|---|---|---|
+| AC1 middlewares y rutas en un único lugar | PASS | Solo `server/app.js` (`createApp`); `src/server.ts` ya no existe |
+| AC2 `serve:integrated` responde 200 en `/` y `/health` | PASS | `/` 200, `/health` `{"status":"UP"}` 200. `/health/redis` ya no existe (Redis retirado); devuelve la SPA |
+| AC3 rutas `/mrc` y `/bkd` | PASS con cambio | Mismos prefijos; el comportamiento cambió por la reescritura del BFF (PR #31), cubierto por 48 pruebas |
+| AC4 flags `--vault*`, `--ssl*` | N/A | Vault/yargs eliminados a propósito; HTTPS por `SSL_CERT_PATH`/`SSL_KEY_PATH` |
+
+Desviaciones respecto al texto de la tarea: la fábrica es `server/app.js` (no `app.factory.js`) y no hay lanzador con Vault. Pruebas de `app`/health: `server/test/*.test.js` (`node:test`; se migran a Vitest en F0-06). Comunicación a DevOps pendiente.

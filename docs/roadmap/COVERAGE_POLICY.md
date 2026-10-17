@@ -7,7 +7,7 @@ Objetivo: mantener **≥ 85 %** de cobertura en todo momento, en frontend y back
 | Proyecto | Ruta | Herramienta | Líneas | Sentencias | Funciones | Ramas |
 |---|---|---|---:|---:|---:|---:|
 | Frontend | `src/app/**` | Vitest (`@angular/build:unit-test`) + v8 | 85 % | 85 % | 85 % | 85 % |
-| Backend | `server/**` | Vitest (entorno node) + supertest + v8 | 85 % | 85 % | 85 % | 85 % |
+| Backend | `server/**` | Vitest (entorno node) + v8 | 85 % | 85 % | 85 % | 85 % |
 | Diff de cada PR | archivos modificados | reporte en el PR | 85 % | — | — | — |
 
 Los umbrales se configuran en `angular.json` / `vitest.server.config.mjs` (tarea [F0-06](F0-saneamiento/F0-06-vitest-quality-gate-85.md)). Si una métrica queda por debajo, el comando termina con error y CI bloquea el merge.
@@ -28,7 +28,7 @@ Solo se excluyen archivos sin lógica propia. Cualquier exclusión nueva se just
 | Ruta | Motivo |
 |---|---|
 | `src/main.ts`, `src/main.server.ts` | Bootstrap |
-| `src/server.ts`, `server.js` | Arranque del proceso; la lógica vive en `server/app.factory.js`, que sí se prueba |
+| `server.js` | Arranque del proceso; la lógica vive en `server/app.js`, que sí se prueba |
 | `src/environments/**` | Constantes |
 | `**/index.ts` | Barrels |
 | `**/*.model.ts`, `**/*.dto.ts` | Solo tipos |
@@ -52,5 +52,5 @@ Ninguna tarea de F1 en adelante se empieza hasta que el paso 3 esté cumplido.
 - Cubrir ramas de error (4xx, 5xx, timeout, datos faltantes), no solo el camino feliz.
 - Usar fake timers para polling, debounce y expiraciones.
 - Frontend: `HttpTestingController` para HTTP y `RouterTestingHarness` para rutas.
-- Backend: `supertest` sobre `createApp()`; axios, Redis y Vault siempre simulados. Una prueba que intenta salir a la red falla.
+- Backend: peticiones reales (`fetch`) sobre `createApp()` con dobles de Mercury y Backbone (`server/test/harness.js`); nada sale a la red. Una prueba que intenta salir a la red falla.
 - Los fixtures de API salen del contrato `docs/api/openapi.yaml`, no se inventan en cada prueba.

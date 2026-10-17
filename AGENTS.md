@@ -3,7 +3,7 @@
 ## Project Scope
 - `iris` is a full-stack Angular app with integrated Node.js backend, using standalone components and lazy-loaded routes.
 - **Frontend**: `src/main.ts` -> `bootstrapApplication(AppComponent, appConfig)` for client-side rendering.
-- **Backend**: `src/server.ts` integrates Angular SSR with existing backend API layer (`/server` folder).
+- **Backend**: `server.js` + `/server` is a Node/Express BFF (pattern of `stratum` and `zerobound-frontend`) that serves the Angular build and proxies Mercury and Backbone.
 - **Project Name**: Package is named `dashboard` in `package.json`; use this for Angular CLI commands.
 - Root UI shell: `src/app/layout/layout.component.ts`; feature pages render inside its `router-outlet`.
 
@@ -42,15 +42,15 @@
   - `serve:integrated` -> builds and serves full-stack app with backend APIs
   - `dev:integrated:unix` / `dev:integrated:win` -> watch mode with backend integration
   - `watch` -> `ng build --watch --configuration development`
-  - `test` -> `ng test --code-coverage --no-watch --browsers ChromeHeadlessNoSandbox`
+  - `test` -> Vitest (`ng test`), `test:server` -> Vitest for `server/`, `test:all` -> both
 - **Backend Development**: Use `serve:integrated` or `dev:integrated:*` scripts for full-stack development.
-- **HTTPS Support**: Backend serves on HTTPS with SSL certificates in `/ssl` folder.
+- **HTTPS Support**: the BFF serves HTTPS when `SSL_CERT_PATH` and `SSL_KEY_PATH` are set; certificates stay out of git.
 - Angular schematics are configured to skip test generation (`angular.json`), and there are currently no `*.spec.ts` files.
 
 ## Integration and Environment Notes
 - **Multiple Environments**: `src/environments/` contains configs for dev, qa, prod, and cloud variants.
 - Default API endpoint is `https://jsonplaceholder.typicode.com` (`src/environments/environment*.ts`).
-- **Backend Integration**: Full Node.js backend in `/server` folder with routes, controllers, and proxies.
+- **Backend Integration**: BFF in `/server` (`app.js`, `config/`, `shared/`, `routes/`, `test/`); settings come from env vars (`default.env.example`).
 - **API Routes**: Backend APIs are prefixed (`/mrc/api/v1/*`, `/bkd/api/v1/*`) and don't conflict with Angular routes.
 - **SSL Configuration**: Uses certificates in `/ssl` folder; falls back to HTTP if not available.
 - `SettingsPageComponent` updates runtime API config through `ApiService` and does a direct `fetch` connectivity check.
@@ -63,17 +63,17 @@
 - Preserve signal-based patterns (`signal`, `computed`, readonly signal exposure) used across store/services.
 
 ## Backend Architecture
-- **Server Entry**: `src/server.ts` combines Angular SSR with existing Node.js API layer.
+- **Server Entry**: `server.js` (settings check, `createApp()`, HTTP/HTTPS); the app lives in `server/app.js`.
 - **Backend Modules**: CommonJS modules in `/server` folder using `require()` (not ES6 imports).
-- **Configuration**: `server/config/app.config.js` bootstraps backend settings; uses `NODE_CONFIG_DIR`.
-- **API Routes**: 
-  - Mercury Standard: `/mrc/api/v1/general/*` (proxy to Mercury services)
-  - Mercury Auth: `/mrc/api/v1/auth/*` (authentication endpoints)
+- **Configuration**: `server/config/constants.js` reads env vars with local-dev defaults; `settings-check.js` stops a half-configured production start (exit 78). No Vault, no `config` package.
+- **Auth/session**: login through Backbone as the Iris application client; session and refresh JWTs in httpOnly cookies; the BFF sends the JWT upstream as `session-token` and renews it once on 401. CSRF via the `x-iris-csrf: 1` header on non-GET API calls.
+- **API Routes**:
+  - Mercury Standard: `/mrc/api/v1/general/*` (proxy to Mercury)
+  - Mercury Auth: `/mrc/api/v1/auth/*` (access-token, logout, me, create-user, verify-code)
   - Multimedia: `/mrc/api/v1/d-image/*` (file uploads with multer)
   - Backbone: `/bkd/api/v1/*` (backbone service proxy)
-- **Controllers**: Located in `server/controller/`; handle API business logic and external service proxies.
-- **Middleware**: Rate limiting, compression, CORS, HTTP context (express-http-context).
-- **SSL/HTTPS**: Automatic HTTPS with certificates from `/ssl` folder; graceful HTTP fallback.
+- **Tests**: `pnpm test:server` (Vitest, stub upstreams, ≥ 85 %).
+- **Middleware**: Rate limiting, compression, CORS (credentials), cookie-parser, W3C trace context.
 
 ## Multi-Agent Delivery Model
 - The `manager-project` agent is the intake owner: receives every request, classifies scope/risk, and assigns requirements to the right agents.
