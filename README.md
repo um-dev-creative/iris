@@ -34,7 +34,7 @@ Las variables de entorno están documentadas en [`default.env.example`](default.
 |---|---|
 | `pnpm start` | `ng serve` en :4200; reenvía `/mrc`, `/bkd` y `/health` al BFF (`IRIS_BFF_URL`, por defecto :4000) |
 | `pnpm build:dev` | Build de desarrollo |
-| `pnpm build` / `pnpm build:ssr` | Build con `ENVM` (SSR en el segundo) |
+| `pnpm build` / `pnpm build:ssr` | Build con `ENVM` (`development`, `dev`, `qa`, `dev-cloud`, `qa-cloud`, `production`; SSR en el segundo). Ver [entornos](docs/technical/environments.md) |
 | `pnpm serve:integrated` | Build SSR y `node server.js` (BFF + app) |
 | `pnpm dev:integrated:unix` | Watch del build y BFF |
 | `pnpm server` | Solo el BFF (`node server.js`) |
