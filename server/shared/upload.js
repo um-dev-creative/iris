@@ -9,7 +9,7 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
  * (size limit, unexpected field) into clean 4xx responses instead of unhandled errors.
  * @param {(m: import('multer').Multer) => import('express').RequestHandler} pick
  */
-function handleUpload(pick, uploader = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_FILE_BYTES } })) {
+function handleUpload(pick, uploader = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_FILE_BYTES, files: 1, fields: 10, parts: 11 } })) {
   const middleware = pick(uploader);
   return (req, res, next) => {
     middleware(req, res, (err) => {

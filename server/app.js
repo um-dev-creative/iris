@@ -57,7 +57,14 @@ function createApp({ distPath = path.join(__dirname, '../dist/dashboard/browser'
   app.use(API_PREFIXES, (_req, res) => res.status(404).json({ error: 'Not found' }));
 
   // the SSR build writes index.csr.html, a client-only build index.html
-  const indexHtml = ['index.csr.html', 'index.html'].map((f) => path.join(distPath, f)).find(existsSync);
+  let indexHtml;
+  for (const file of ['index.csr.html', 'index.html']) {
+    const candidate = path.join(distPath, file);
+    if (existsSync(candidate)) {
+      indexHtml = candidate;
+      break;
+    }
+  }
   if (indexHtml) {
     app.use(express.static(distPath, { maxAge: '1y', index: false }));
     app.get('*', (_req, res) => res.sendFile(indexHtml));

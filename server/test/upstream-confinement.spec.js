@@ -25,10 +25,20 @@ describe('el BFF solo habla con los hosts configurados (AC2)', () => {
   it.each(attempts)('%s se queda bajo el prefijo del servicio configurado', async (path) => {
     const res = await bff.call(path, { cookie: GOOD });
 
-    assert.ok([200, 401, 404].includes(res.status), `status ${res.status}`);
+    assert.ok([200, 400, 401, 404].includes(res.status), `status ${res.status}`);
     for (const call of bff.state.apiCalls) {
       assert.match(call.url, call.service === 'mercury' ? /^\/mercury\/api\/v1\// : /^\/backbone\/api\/v1\//);
     }
+  });
+
+  it.each([
+    '/mrc/api/v1/general/..%2F..%2Fadmin',
+    '/mrc/api/v1/general/a%5Cb',
+  ])('%s se rechaza con 400 sin llegar al upstream', async (path) => {
+    const res = await bff.call(path, { cookie: GOOD });
+
+    assert.equal(res.status, 400);
+    assert.deepEqual(bff.state.apiCalls, []);
   });
 
   it('una petición para mercury nunca llega a backbone y viceversa', async () => {

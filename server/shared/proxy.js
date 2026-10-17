@@ -20,6 +20,26 @@ const UPSTREAMS = {
   backbone: { base: BACKBONE_BASE_URL, prefix: BACKBONE_API_PREFIX },
 };
 
+/** Strips control characters (CR/LF included) so user-controlled text cannot forge log lines. */
+const clean = (value) => String(value).replace(/[\u0000-\u001f\u007f]/g, ' ');
+
+/**
+ * A path stays under the upstream prefix only if it is absolute, free of control characters and backslashes,
+ * and has no dot segments (also when percent-encoded).
+ */
+function isSafePath(path) {
+  if (path === '') return true;
+  if (!path.startsWith('/') || path.startsWith('//')) return false;
+  let decoded;
+  try {
+    decoded = decodeURIComponent(path);
+  } catch {
+    return false;
+  }
+  if (/[\u0000-\u001f\u007f\\]/.test(decoded)) return false;
+  return !decoded.split('/').some((segment) => segment === '..' || segment === '.');
+}
+
 const forward = (req, url, token, { body, headers = {} } = {}) =>
   axios({
     method: req.method,
@@ -65,6 +85,7 @@ function sendUpstream(res, response) {
  */
 async function proxyToApi(req, res, upstream, path, options = {}) {
   const { base, prefix } = UPSTREAMS[upstream];
+  if (!isSafePath(path)) return res.status(400).json({ error: 'Invalid path' });
   const url = `${base}${prefix}${path}`;
   let token = req.cookies?.[SESSION_COOKIE];
   if (!token && !options.public) return res.status(401).json({ error: 'Not authenticated' });
@@ -85,12 +106,12 @@ async function proxyToApi(req, res, upstream, path, options = {}) {
     }
 
     if (response.status >= 500 && req.trace) {
-      logger.warn(`${upstream} answered ${response.status} for ${req.method} ${path} traceId=${req.trace.traceId}`);
+      logger.warn(`${upstream} answered ${response.status} for ${req.method} ${clean(path)} traceId=${req.trace.traceId}`);
     }
     return sendUpstream(res, response);
   } catch (err) {
     // err.code (e.g. DEPTH_ZERO_SELF_SIGNED_CERT) names a TLS trust failure explicitly
-    logger.error(`Proxy error → ${url}: ${err.code ? `[${err.code}] ` : ''}${err.message}${req.trace ? ` traceId=${req.trace.traceId}` : ''}`);
+    logger.error(clean(`Proxy error → ${url}: ${err.code ? `[${err.code}] ` : ''}${err.message}${req.trace ? ` traceId=${req.trace.traceId}` : ''}`));
     return res.status(502).json({ error: 'Backend unavailable', ...(req.trace ? { traceId: req.trace.traceId } : {}) });
   }
 }
