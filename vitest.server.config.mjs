@@ -3,6 +3,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     globals: true,
+    setupFiles: ['server/test/setup.js'],
     environment: 'node',
     include: ['server/**/*.spec.js'],
     // Cada archivo carga el BFF con su propio entorno (el BFF lee process.env al hacer require)
