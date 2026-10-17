@@ -2,7 +2,7 @@
 
 const multer = require('multer');
 
-const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const MAX_FILE_BYTES = 8 * 1024 * 1024;
 
 /**
  * Express middleware that parses a multipart upload held in memory and turns multer failures
