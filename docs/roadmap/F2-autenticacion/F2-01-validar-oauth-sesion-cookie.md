@@ -62,7 +62,7 @@ El BFF tiene `POST /mrc/api/v1/auth/access-token` y `DELETE /mrc/api/v1/auth/ses
 
 Cumple el [DoD general](../DEFINITION_OF_DONE.md) y además:
 
-- [x] Evidencia de la prueba contra QA adjunta al ticket (sin credenciales)
+- [ ] Evidencia de la prueba contra QA adjunta al ticket (sin credenciales)
 - [x] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
 - [x] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
 - [x] Documentación técnica actualizada (ver abajo)
@@ -87,7 +87,7 @@ Esta tarea agrega o modifica código ejecutable. Debe cumplir la [Política de c
 ### Técnica
 
 - [x] `docs/technical/security.md` § Sesión: diagrama de secuencia, atributos de cookie, CSRF
-- [x] `docs/api/openapi.yaml`: endpoints de auth
+- [ ] `docs/api/openapi.yaml`: endpoints de auth (el archivo se crea en F3-01)
 
 ### Usuario
 
