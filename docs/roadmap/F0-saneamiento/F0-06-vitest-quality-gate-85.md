@@ -56,19 +56,19 @@ El proyecto tiene Karma/Jasmine configurado pero ningún `*.spec.ts`. Angular 21
 
 ## Criterios de aceptación
 
-- [ ] **AC1** — `pnpm test` ejecuta Vitest y genera `coverage/frontend/lcov.info`
-- [ ] **AC2** — `pnpm test:server` genera `coverage/server/lcov.info`
-- [ ] **AC3** — Ambos comandos fallan con código ≠ 0 si cualquier métrica < 85 %
-- [ ] **AC4** — Una spec de ejemplo corre en cada proyecto
+- [x] **AC1** — `pnpm test` ejecuta Vitest y genera `coverage/frontend/lcov.info`
+- [x] **AC2** — `pnpm test:server` genera `coverage/server/lcov.info`
+- [x] **AC3** — Ambos comandos fallan con código ≠ 0 si cualquier métrica < 85 %
+- [x] **AC4** — Una spec de ejemplo corre en cada proyecto
 
 ## Definition of Done
 
 Cumple el [DoD general](../DEFINITION_OF_DONE.md) y además:
 
-- [ ] Karma y Jasmine eliminados de `package.json`
-- [ ] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
-- [ ] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
-- [ ] Documentación técnica actualizada (ver abajo)
+- [x] Karma y Jasmine eliminados de `package.json`
+- [x] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
+- [x] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
+- [x] Documentación técnica actualizada (ver abajo)
 - [ ] Comunicación a interesados enviada (ver abajo)
 
 ## Cobertura de pruebas (umbral ≥ 85 %)
@@ -88,8 +88,8 @@ Esta tarea agrega o modifica código ejecutable. Debe cumplir la [Política de c
 
 ### Técnica
 
-- [ ] `docs/technical/testing.md`: cómo escribir y ejecutar pruebas, mocks de `HttpClient` y de Mercury
-- [ ] `docs/roadmap/COVERAGE_POLICY.md` enlazado desde README
+- [x] `docs/technical/testing.md`: cómo escribir y ejecutar pruebas, mocks de `HttpClient` y de Mercury
+- [x] `docs/roadmap/COVERAGE_POLICY.md` enlazado desde README
 
 ### Usuario
 
@@ -113,3 +113,16 @@ Agregar en `CHANGELOG.md` → `[Unreleased]` → `### Changed`:
 ## Riesgos y notas
 
 - Hasta completar F0-07 y F0-08 la cobertura global estará por debajo de 85 %; el gate se activa como bloqueante al cerrar esas tareas.
+
+## Reporte de validación
+
+Validado el 2026-10-17 en la rama `feat/f0-06-vitest-quality-gate-85`.
+
+| Criterio | Resultado | Evidencia |
+|---|---|---|
+| AC1 `pnpm test` ejecuta Vitest y genera `coverage/frontend/lcov.info` | PASS | Vitest 5 vía `@angular/build:unit-test`; el archivo existe |
+| AC2 `pnpm test:server` genera `coverage/server/lcov.info` | PASS | 7 archivos / 48 pruebas; cobertura 98,1 % líneas, 91,3 % ramas, 100 % funciones |
+| AC3 fallan con código ≠ 0 si una métrica < 85 % | PASS | Frontend: con la spec de ejemplo (7,8 % líneas) `pnpm test` termina con error de umbral. Servidor: con `--coverage.thresholds.lines=100` sale con código 1 |
+| AC4 una spec de ejemplo corre en cada proyecto | PASS | `src/app/app.component.spec.ts` y `server/test/*.spec.js` |
+
+Hecho: Karma, Jasmine y `@types/jasmine` eliminados; `tsconfig.spec.json` usa `vitest/globals`; scripts `test`, `test:watch`, `test:server`, `test:all`, `coverage:merge`; las pruebas `node:test` del BFF se migraron a Vitest (CommonJS con globals, `vitest.server.config.mjs`); `docs/technical/testing.md`; política y README actualizados. Desviaciones: no se usa `supertest` (las pruebas llaman con `fetch` a una instancia real de `createApp()`); no hay `constants.util.spec.js` porque ese módulo ya no existe. Riesgo conocido: el gate del frontend falla hasta cerrar F0-07. Pendiente: comunicación a equipo y QA.

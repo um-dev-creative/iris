@@ -16,7 +16,7 @@ Copia `default.env.example` a `default.env` (ignorado por git) y completa los va
 | `COOKIE_SECURE`, `CORS_ORIGIN`, `TRUST_PROXY` | Cookies, CORS y proxies de confianza |
 | `SSL_CERT_PATH` / `SSL_KEY_PATH` | HTTPS opcional (ambas juntas) |
 
-Pruebas del BFF: `pnpm test:bff` (cobertura: `pnpm test:bff:coverage`).
+Pruebas: `pnpm test:server` (BFF), `pnpm test` (frontend) y `pnpm test:all`; ver `docs/technical/testing.md`.
 
 Detección de secretos: `gitleaks detect --config .gitleaks.toml` (instalar con `brew install gitleaks`).
 
@@ -101,7 +101,7 @@ When the integrated server starts, it will be available at:
 
 3. Use the simple script:
    ```bash
-   ./serve-integrated.sh
+   ./scripts/serve-integrated.sh
    ```
 
 ### If build fails:

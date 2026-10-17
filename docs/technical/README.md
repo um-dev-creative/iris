@@ -17,7 +17,7 @@ Documentación para quien desarrolla, prueba, despliega u opera Iris. Cada tarea
 ## Estado actual (15 oct 2026)
 
 - Frontend Angular 22 standalone, signals, Tailwind 4, SSR con `@angular/ssr`.
-- BFF Express en `server/` (CommonJS) con `server.js` como entrada y `createApp()` en `server/app.js` (patrón de Stratum y zerobound-frontend); pruebas `node:test` con umbral ≥ 85 % (`pnpm test:bff:coverage`).
+- BFF Express en `server/` (CommonJS) con `server.js` como entrada y `createApp()` en `server/app.js` (patrón de Stratum y zerobound-frontend); pruebas Vitest con umbral ≥ 85 % (`pnpm test:server`).
 - Pruebas del frontend y CI pendientes (F0-06 a F0-09).
 - Documentos históricos de la integración del BFF y Redis: se mueven a `docs/history/` en F0-05.
 
