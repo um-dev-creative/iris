@@ -45,6 +45,6 @@ Two cooperating halves:
 ## Gotchas
 
 - Standalone, mostly `OnPush` components; preserve signal patterns (expose readonly signals). Icons are class constants (`readonly Bell = Bell`).
-- Root `*.sh` files are convenience wrappers around the pnpm scripts.
+- `scripts/*.sh` are convenience wrappers around the pnpm scripts; `docs/history/` keeps the notes of the old BFF integration (Vault/Redis era).
 - The default API endpoint in the environments is `https://jsonplaceholder.typicode.com`, a placeholder.
-- Extra docs: `docs/` (roadmap, stories, technical, user), `DEVELOPMENT_SETUP.md`, `HTTPS_README.md`, `BACKEND_INTEGRATION_LOG.md`.
+- Extra docs: `docs/` (roadmap, stories, technical, user), `DEVELOPMENT_SETUP.md`, `docs/history/` (historical).

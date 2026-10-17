@@ -101,7 +101,7 @@ When the integrated server starts, it will be available at:
 
 3. Use the simple script:
    ```bash
-   ./serve-integrated.sh
+   ./scripts/serve-integrated.sh
    ```
 
 ### If build fails:
