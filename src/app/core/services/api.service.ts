@@ -3,7 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ApiConfig } from '../models';
-import { environment } from '../../../environments/environment';
+import { API_BASE_URL } from '../config';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -12,8 +12,8 @@ export class ApiService {
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   private config: ApiConfig = {
-    baseUrl: environment.apiBaseUrl,
-    apiKey: environment.apiKey,
+    baseUrl: inject(API_BASE_URL),
+    apiKey: '',
     authType: 'none',
   };
 

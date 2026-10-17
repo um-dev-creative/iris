@@ -14,6 +14,22 @@ Las rutas viven en `src/app/core/routes/route-paths.ts` (`ROUTE_PATHS`, segmento
 
 `routeUrl(...segmentos)` arma una URL absoluta: `routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.DATA)` → `/dashboard/data`. Úsala en `routerLink`, `router.navigate` y en cualquier enlace. Una ruta nueva se agrega primero a `ROUTE_PATHS`. Comprobación: `grep -rn "'/dashboard" src/app` solo debe encontrar el comentario de `route-paths.ts`.
 
+## Configuración
+
+La configuración por entorno se inyecta con tokens (`src/app/core/config`, barrel `core/config`). `provideAppConfig()` (en `app.config.ts` y `app.config.server.ts`) es el **único** sitio de `src/app` que importa `environments/environment`; todo lo demás inyecta `APP_CONFIG` o `API_BASE_URL`.
+
+| Clave de `AppConfig` | Tipo | Por defecto | Descripción |
+|---|---|---|---|
+| `production` | `boolean` | `false` | `true` en el build de producción |
+| `apiBaseUrl` | `string` | `/mrc/api/v1` | Raíz de la API, relativa al BFF; alimenta `API_BASE_URL` |
+| `pollingIntervalMs` | `number` | `30000` | Refresco de datos en vivo (lo usan las fases con datos reales) |
+| `features.mockData` | `boolean` | `true` | Datos simulados en lugar de la API |
+| `features.showcase` | `boolean` | `true` | Muestra la página de showcase |
+
+Para agregar una variable: declararla en `AppConfig`, darle su valor en `DEFAULT_APP_CONFIG` y definirla en los `environment*.ts` que la cambien; `provideAppConfig` mezcla el entorno sobre los valores por defecto sin más cambios, y ningún servicio se toca.
+
+En pruebas se sobreescribe con `{ provide: API_BASE_URL, useValue: '/test/api' }` o con `provideAppConfig({ apiBaseUrl: '/test/api' })`.
+
 ## SSR: acceso a APIs del navegador
 
 El build `build:ssr` genera también el bundle de servidor (`main.server.ts`), así que el código de `src/app` puede ejecutarse sin `window`, `document` ni `localStorage`.

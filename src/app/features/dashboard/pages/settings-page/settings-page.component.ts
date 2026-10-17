@@ -12,7 +12,7 @@ import {
 } from '../../../../shared/components';
 import { ApiService, NotificationService } from '../../../../core/services';
 import { ApiConfig } from '../../../../core/models';
-import { environment } from '../../../../../environments/environment';
+import { API_BASE_URL } from '../../../../core/config';
 
 @Component({
   selector: 'app-settings-page',
@@ -119,6 +119,7 @@ import { environment } from '../../../../../environments/environment';
 export class SettingsPageComponent implements OnInit {
   private readonly apiService = inject(ApiService);
   private readonly notificationService = inject(NotificationService);
+  private readonly defaultBaseUrl = inject(API_BASE_URL);
 
   readonly config = signal<ApiConfig>({ baseUrl: '', apiKey: '', authType: 'none' });
   readonly testing = signal(false);
@@ -142,7 +143,7 @@ export class SettingsPageComponent implements OnInit {
 
   resetConfig(): void {
     const defaults: ApiConfig = {
-      baseUrl: environment.apiBaseUrl,
+      baseUrl: this.defaultBaseUrl,
       apiKey: '',
       authType: 'none',
     };
