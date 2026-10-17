@@ -3,15 +3,17 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ApiService } from './api.service';
-import { environment } from '../../../environments/environment';
+import { API_BASE_URL } from '../config';
 
 const STORAGE_KEY = 'api_config';
+const TEST_API = '/test/api/v1';
 
 function setup(platform: 'browser' | 'server'): { service: ApiService; http: HttpTestingController } {
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
+      { provide: API_BASE_URL, useValue: TEST_API },
       { provide: PLATFORM_ID, useValue: platform },
     ],
   });
@@ -29,7 +31,7 @@ describe('ApiService', () => {
     it('usa la configuración del entorno cuando no hay nada guardado', () => {
       const { service } = setup('browser');
 
-      expect(service.getConfig()).toEqual({ baseUrl: environment.apiBaseUrl, apiKey: environment.apiKey, authType: 'none' });
+      expect(service.getConfig()).toEqual({ baseUrl: TEST_API, apiKey: '', authType: 'none' });
     });
 
     it('carga la configuración guardada', () => {
@@ -45,7 +47,7 @@ describe('ApiService', () => {
 
       const { service } = setup('browser');
 
-      expect(service.getConfig().baseUrl).toBe(environment.apiBaseUrl);
+      expect(service.getConfig().baseUrl).toBe(TEST_API);
     });
 
     it('persiste los cambios y sobrevive a una "recarga"', () => {
@@ -61,7 +63,7 @@ describe('ApiService', () => {
 
       service.getConfig().baseUrl = 'mutado';
 
-      expect(service.getConfig().baseUrl).toBe(environment.apiBaseUrl);
+      expect(service.getConfig().baseUrl).toBe(TEST_API);
     });
   });
 
@@ -80,7 +82,7 @@ describe('ApiService', () => {
 
       const { service } = setup('server');
 
-      expect(service.getConfig().baseUrl).toBe(environment.apiBaseUrl);
+      expect(service.getConfig().baseUrl).toBe(TEST_API);
     });
   });
 
@@ -90,7 +92,7 @@ describe('ApiService', () => {
 
       service.get('/items', { page: 2, q: 'x y' }).subscribe();
 
-      const req = http.expectOne((r) => r.url === `${environment.apiBaseUrl}/items`);
+      const req = http.expectOne((r) => r.url === `${TEST_API}/items`);
       expect(req.request.method).toBe('GET');
       expect(req.request.params.get('page')).toBe('2');
       expect(req.request.params.get('q')).toBe('x y');
@@ -103,7 +105,7 @@ describe('ApiService', () => {
 
       service.get('/items').subscribe();
 
-      expect(http.expectOne(`${environment.apiBaseUrl}/items`).request.params.keys()).toEqual([]);
+      expect(http.expectOne(`${TEST_API}/items`).request.params.keys()).toEqual([]);
     });
 
     it('POST, PUT y DELETE usan el método y el cuerpo correctos', () => {
@@ -118,7 +120,7 @@ describe('ApiService', () => {
       const put = http.expectOne((r) => r.method === 'PUT');
       expect(put.request.body).toEqual({ n: 2 });
       const del = http.expectOne((r) => r.method === 'DELETE');
-      expect(del.request.url).toBe(`${environment.apiBaseUrl}/a/1`);
+      expect(del.request.url).toBe(`${TEST_API}/a/1`);
       [post, put, del].forEach((r) => r.flush({}));
     });
 
@@ -131,7 +133,7 @@ describe('ApiService', () => {
 
       service.get('/x').subscribe();
 
-      const req = http.expectOne(`${environment.apiBaseUrl}/x`);
+      const req = http.expectOne(`${TEST_API}/x`);
       expect(req.request.headers.get(header)).toBe(value);
       req.flush({});
     });
@@ -142,7 +144,7 @@ describe('ApiService', () => {
 
       service.get('/x').subscribe();
 
-      const req = http.expectOne(`${environment.apiBaseUrl}/x`);
+      const req = http.expectOne(`${TEST_API}/x`);
       expect(req.request.headers.has('Authorization')).toBe(false);
       expect(req.request.headers.has('X-API-Key')).toBe(false);
       req.flush({});

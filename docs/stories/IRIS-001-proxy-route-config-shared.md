@@ -33,32 +33,36 @@ Currently the app communicates directly to `https://jsonplaceholder.typicode.com
 ## Acceptance Criteria
 
 ### AC1 — Dev Proxy
-- [ ] `proxy.conf.json` exists at project root and forwards `/api/**` to the configured `target` backend URL.
-- [ ] `angular.json` `serve` configuration references `proxyConfig: "proxy.conf.json"`.
-- [ ] `ng serve` no longer requires CORS workarounds for local API calls.
-- [ ] Proxy target is read from `environment.ts` / `environment.prod.ts` — no hardcoded URLs in proxy file.
+
+> Implementado como `proxy.conf.mjs` (no `.json`) con contextos `/mrc`, `/bkd` y `/health` hacia el BFF; el destino sale de `IRIS_BFF_URL`, no de `environment*.ts` (F1-01).
+- [x] `proxy.conf.json` exists at project root and forwards `/api/**` to the configured `target` backend URL.
+- [x] `angular.json` `serve` configuration references `proxyConfig: "proxy.conf.json"`.
+- [x] `ng serve` no longer requires CORS workarounds for local API calls.
+- [x] Proxy target is read from `environment.ts` / `environment.prod.ts` — no hardcoded URLs in proxy file.
 
 ### AC2 — Route Architecture
-- [ ] Route path constants are extracted to `src/app/core/routes/route-paths.ts` (e.g. `ROUTE_PATHS.DASHBOARD`, `ROUTE_PATHS.SETTINGS`).
-- [ ] All `routerLink` and `router.navigate()` calls in the app reference these constants, not magic strings.
-- [ ] `app.routes.ts` uses the new constants without breaking existing `/dashboard` redirect and lazy-load of `DASHBOARD_ROUTES`.
-- [ ] A wildcard `**` fallback route redirects to `ROUTE_PATHS.DASHBOARD`.
-- [ ] `authGuard` placeholder is preserved on the dashboard parent route.
+- [x] Route path constants are extracted to `src/app/core/routes/route-paths.ts` (e.g. `ROUTE_PATHS.DASHBOARD`, `ROUTE_PATHS.SETTINGS`).
+- [x] All `routerLink` and `router.navigate()` calls in the app reference these constants, not magic strings.
+- [x] `app.routes.ts` uses the new constants without breaking existing `/dashboard` redirect and lazy-load of `DASHBOARD_ROUTES`.
+- [x] A wildcard `**` fallback route redirects to `ROUTE_PATHS.DASHBOARD`.
+- [x] `authGuard` placeholder is preserved on the dashboard parent route.
 
 ### AC3 — App Config
-- [ ] Environment injection tokens are defined in `src/app/core/config/app-config.token.ts` (`APP_CONFIG`, `API_BASE_URL`).
-- [ ] `appConfig` in `src/app/app.config.ts` provides these tokens using `environment.*` values.
-- [ ] `ApiService` consumes `API_BASE_URL` token instead of importing `environment` directly.
-- [ ] Adding a new environment variable requires only `environment*.ts` + token update, no service changes.
+
+> Además de los tokens, `provideAppConfig()` también se registra en `app.config.server.ts` (F1-03). La URL de la API es relativa al BFF en todos los entornos (F1-05).
+- [x] Environment injection tokens are defined in `src/app/core/config/app-config.token.ts` (`APP_CONFIG`, `API_BASE_URL`).
+- [x] `appConfig` in `src/app/app.config.ts` provides these tokens using `environment.*` values.
+- [x] `ApiService` consumes `API_BASE_URL` token instead of importing `environment` directly.
+- [x] Adding a new environment variable requires only `environment*.ts` + token update, no service changes.
 
 ### AC4 — Shared Logic
-- [ ] `src/app/shared/utils/` folder created with:
+- [x] `src/app/shared/utils/` folder created with:
   - `type-guards.ts` — common `isNonNull`, `isString`, `isDefined` helpers.
   - `mappers.ts` — data-transform helpers (e.g. `toSelectOption`, `formatTimestamp`).
   - `pagination.ts` — pure functions for slice/page-count used by `PaginationState`.
-- [ ] `src/app/shared/utils/index.ts` barrel exports all utilities.
-- [ ] At least one consumer inside `features/dashboard` imports from the barrel (`src/app/shared/utils`).
-- [ ] No utility function duplicates existing logic in `MonitoringDataService` or `DashboardStore`.
+- [x] `src/app/shared/utils/index.ts` barrel exports all utilities.
+- [x] At least one consumer inside `features/dashboard` imports from the barrel (`src/app/shared/utils`).
+- [x] No utility function duplicates existing logic in `MonitoringDataService` or `DashboardStore`.
 
 ---
 

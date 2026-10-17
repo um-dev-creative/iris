@@ -5,11 +5,12 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { routes } from './app.routes';
 import { authGuard } from './core/guards';
+import { provideAppConfig } from './core/config';
 import { ROUTE_PATHS, routeUrl } from './core/routes';
 
 async function navigate(url: string) {
   localStorage.clear();
-  TestBed.configureTestingModule({ providers: [provideRouter(routes), provideHttpClient(), provideHttpClientTesting()] });
+  TestBed.configureTestingModule({ providers: [provideRouter(routes), provideAppConfig({ apiBaseUrl: '/test/api/v1' }), provideHttpClient(), provideHttpClientTesting()] });
   const harness = await RouterTestingHarness.create();
   await harness.navigateByUrl(url);
   return { harness, url: () => TestBed.inject(Router).url };

@@ -1,10 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { SettingsPageComponent } from './settings-page.component';
 import { ApiService, NotificationService } from '../../../../core/services';
-import { environment } from '../../../../../environments/environment';
+import { API_BASE_URL } from '../../../../core/config';
+
+const TEST_API = '/test/api/v1';
 
 function render() {
   localStorage.clear();
+  TestBed.configureTestingModule({ providers: [{ provide: API_BASE_URL, useValue: TEST_API }] });
   const fixture = TestBed.createComponent(SettingsPageComponent);
   fixture.detectChanges();
   return {
@@ -27,7 +30,7 @@ describe('SettingsPageComponent', () => {
     const { c, api } = render();
 
     expect(c.config()).toEqual(api.getConfig());
-    expect(c.config().baseUrl).toBe(environment.apiBaseUrl);
+    expect(c.config().baseUrl).toBe(TEST_API);
   });
 
   it('updateField cambia solo el campo indicado', () => {
@@ -56,7 +59,7 @@ describe('SettingsPageComponent', () => {
 
     c.resetConfig();
 
-    expect(c.config()).toEqual({ baseUrl: environment.apiBaseUrl, apiKey: '', authType: 'none' });
+    expect(c.config()).toEqual({ baseUrl: TEST_API, apiKey: '', authType: 'none' });
     expect(api.getConfig().apiKey).toBe('');
     expect(notes.toasts()[0]).toMatchObject({ type: 'info', title: 'Configuración restaurada' });
   });
