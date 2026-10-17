@@ -19,6 +19,8 @@ export const routes: Routes = [
     path: ROUTE_PATHS.DASHBOARD,
     component: LayoutComponent,
     canActivate: [authGuard],
+    // navegar entre páginas del dashboard también exige sesión (canActivate solo corre al entrar al padre)
+    canActivateChild: [authGuard],
     loadChildren: () =>
       import('./features/dashboard/dashboard.routes').then(
         (m) => m.DASHBOARD_ROUTES

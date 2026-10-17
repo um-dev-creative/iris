@@ -18,6 +18,7 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 
 ### Added
 
+- Menú de usuario en la navbar con el perfil real y cierre de sesión con confirmación. (F2-07)
 - Interceptor de autenticación: las llamadas al BFF llevan cookies y cabecera CSRF, y una sesión expirada avisa una sola vez y lleva al login. (F2-06)
 - Página de inicio de sesión (`/login`) con validación, mensajes de error genéricos y redirección a `returnUrl`. (F2-04)
 - Servicio de autenticación con estado de sesión reactivo. (F2-03)

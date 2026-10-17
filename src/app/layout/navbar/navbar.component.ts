@@ -2,11 +2,12 @@ import { Component, ChangeDetectionStrategy, inject, input } from '@angular/core
 import { LucideAngularModule, Bell, Search, UserCircle, Menu } from 'lucide-angular';
 import { DashboardStore } from '../../core/services';
 import { ThemeToggleComponent } from '../../shared/components/theme-toggle/theme-toggle.component';
+import { UserMenuComponent } from '../user-menu/user-menu.component';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [ThemeToggleComponent, LucideAngularModule],
+  imports: [ThemeToggleComponent, UserMenuComponent, LucideAngularModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <header class="sticky top-0 z-10 flex items-center h-16 px-4 lg:px-6 bg-card border-b border-border gap-4">
@@ -57,19 +58,16 @@ import { ThemeToggleComponent } from '../../shared/components/theme-toggle/theme
           }
         </button>
 
-        <!-- User avatar -->
-        <div class="flex items-center gap-2">
+        <!-- User -->
+        @if (store.user()) {
+          <app-user-menu />
+        } @else {
           <div
             class="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-xs font-bold"
           >
             {{ store.userInitials() }}
           </div>
-          @if (store.user(); as user) {
-            <span class="hidden md:block text-sm font-medium text-foreground">
-              {{ user.name }}
-            </span>
-          }
-        </div>
+        }
       </div>
     </header>
   `,

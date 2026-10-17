@@ -29,4 +29,4 @@ Login y logout reales contra Mercury a través del BFF, con sesión en Redis, ru
 | [F2-04](F2-04-pagina-login.md) | Página de inicio de sesión | Critical | ● |  |  | 2d | F2-03 | 🔄 |
 | [F2-05](F2-05-guards-reales.md) | authGuard real y guestGuard | Critical | ● |  |  | 0.5d | F2-03, F2-04 | ✅ |
 | [F2-06](F2-06-auth-interceptor-401.md) | Interceptor de autenticación y manejo de sesión expirada | Critical | ● |  |  | 1d | F2-03 | ✅ |
-| [F2-07](F2-07-logout-perfil-navbar.md) | Cerrar sesión y perfil de usuario en la navbar | Major | ● | ● |  | 1d | F2-03, F2-01 | ⬜ |
+| [F2-07](F2-07-logout-perfil-navbar.md) | Cerrar sesión y perfil de usuario en la navbar | Major | ● | ● |  | 1d | F2-03, F2-01 | ✅ |
