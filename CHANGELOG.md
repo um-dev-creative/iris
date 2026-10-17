@@ -19,6 +19,8 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 - Modelo de trabajo multi-agente (`AGENTS.md`, `.github/agents/`) y story IRIS-001.
 - Backlog del MVP v0.1.0 en `docs/roadmap/` con 42 tareas, Definition of Done, política de cobertura ≥ 85 % y plan de comunicación.
 - Suite de pruebas del BFF (rutas, proxies, sesión, configuración y confinamiento de destinos) con cobertura ≥ 85 % y guardia contra conexiones de red reales. (F0-08)
+- Integración continua en GitHub Actions con build SSR, pruebas, cobertura mínima del 85 % y escaneo de secretos. (F0-09)
+- Plantilla de pull request, guía de Conventional Commits y README actualizado con requisitos, setup con pnpm y enlaces a la documentación. (F0-10)
 
 ### Changed
 
