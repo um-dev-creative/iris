@@ -27,6 +27,10 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 - Las pruebas usan Vitest con un umbral mínimo de cobertura del 85 % en frontend y backend. (F0-06)
 - Actualización a Angular 22.2.3 con TypeScript 6.0.
 
+### Fixed
+
+- El renderizado en servidor ya no falla al leer la configuración de API guardada en el navegador. (F0-04)
+
 ### Removed
 
 - Vault, Redis, el paquete `config`, `src/server.ts` y los scripts `validate-*.js` / `test-*.js` del BFF anterior, junto con las dependencias que solo ellos usaban.

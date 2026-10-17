@@ -1,4 +1,5 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, PLATFORM_ID, inject } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ApiConfig } from '../models';
@@ -7,6 +8,8 @@ import { environment } from '../../../environments/environment';
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly http = inject(HttpClient);
+  /** `localStorage` solo existe en el navegador: en SSR se usa la configuración por defecto del entorno. */
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   private config: ApiConfig = {
     baseUrl: environment.apiBaseUrl,
@@ -21,7 +24,9 @@ export class ApiService {
   /** Actualiza la configuración de la API y la persiste en localStorage */
   updateConfig(config: Partial<ApiConfig>): void {
     this.config = { ...this.config, ...config };
-    localStorage.setItem('api_config', JSON.stringify(this.config));
+    if (this.isBrowser) {
+      localStorage.setItem('api_config', JSON.stringify(this.config));
+    }
   }
 
   /** Obtiene la configuración actual */
@@ -82,6 +87,7 @@ export class ApiService {
   }
 
   private loadConfig(): void {
+    if (!this.isBrowser) return;
     const saved = localStorage.getItem('api_config');
     if (saved) {
       try {
