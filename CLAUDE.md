@@ -12,8 +12,8 @@ See `AGENTS.md` for the detailed conventions and the multi-agent delivery model 
 
 The repo declares `packageManager: pnpm` (`pnpm-lock.yaml`); use pnpm and don't mix lockfiles.
 
-- `pnpm start`: `ng serve` on :4200, frontend only (no backend APIs).
-- `pnpm build:dev`: development build. `pnpm build` and `pnpm build:ssr` need `ENVM` set (see `default.env`; environments are in `src/environments/`: dev, qa, prod, cloud).
+- `pnpm start`: `ng serve` on :4200; `proxy.conf.mjs` forwards `/mrc`, `/bkd` and `/health` to the BFF (`IRIS_BFF_URL`, default `http://localhost:4000`), so run `pnpm server` alongside.
+- `pnpm build:dev`: development build. `pnpm build` and `pnpm build:ssr` need `ENVM` set (`development`, `dev`, `qa`, `dev-cloud`, `qa-cloud`, `production`; each maps to an `angular.json` configuration and a `src/environments/environment.*.ts`, see `docs/technical/environments.md`).
 - `pnpm serve:integrated`: SSR build and then `node server.js` (full stack; HTTPS only when `SSL_CERT_PATH` and `SSL_KEY_PATH` are set).
 - `pnpm dev:integrated:unix`: watches the SSR build and runs `node server.js`.
 - `pnpm test`: Vitest via `@angular/build:unit-test`, with 85 % coverage thresholds (frontend stays below until F0-07). Single spec: `pnpm ng test --no-watch --include='src/app/path/to/x.spec.ts'`.
@@ -46,5 +46,5 @@ Two cooperating halves:
 
 - Standalone, mostly `OnPush` components; preserve signal patterns (expose readonly signals). Icons are class constants (`readonly Bell = Bell`).
 - `scripts/*.sh` are convenience wrappers around the pnpm scripts; `docs/history/` keeps the notes of the old BFF integration (Vault/Redis era).
-- The default API endpoint in the environments is `https://jsonplaceholder.typicode.com`, a placeholder.
+- Every environment sets `apiBaseUrl: '/mrc/api/v1'` (relative, through the BFF); config is injected via `APP_CONFIG`/`API_BASE_URL` (`src/app/core/config`), and only `provideAppConfig` imports `environments/environment`. The BFF requires the `x-iris-csrf: 1` header on API calls, which the frontend does not send yet (F2).
 - Extra docs: `docs/` (roadmap, stories, technical, user), `DEVELOPMENT_SETUP.md`, `docs/history/` (historical).

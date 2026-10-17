@@ -12,7 +12,7 @@
     "start": "ng serve",
     "build": "cross-env ng build --configuration=$ENVM",
     "build:dev": "ng build --configuration development",
-    "build:ssr": "cross-env-shell \"ng build --configuration $ENVM && ng run dashboard:server\"",
+    "build:ssr": "cross-env-shell \"ng build --configuration $ENVM && ng run dashboard:server:$ENVM\"",
     "watch": "ng build --watch --configuration development",
     "watch:ssr": "ng run dashboard:server:development --watch",
     "serve:integrated": "pnpm run build:ssr && node server.js",

@@ -53,18 +53,18 @@ Hay seis archivos `environment*.ts` pero `angular.json` solo define `production`
 
 ## Criterios de aceptación
 
-- [ ] **AC1** — `ENVM=qa pnpm run build:ssr` funciona para cada entorno
-- [ ] **AC2** — Ningún entorno referencia `jsonplaceholder`
-- [ ] **AC3** — El navegador nunca recibe secretos ni API keys desde `environment*.ts`
+- [x] **AC1** — `ENVM=qa pnpm run build:ssr` funciona para cada entorno
+- [x] **AC2** — Ningún entorno referencia `jsonplaceholder`
+- [x] **AC3** — El navegador nunca recibe secretos ni API keys desde `environment*.ts`
 
 ## Definition of Done
 
 Cumple el [DoD general](../DEFINITION_OF_DONE.md) y además:
 
-- [ ] Tabla de entornos publicada
-- [ ] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
-- [ ] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
-- [ ] Documentación técnica actualizada (ver abajo)
+- [x] Tabla de entornos publicada
+- [x] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
+- [x] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
+- [x] Documentación técnica actualizada (ver abajo)
 - [ ] Comunicación a interesados enviada (ver abajo)
 
 ## Cobertura de pruebas (umbral ≥ 85 %)
@@ -83,7 +83,7 @@ Esta tarea agrega o modifica código ejecutable. Debe cumplir la [Política de c
 
 ### Técnica
 
-- [ ] `docs/technical/environments.md`: tabla de entornos, URLs, certificados y variables
+- [x] `docs/technical/environments.md`: tabla de entornos, URLs, certificados y variables
 
 ### Usuario
 
@@ -102,3 +102,17 @@ Agregar en `CHANGELOG.md` → `[Unreleased]` → `### Changed`:
 | A quién | Qué informar | Cuándo · canal |
 |---|---|---|
 | DevOps / Plataforma | Nuevos valores válidos de `ENVM` | Antes del merge |
+
+## Reporte de validación
+
+Validado el 2026-10-17 en la rama `feat/f1-05-normalizar-entornos` (apilada sobre F1-04).
+
+| Criterio | Resultado | Evidencia |
+|---|---|---|
+| AC1 `ENVM=<x> pnpm run build:ssr` funciona para cada entorno | PASS | Ejecutado localmente con `development`, `dev`, `qa`, `dev-cloud`, `qa-cloud` y `production`: los seis terminan con código 0 y sin errores ni avisos, y generan el `index*.html`. El bundle de `production` tiene hash distinto (`production: true`); los demás comparten bundle porque sus valores son iguales. `ENVM=prod` falla con `Configuration 'prod' ... is not set` (el nombre válido es `production`). CI: nuevo job `Build por entorno` con matriz de los seis valores |
+| AC2 ningún entorno referencia `jsonplaceholder` | PASS | `environments.spec.ts` (6 entornos × 3 comprobaciones) y `grep -rl jsonplaceholder src angular.json` → solo la propia prueba. Quedaban menciones en `CLAUDE.md`/`AGENTS.md`; actualizadas |
+| AC3 el navegador no recibe secretos ni API keys desde `environment*.ts` | PASS | Los 6 archivos solo tienen `production` y `apiBaseUrl: '/mrc/api/v1'`; `apiKey` eliminado; la prueba rechaza claves con `key/secret/token/password` y URLs absolutas |
+
+Hecho: configuraciones `dev`, `qa`, `dev-cloud`, `qa-cloud` y `production` (con `fileReplacements`) en los targets `build` y `server` más `serve`; `production` antes usaba `environment.ts` porque no tenía reemplazo; `build:ssr` ahora pasa `ENVM` también al target `server` (antes lo compilaba siempre como `production` y sobrescribía el build de `ENVM`); `docs/technical/environments.md` con la tabla `ENVM` ↔ configuración Angular ↔ archivo ↔ BFF, certificados y variables. Frontend: 242 pruebas, líneas 99.5 %; BFF: 75 pruebas.
+
+Desviación (capa BE): la tarea pedía alinear `server/config/{dev,qa,production}.json`, pero esos archivos ya no existen: el BFF se configura solo con variables de entorno (F0-03). La alineación quedó documentada en la tabla de `environments.md`; no hubo cambios de backend ni en Mercury. Pendiente: avisar a DevOps/Plataforma de los nuevos valores válidos de `ENVM` antes del merge, y hallazgo para F2: el BFF exige la cabecera `x-iris-csrf: 1` en `/mrc/api/**` y `/bkd/api/**` y `ApiService` aún no la envía.

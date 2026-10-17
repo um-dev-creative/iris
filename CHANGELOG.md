@@ -16,6 +16,8 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 
 ### Added
 
+- Utilidades compartidas de tipos, formateo y paginación. (F1-04)
+- Proxy de desarrollo para `ng serve` hacia el BFF local. (F1-01)
 - Integración del BFF Node con el servidor SSR de Angular: proxies a Mercury (`/mrc/api/v1/general`, `/auth`, `/d-image`) y Backbone (`/bkd/api/v1`), autenticación OAuth, sesiones y locks en Redis con fallback en memoria, soporte HTTPS y endpoints `/health` y `/health/redis`. (F0-02)
 - Configuraciones de entorno `dev`, `qa`, `dev-cloud` y `qa-cloud`.
 - Modelo de trabajo multi-agente (`AGENTS.md`, `.github/agents/`) y story IRIS-001.
@@ -26,6 +28,10 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 
 ### Changed
 
+- Todos los entornos consumen la API a través del BFF con URL relativa; se agregaron configuraciones de build para dev, qa y cloud. (F1-05)
+- `build:ssr` compila el target de servidor con el mismo `ENVM` (antes siempre con `production`). (F1-05)
+- La configuración de la aplicación se inyecta mediante `APP_CONFIG` y `API_BASE_URL`. (F1-03)
+- Las rutas de la aplicación se definen en constantes tipadas (`ROUTE_PATHS`). (F1-02)
 - BFF reescrito con el patrón de Stratum y zerobound-frontend: `createApp()` sin efectos, configuración por variables de entorno con validación de arranque, sesión por cookies httpOnly con renovación automática, protección CSRF por cabecera, trazas W3C, proxies a Mercury y Backbone y pruebas (≥ 85 %). Rutas `/mrc/api/v1/*` y `/bkd/api/v1/*` conservadas; el login (`access-token`) ahora usa solo la sesión de Backbone. (F0-02)
 - El servidor se arranca desde un único punto (`createApp` en `server/app.js`); `server.js` queda como lanzador que valida la configuración. (F0-03)
 - pnpm es el único gestor de paquetes (`packageManager`, `engines`, lockfile versionado); documentación histórica reorganizada en `docs/history/` y scripts en `scripts/`. (F0-05)

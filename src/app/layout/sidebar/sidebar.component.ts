@@ -2,12 +2,15 @@ import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { LucideAngularModule, PanelLeftClose, PanelLeftOpen, LayoutDashboard, Table2, Settings, Palette, LucideIconData } from 'lucide-angular';
 import { DashboardStore } from '../../core/services';
+import { ROUTE_PATHS, routeUrl } from '../../core/routes';
 
 interface NavItem {
   label: string;
   icon: LucideIconData;
   route: string;
 }
+
+const dashboardUrl = routeUrl(ROUTE_PATHS.DASHBOARD);
 
 @Component({
   selector: 'app-sidebar',
@@ -40,7 +43,7 @@ interface NavItem {
           <a
             [routerLink]="item.route"
             routerLinkActive="bg-sidebar-primary text-sidebar-primary-foreground"
-            [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }"
+            [routerLinkActiveOptions]="{ exact: item.route === dashboardUrl }"
             class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors duration-200 group"
             [class.justify-center]="!store.sidebarOpen()"
           >
@@ -82,27 +85,29 @@ export class SidebarComponent {
   readonly store = inject(DashboardStore);
   readonly PanelLeftClose = PanelLeftClose;
   readonly PanelLeftOpen = PanelLeftOpen;
+  /** El enlace al dashboard solo está activo en su ruta exacta, no en las hijas. */
+  readonly dashboardUrl = dashboardUrl;
 
   readonly navItems: NavItem[] = [
     {
       label: 'Overview',
       icon: LayoutDashboard,
-      route: '/dashboard',
+      route: dashboardUrl,
     },
     {
       label: 'Data View',
       icon: Table2,
-      route: '/dashboard/data',
+      route: routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.DATA),
     },
     {
       label: 'Settings',
       icon: Settings,
-      route: '/dashboard/settings',
+      route: routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.SETTINGS),
     },
     {
       label: 'Showcase',
       icon: Palette,
-      route: '/dashboard/showcase',
+      route: routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.SHOWCASE),
     },
   ];
 

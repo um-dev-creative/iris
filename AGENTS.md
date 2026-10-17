@@ -36,7 +36,7 @@
 - Use one package manager consistently per session; avoid mixing lockfile updates.
 - **Project Name**: Use `dashboard` for Angular CLI commands (not `iris`); e.g., `ng build dashboard`.
 - Core scripts from `package.json`:
-  - `start` -> `ng serve` (frontend only)
+  - `start` -> `ng serve` with `proxy.conf.mjs` to the BFF (`IRIS_BFF_URL`, default `http://localhost:4000`)
   - `build` -> `ng build --configuration=$ENVM` (uses environment variable)
   - `build:ssr` -> builds both client and SSR server
   - `serve:integrated` -> builds and serves full-stack app with backend APIs
@@ -48,8 +48,8 @@
 - Angular schematics are configured to skip test generation (`angular.json`), and there are currently no `*.spec.ts` files.
 
 ## Integration and Environment Notes
-- **Multiple Environments**: `src/environments/` contains configs for dev, qa, prod, and cloud variants.
-- Default API endpoint is `https://jsonplaceholder.typicode.com` (`src/environments/environment*.ts`).
+- **Multiple Environments**: `src/environments/` holds one file per `ENVM` (`development`, `dev`, `qa`, `dev-cloud`, `qa-cloud`, `production`), all with a relative `apiBaseUrl`; see `docs/technical/environments.md`.
+- API base URL is `/mrc/api/v1` in every `src/environments/environment*.ts` (relative, through the BFF); inject `API_BASE_URL`/`APP_CONFIG` instead of importing `environment`.
 - **Backend Integration**: BFF in `/server` (`app.js`, `config/`, `shared/`, `routes/`, `test/`); settings come from env vars (`default.env.example`).
 - **API Routes**: Backend APIs are prefixed (`/mrc/api/v1/*`, `/bkd/api/v1/*`) and don't conflict with Angular routes.
 - **SSL Configuration**: Uses certificates in `/ssl` folder; falls back to HTTP if not available.

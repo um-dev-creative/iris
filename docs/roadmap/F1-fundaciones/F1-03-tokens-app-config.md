@@ -54,18 +54,18 @@ Implementa AC3 de IRIS-001. `ApiService` y `SettingsPageComponent` importan `env
 
 ## Criterios de aceptación
 
-- [ ] **AC1** — Ningún archivo bajo `src/app` importa `environments/environment`, salvo `provideAppConfig`
-- [ ] **AC2** — Agregar una variable nueva requiere solo `environment*.ts` + interfaz `AppConfig`
-- [ ] **AC3** — Las pruebas pueden sobreescribir `API_BASE_URL`
+- [x] **AC1** — Ningún archivo bajo `src/app` importa `environments/environment`, salvo `provideAppConfig`
+- [x] **AC2** — Agregar una variable nueva requiere solo `environment*.ts` + interfaz `AppConfig`
+- [x] **AC3** — Las pruebas pueden sobreescribir `API_BASE_URL`
 
 ## Definition of Done
 
 Cumple el [DoD general](../DEFINITION_OF_DONE.md) y además:
 
-- [ ] Cobertura de `core/config` ≥ 85 %
-- [ ] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
-- [ ] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
-- [ ] Documentación técnica actualizada (ver abajo)
+- [x] Cobertura de `core/config` ≥ 85 %
+- [x] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
+- [x] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
+- [x] Documentación técnica actualizada (ver abajo)
 
 ## Cobertura de pruebas (umbral ≥ 85 %)
 
@@ -84,7 +84,7 @@ Esta tarea agrega o modifica código ejecutable. Debe cumplir la [Política de c
 
 ### Técnica
 
-- [ ] `docs/technical/frontend.md` § Configuración: tabla de claves de `AppConfig`
+- [x] `docs/technical/frontend.md` § Configuración: tabla de claves de `AppConfig`
 
 ### Usuario
 
@@ -101,3 +101,15 @@ Agregar en `CHANGELOG.md` → `[Unreleased]` → `### Changed`:
 ## Comunicación a interesados
 
 Sin comunicación específica; se incluye en el [reporte semanal](../STAKEHOLDERS.md#reporte-semanal).
+
+## Reporte de validación
+
+Validado el 2026-10-17 en la rama `feat/f1-03-tokens-app-config` (apilada sobre F1-02).
+
+| Criterio | Resultado | Evidencia |
+|---|---|---|
+| AC1 ningún archivo de `src/app` importa `environments/environment`, salvo `provideAppConfig` | PASS | `grep -rln "environments/environment" src/app` → solo `core/config/provide-app-config.ts`. `ApiService` y `SettingsPageComponent` inyectan `API_BASE_URL`; los specs que importaban `environment` usan una constante de prueba |
+| AC2 variable nueva = `environment*.ts` + interfaz `AppConfig` | PASS | `buildAppConfig` mezcla el entorno sobre `DEFAULT_APP_CONFIG` (también `features` por clave), sin listar claves; prueba "mezcla features por clave" |
+| AC3 las pruebas pueden sobreescribir `API_BASE_URL` | PASS | Prueba "una prueba puede sobreescribir API_BASE_URL"; `api.service.spec.ts` y `settings-page.component.spec.ts` lo hacen con `useValue` |
+
+Cobertura de `core/config`: 100 % (`app-config.token.ts` 4/4, `provide-app-config.ts` 7/7 líneas). Frontend: 177 pruebas, líneas 99.5 %. `ENVM=development pnpm build:ssr` sin errores. Hecho: `AppConfig` con `features.mockData`, `features.showcase` y `pollingIntervalMs`; registro en `app.config.ts` y `app.config.server.ts`; tabla de claves en `docs/technical/frontend.md` § Configuración. Nota: el `apiKey` por defecto de `ApiService` ahora es `''` (ya no sale del entorno); F1-05 retira `apiKey` de los `environment*.ts`.
