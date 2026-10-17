@@ -6,7 +6,7 @@ See `AGENTS.md` for the detailed conventions and the multi-agent delivery model 
 
 ## Overview
 
-`iris` is an Angular 21 monitoring dashboard (standalone components, signals, Tailwind CSS v4, `lucide-angular`) served by a Node/Express BFF. The Angular CLI project and npm package are both named **`dashboard`** (use `ng build dashboard`, not `iris`). The README is in Spanish and minimal.
+`iris` is an Angular 22 monitoring dashboard (standalone components, signals, Tailwind CSS v4, `lucide-angular`) served by a Node/Express BFF. The Angular CLI project and npm package are both named **`dashboard`** (use `ng build dashboard`, not `iris`). The README is in Spanish and minimal.
 
 ## Commands
 

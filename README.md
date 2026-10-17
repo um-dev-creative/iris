@@ -1,6 +1,6 @@
 # Iris
 
-Dashboard de monitoreo construido con **Angular 21**, **Tailwind CSS 4** y **Lucide Icons**.
+Dashboard de monitoreo construido con **Angular 22**, **Tailwind CSS 4** y **Lucide Icons**.
 
 ## Inicio rápido
 
@@ -21,7 +21,7 @@ npm test         Tests (Karma + Jasmine)
 
 ## Stack
 
-Angular 21 · Tailwind CSS 4 · TypeScript 5.9 · RxJS 7.8 · Lucide Icons
+Angular 22 · Tailwind CSS 4 · TypeScript 6.0 · RxJS 7.8 · Lucide Icons
 
 ## Licencia
 
