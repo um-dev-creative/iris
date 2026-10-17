@@ -22,6 +22,7 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 ### Changed
 
 - BFF reescrito con el patrón de Stratum y zerobound-frontend: `createApp()` sin efectos, configuración por variables de entorno con validación de arranque, sesión por cookies httpOnly con renovación automática, protección CSRF por cabecera, trazas W3C, proxies a Mercury y Backbone y pruebas `node:test` (≥ 85 %). Rutas `/mrc/api/v1/*` y `/bkd/api/v1/*` conservadas; el login (`access-token`) ahora usa solo la sesión de Backbone. (F0-02)
+- El servidor se arranca desde un único punto (`createApp` en `server/app.js`); `server.js` queda como lanzador que valida la configuración. (F0-03)
 - Actualización a Angular 22.2.3 con TypeScript 6.0.
 
 ### Removed

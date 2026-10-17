@@ -7,17 +7,21 @@ Dashboard de monitoreo construido con **Angular 22**, **Tailwind CSS 4** y **Luc
 ```bash
 git clone https://github.com/um-dev-creative/iris.git
 cd iris
-npm install
-npm start        # http://localhost:4200
+pnpm install
+pnpm start        # http://localhost:4200
 ```
 
 ## Scripts
 
-```
-npm start        Servidor de desarrollo
-npm run build    Build de producción
-npm test         Tests (Karma + Jasmine)
-```
+| Comando | Qué hace |
+|---|---|
+| `pnpm start` | `ng serve` en :4200 (solo frontend) |
+| `pnpm build:dev` | Build de desarrollo |
+| `pnpm build` / `pnpm build:ssr` | Build con `ENVM` (SSR en el segundo) |
+| `pnpm serve:integrated` | Build SSR y `node server.js` (BFF + app) |
+| `pnpm dev:integrated:unix` | Watch del build y BFF |
+| `pnpm server` | Solo el BFF (`node server.js`) |
+| `pnpm test:bff` / `pnpm test:bff:coverage` | Pruebas del BFF (gate 85 %) |
 
 ## Stack
 
