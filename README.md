@@ -1,5 +1,7 @@
 # Iris
 
+[![CI](https://github.com/um-dev-creative/iris/actions/workflows/ci.yml/badge.svg)](https://github.com/um-dev-creative/iris/actions/workflows/ci.yml)
+
 Dashboard de monitoreo construido con **Angular 22**, **Tailwind CSS 4** y **Lucide Icons**.
 
 ## Inicio rápido
