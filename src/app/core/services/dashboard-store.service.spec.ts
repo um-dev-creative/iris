@@ -1,15 +1,19 @@
 import { TestBed } from '@angular/core/testing';
+import { fakeAuth } from '../testing/auth.testing';
 import { DashboardStore } from './dashboard-store.service';
 import { ThemeService } from './theme.service';
 import { User } from '../models';
 
-const user: User = { id: 1, name: 'Luis Mata Uzcategui', username: 'lmata', email: 'l@m.test' };
+const user: User = { id: 'u-1', name: 'Luis Mata Uzcategui', username: 'lmata', email: 'l@m.test' };
 
 describe('DashboardStore', () => {
   let store: DashboardStore;
+  let auth: ReturnType<typeof fakeAuth>;
 
   beforeEach(() => {
     localStorage.clear();
+    auth = fakeAuth();
+    TestBed.configureTestingModule({ providers: [auth.provider] });
     store = TestBed.inject(DashboardStore);
   });
 
@@ -28,14 +32,20 @@ describe('DashboardStore', () => {
     expect(store.sidebarOpen()).toBe(true);
   });
 
-  it('guarda el usuario y calcula las iniciales (máximo dos)', () => {
-    store.setUser(user);
+  it('expone el usuario de la sesión y calcula las iniciales (máximo dos)', () => {
+    auth.setUser(user);
 
     expect(store.user()).toEqual(user);
     expect(store.userInitials()).toBe('LM');
 
-    store.setUser(null);
+    auth.setUser(null);
     expect(store.userInitials()).toBe('?');
+  });
+
+  it('las iniciales ignoran espacios de más', () => {
+    auth.setUser({ ...user, name: '  ana   maria  ' });
+
+    expect(store.userInitials()).toBe('AM');
   });
 
   it('controla el estado de carga', () => {

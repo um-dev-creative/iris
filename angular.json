@@ -352,6 +352,7 @@
               "src/app/**/index.ts",
               "src/app/**/*.model.ts",
               "src/app/**/*.dto.ts",
+              "src/app/**/testing/**",
               "src/app/features/dashboard/pages/showcase-page/**"
             ],
             "coverageReporters": [
