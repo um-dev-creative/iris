@@ -40,6 +40,9 @@ function isSafePath(path) {
   return !decoded.split('/').some((segment) => segment === '..' || segment === '.');
 }
 
+/** The trace id of the request, when tracing is on (it is validated hex by the trace middleware). */
+const traceOf = (req) => (req.trace ? { traceId: req.trace.traceId } : {});
+
 const forward = (req, url, token, { body, headers = {} } = {}) =>
   axios({
     method: req.method,
@@ -111,17 +114,14 @@ async function proxyToApi(req, res, upstream, path, options = {}) {
       if (renewedToken) response = await forward(req, url, renewedToken, options);
     }
 
-    if (response.status >= 500 && req.trace) {
-      // only fixed values and the validated trace id are logged: nothing the caller typed
-      logger.warn(`${upstream} answered ${response.status} traceId=${req.trace.traceId}`);
-    }
+    // only fixed values are in the message; the trace id travels as structured metadata
+    if (response.status >= 500) logger.warn(`${upstream} answered ${response.status}`, traceOf(req));
     return sendUpstream(res, response);
   } catch (err) {
     // err.code (e.g. DEPTH_ZERO_SELF_SIGNED_CERT) names a TLS trust failure explicitly
     const code = err.code ? `[${err.code}] ` : '';
-    const trace = req.trace ? ` traceId=${req.trace.traceId}` : '';
-    logger.error(clean(`Proxy error → ${upstream}: ${code}${err.message}${trace}`));
-    return res.status(502).json({ error: 'Backend unavailable', ...(req.trace ? { traceId: req.trace.traceId } : {}) });
+    logger.error(clean(`Proxy error → ${upstream}: ${code}${err.message}`), traceOf(req));
+    return res.status(502).json({ error: 'Backend unavailable', ...traceOf(req) });
   }
 }
 
