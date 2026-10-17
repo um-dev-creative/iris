@@ -1,10 +1,12 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
-import { User, Notification } from '../models';
+import { Notification } from '../models';
+import { AuthService } from './auth.service';
 import { ThemeService } from './theme.service';
 
 @Injectable({ providedIn: 'root' })
 export class DashboardStore {
   private readonly themeService = inject(ThemeService);
+  private readonly auth = inject(AuthService);
 
   // --- Theme ---
   readonly theme = this.themeService.currentTheme;
@@ -12,13 +14,13 @@ export class DashboardStore {
 
   // --- State signals ---
   private readonly _sidebarOpen = signal<boolean>(true);
-  private readonly _user = signal<User | null>(null);
   private readonly _notifications = signal<Notification[]>([]);
   private readonly _loading = signal<boolean>(false);
 
   // --- Public readonly signals ---
   readonly sidebarOpen = this._sidebarOpen.asReadonly();
-  readonly user = this._user.asReadonly();
+  /** Quién tiene la sesión; lo gestiona `AuthService`. */
+  readonly user = this.auth.user;
   readonly notifications = this._notifications.asReadonly();
   readonly loading = this._loading.asReadonly();
 
@@ -28,10 +30,11 @@ export class DashboardStore {
   );
   readonly unreadCount = computed(() => this.unreadNotifications().length);
   readonly userInitials = computed(() => {
-    const u = this._user();
+    const u = this.user();
     if (!u) return '?';
     return u.name
       .split(' ')
+      .filter(Boolean)
       .map((w) => w[0])
       .join('')
       .toUpperCase()
@@ -45,10 +48,6 @@ export class DashboardStore {
 
   setSidebarOpen(open: boolean): void {
     this._sidebarOpen.set(open);
-  }
-
-  setUser(user: User | null): void {
-    this._user.set(user);
   }
 
   setLoading(loading: boolean): void {

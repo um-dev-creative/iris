@@ -2,10 +2,11 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { LayoutComponent } from './layout.component';
 import { DashboardStore, NotificationService } from '../core/services';
+import { fakeAuth } from '../core/testing/auth.testing';
 
 function render() {
   localStorage.clear();
-  TestBed.configureTestingModule({ providers: [provideRouter([])] });
+  TestBed.configureTestingModule({ providers: [provideRouter([]), fakeAuth().provider] });
   const fixture = TestBed.createComponent(LayoutComponent);
   fixture.detectChanges();
   return { fixture, el: fixture.nativeElement as HTMLElement, store: TestBed.inject(DashboardStore) };

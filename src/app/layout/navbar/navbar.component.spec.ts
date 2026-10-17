@@ -1,9 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { NavbarComponent } from './navbar.component';
 import { DashboardStore } from '../../core/services';
+import { fakeAuth } from '../../core/testing/auth.testing';
+
+let auth = fakeAuth();
 
 function render(title?: string) {
   localStorage.clear();
+  TestBed.configureTestingModule({ providers: [auth.provider] });
   const fixture = TestBed.createComponent(NavbarComponent);
   if (title) fixture.componentRef.setInput('pageTitle', title);
   fixture.detectChanges();
@@ -11,6 +15,8 @@ function render(title?: string) {
 }
 
 describe('NavbarComponent', () => {
+  beforeEach(() => (auth = fakeAuth()));
+
   it('muestra el título por defecto o el indicado', () => {
     expect(render().el.querySelector('h1')!.textContent).toContain('Dashboard');
     TestBed.resetTestingModule();
@@ -25,9 +31,9 @@ describe('NavbarComponent', () => {
   });
 
   it('con usuario muestra iniciales y nombre', () => {
-    const { fixture, el, store } = render();
+    const { fixture, el } = render();
 
-    store.setUser({ id: 1, name: 'Luis Mata', username: 'l', email: 'l@m' });
+    auth.setUser({ id: 'u-1', name: 'Luis Mata', username: 'l' });
     fixture.detectChanges();
 
     expect(el.textContent).toContain('LM');
