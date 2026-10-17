@@ -10,6 +10,7 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 
 ### Security
 
+- Las cookies de sesión del BFF (`iris_session`, `iris_refresh`) pasan de `SameSite=Lax` a `SameSite=Strict`; se agregaron pruebas de sus atributos, de la respuesta genérica ante credenciales inválidas y de que la sesión sobrevive a un reinicio. (F2-01)
 - Las acciones de GitHub del pipeline de CI se fijan por SHA de commit completo (con el tag como comentario). Seguimiento de SonarCloud S7637.
 - Los logs del proxy ya no incluyen datos de la petición (ruta ni URL), la renovación de sesión se extrajo a `renewSession` y el límite de subida bajó a 8 MB. Seguimiento de SonarCloud.
 - El proxy del BFF rechaza con 400 rutas con segmentos `..`, `//` inicial, barras invertidas o caracteres de control; los logs saneados evitan inyección de líneas; la subida multipart limita archivos, campos y partes. Se resolvieron los hallazgos de SonarCloud.

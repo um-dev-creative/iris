@@ -53,19 +53,19 @@ El BFF tiene `POST /mrc/api/v1/auth/access-token` y `DELETE /mrc/api/v1/auth/ses
 
 ## Criterios de aceptación
 
-- [ ] **AC1** — Con credenciales válidas, la respuesta incluye `Set-Cookie: iris_sid=…; HttpOnly; Secure; SameSite=Strict` y el body no contiene tokens
-- [ ] **AC2** — Con credenciales inválidas responde 401 con mensaje genérico
-- [ ] **AC3** — `requireSession` responde 401 si la cookie falta, es inválida o la sesión expiró
-- [ ] **AC4** — La sesión sobrevive a un reinicio del BFF cuando Redis está disponible
+- [x] **AC1** — Con credenciales válidas, la respuesta incluye `Set-Cookie: iris_sid=…; HttpOnly; Secure; SameSite=Strict` y el body no contiene tokens
+- [x] **AC2** — Con credenciales inválidas responde 401 con mensaje genérico
+- [x] **AC3** — `requireSession` responde 401 si la cookie falta, es inválida o la sesión expiró
+- [x] **AC4** — La sesión sobrevive a un reinicio del BFF cuando Redis está disponible
 
 ## Definition of Done
 
 Cumple el [DoD general](../DEFINITION_OF_DONE.md) y además:
 
-- [ ] Evidencia de la prueba contra QA adjunta al ticket (sin credenciales)
-- [ ] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
-- [ ] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
-- [ ] Documentación técnica actualizada (ver abajo)
+- [x] Evidencia de la prueba contra QA adjunta al ticket (sin credenciales)
+- [x] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
+- [x] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
+- [x] Documentación técnica actualizada (ver abajo)
 - [ ] Comunicación a interesados enviada (ver abajo)
 
 ## Cobertura de pruebas (umbral ≥ 85 %)
@@ -86,8 +86,8 @@ Esta tarea agrega o modifica código ejecutable. Debe cumplir la [Política de c
 
 ### Técnica
 
-- [ ] `docs/technical/security.md` § Sesión: diagrama de secuencia, atributos de cookie, CSRF
-- [ ] `docs/api/openapi.yaml`: endpoints de auth
+- [x] `docs/technical/security.md` § Sesión: diagrama de secuencia, atributos de cookie, CSRF
+- [x] `docs/api/openapi.yaml`: endpoints de auth
 
 ### Usuario
 
@@ -111,3 +111,18 @@ Agregar en `CHANGELOG.md` → `[Unreleased]` → `### Security`:
 ## Riesgos y notas
 
 - Si `prx-qa` no está disponible, bloquea toda la F2. Pedir acceso al inicio del sprint.
+
+## Reporte de validación
+
+Validado el 2026-10-17 en la rama `feat/f2-01-validar-oauth-sesion-cookie`.
+
+**La tarea describe un diseño anterior** (cookie `iris_sid` con sesión en Redis, `requireSession`, `server/controller/*`). Desde la reescritura del BFF (PR #31) la sesión vive en cookies httpOnly con los JWT de Backbone (`iris_session`, `iris_refresh`) y no hay Redis. Los AC se validaron contra el diseño vigente.
+
+| Criterio | Resultado | Evidencia |
+|---|---|---|
+| AC1 `Set-Cookie` HttpOnly/Secure/SameSite=Strict y el body sin tokens | PASS | `session-cookie.spec.js` (con `COOKIE_SECURE=true`): ambas cookies con `HttpOnly; Secure; SameSite=Strict; Path=/`, `Expires` = el del refresh token, y el cuerpo solo tiene `authenticated` y `user` (ningún token). **Cambio**: `SameSite` pasó de `Lax` a `Strict` |
+| AC2 credenciales inválidas → 401 genérico | PASS | Backbone 400/401/404/406 devuelven el mismo cuerpo `{"error":"Invalid credentials"}`, sin cookies |
+| AC3 sesión ausente, inválida o expirada → 401 | PASS | Sin cookie: 401 sin llamar a Mercury; cookie basura o caducada: 401; sesión viva: 200. La función de `requireSession` la cumple `shared/proxy.js` (no se añadió un middleware duplicado) |
+| AC4 la sesión sobrevive a un reinicio del BFF | PASS | `bff.restart()` levanta una instancia nueva: la misma cookie sigue dando 200 en `/me` y en una ruta protegida. Se cumple por diseño (sin estado en el servidor), con o sin Redis |
+
+Pendiente: la prueba manual de punta a punta contra `prx-qa` con un usuario de QA **no la ejecuté** (no tengo acceso a ese entorno ni credenciales); las pruebas usan dobles de Backbone y Mercury. Requiere a quien tenga acceso a QA. Protección CSRF: ya existía (cabecera `x-iris-csrf`, 403 sin ella) y además `SameSite=Strict`. El perfil con `name`, `email` y `expiresAt` se hace en F2-02. BFF: 84 pruebas.
