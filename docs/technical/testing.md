@@ -24,4 +24,6 @@ Para probar un caso nuevo: `const bff = await start({ env })`, ajustar `bff.stat
 
 ## Estado
 
-El gate del BFF está en verde. El del frontend sigue por debajo de 85 % hasta completar F0-07, por lo que `pnpm test` termina con error de umbral (esperado).
+Ambos gates están en verde: BFF ≈ 98 % de líneas y frontend ≈ 98 % de líneas (sentencias 97,8 %, ramas 97,3 %, funciones 91 %). `showcase-page` queda excluida de la cobertura (catálogo de componentes que se oculta en producción, F5-04). El gate de CI se activa como bloqueante en F0-09.
+
+Convenciones del frontend: componentes con `fixture.componentRef.setInput(...)`, tiempo con `vi.useFakeTimers()` (nunca esperas reales), `localStorage.clear()` al empezar cuando el servicio lo lee, y sin dependencias entre specs (la suite pasa también con orden aleatorio).

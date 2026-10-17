@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GITLEAKS_VERSION: 8.30.1
+
+jobs:
+  ci:
+    name: Build, tests y cobertura
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # gitleaks revisa todo el historial
+
+      - uses: pnpm/action-setup@v4 # versión tomada de "packageManager" en package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Build de producción (cliente y SSR)
+        run: pnpm build:ssr
+        env:
+          ENVM: production
+
+      - name: Pruebas del frontend (cobertura mínima 85 %)
+        run: pnpm test || { echo "::error title=Frontend::Pruebas o cobertura (< 85 %) fallidas; revisa el resumen de cobertura"; exit 1; }
+
+      - name: Pruebas del BFF (cobertura mínima 85 %)
+        run: pnpm test:server || { echo "::error title=BFF::Pruebas o cobertura (< 85 %) fallidas; revisa el resumen de cobertura"; exit 1; }
+
+      - name: Resumen de cobertura
+        if: always()
+        run: node scripts/coverage-summary.mjs >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publicar cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          if-no-files-found: ignore
+
+      - name: Escaneo de secretos (gitleaks)
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar -xz gitleaks
+          ./gitleaks detect --config .gitleaks.toml --redact --verbose

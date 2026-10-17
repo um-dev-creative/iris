@@ -53,6 +53,15 @@ test('a client backbone refuses is a configuration error answered as 502, never 
   assert.equal(res.status, 502);
 });
 
+test('un cliente que backbone no deja actuar para la aplicación (403) también es un 502', async () => {
+  bff.state.clientTokens = ['m2m-1'];
+  bff.state.loginStatus = 403;
+
+  const res = await login();
+
+  assert.equal(res.status, 502);
+});
+
 test('logout carries the user session to backbone', async () => {
   await bff.call('/mrc/api/v1/auth/logout', { method: 'POST', cookie: `iris_session=${tokens.GOOD}` });
 
