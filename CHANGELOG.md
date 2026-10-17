@@ -27,6 +27,7 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 
 ### Changed
 
+- Las rutas de la aplicación se definen en constantes tipadas (`ROUTE_PATHS`). (F1-02)
 - BFF reescrito con el patrón de Stratum y zerobound-frontend: `createApp()` sin efectos, configuración por variables de entorno con validación de arranque, sesión por cookies httpOnly con renovación automática, protección CSRF por cabecera, trazas W3C, proxies a Mercury y Backbone y pruebas (≥ 85 %). Rutas `/mrc/api/v1/*` y `/bkd/api/v1/*` conservadas; el login (`access-token`) ahora usa solo la sesión de Backbone. (F0-02)
 - El servidor se arranca desde un único punto (`createApp` en `server/app.js`); `server.js` queda como lanzador que valida la configuración. (F0-03)
 - pnpm es el único gestor de paquetes (`packageManager`, `engines`, lockfile versionado); documentación histórica reorganizada en `docs/history/` y scripts en `scripts/`. (F0-05)
