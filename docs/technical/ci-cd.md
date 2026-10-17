@@ -33,3 +33,7 @@ gitleaks detect --config .gitleaks.toml --redact
 ## Protección de `main`
 
 Marcar el check `Build, tests y cobertura` como requerido en la configuración de la rama es un paso manual del repositorio (y de F4-04, que añade el control de cobertura del diff).
+
+## Acciones fijadas por SHA
+
+Las acciones de `ci.yml` se referencian por SHA de commit completo, con el tag como comentario (`# v4.4.0`), como pide SonarCloud (S7637) y para que un tag movido no cambie el pipeline. Para actualizar una: resolver el SHA del tag nuevo (`gh api repos/<dueño>/<repo>/git/ref/tags/<tag>`) y cambiar ambos, SHA y comentario.
