@@ -14,11 +14,12 @@ The repo declares `packageManager: pnpm` (`pnpm-lock.yaml`); use pnpm and don't 
 
 - `pnpm start`: `ng serve` on :4200, frontend only (no backend APIs).
 - `pnpm build:dev`: development build. `pnpm build` and `pnpm build:ssr` need `ENVM` set (see `default.env`; environments are in `src/environments/`: dev, qa, prod, cloud).
-- `pnpm serve:integrated`: SSR build and then `node server.js` (full stack, HTTPS if `/ssl` certs exist, otherwise HTTP).
+- `pnpm serve:integrated`: SSR build and then `node server.js` (full stack; HTTPS only when `SSL_CERT_PATH` and `SSL_KEY_PATH` are set).
 - `pnpm dev:integrated:unix`: watches the SSR build and runs `node server.js`.
 - `pnpm test`: Karma/Jasmine, headless with coverage. Single spec: `pnpm ng test --no-watch --browsers ChromeHeadlessNoSandbox --include='src/app/path/to/x.spec.ts'`. There are currently no `*.spec.ts` files, and schematics skip test generation.
 - No lint script is configured.
-- `pnpm start-dev:unix` runs `server.js` with Vault flags (`--vaultToken --vaultUrl --vaultPath UMDC/data/iris/$ENVM`). Backend config comes from Vault, CLI flags and env vars, falling back to `server/config/*.json`.
+- `pnpm test:bff`: BFF tests (`node:test`, stub backbone and mercury, no network). `pnpm test:bff:coverage` fails under 85 % lines/branches/functions. One file: `node --test server/test/proxy.test.js`.
+- BFF settings are env vars read at require time by `server/config/constants.js` (loaded from `.env`/`default.env` by dotenv); see `default.env.example`. In `NODE_ENV=production` the BFF exits with code 78 if the Backbone client settings are missing.
 
 ## Architecture
 
@@ -33,15 +34,17 @@ Two cooperating halves:
 - Dark mode is the `.dark` class on `<html>` (`@custom-variant dark`), not `prefers-color-scheme`. Design tokens live in `src/styles.css` (`@theme inline`).
 - `authGuard` is a permissive placeholder (`return true`). There is no real auth enforcement on the frontend.
 
-**Backend (`server.js` + `server/`)**
-- `server.js` (CommonJS) is the runtime entry. It sets `NODE_CONFIG_DIR=server/config`, applies compression, CORS, rate limiting and `express-http-context`, mounts the API routes, and serves the Angular build from `dist/dashboard/browser` (it prefers `index.csr.html` and falls back to `index.html`). `src/server.ts` is the Angular SSR piece built by `ng run dashboard:server`.
-- `server/` is plain CommonJS (`require`, not ES imports), laid out as `routes/` → `controller/` → `proxy/` (axios clients for upstream services). `shared/` has Redis client, lock and session stores, and error utilities.
-- API prefixes don't collide with Angular routes: `/mrc/api/v1/general/*` (Mercury proxy), `/mrc/api/v1/auth/*` (auth), `/mrc/api/v1/d-image/*` (multer uploads), `/bkd/api/v1/*` (Backbone proxy).
-- `server.js` sets `NODE_TLS_REJECT_UNAUTHORIZED=0` when `NODE_ENV !== 'production'`.
+**Backend (`server.js` + `server/`)**: the BFF follows the same pattern as `stratum` and `zerobound-frontend`.
+- `server.js` is only the entry: dotenv, `settings-check` (exit 78 on a bad configuration), `createApp()` from `server/app.js`, optional HTTPS. `createApp({distPath})` has no side effects, which is what the tests rely on.
+- `server/` is plain CommonJS: `config/` (constants, logger, settings-check), `shared/` (proxy, backbone client, session cookies, csrf, trace, upload), `routes/`, `test/`.
+- Auth is cookie-based and stateless: login goes to backbone as the Iris application client (M2M token, cached and renewed), the session and refresh JWTs live in httpOnly cookies `iris_session` / `iris_refresh`, and the BFF forwards the JWT as the `session-token` header. `shared/proxy.js` renews it once on a 401. There is no Redis and no Vault.
+- Every API call under `/mrc/api/v1` and `/bkd/api/v1` needs the `x-iris-csrf: 1` header unless it is a GET; an unknown API path is a 404 JSON, never the SPA.
+- Routes: `/mrc/api/v1/auth/*` (login `access-token`, `logout`, legacy `session-end`, `me`, and public `create-user` / `verify-code`), `/mrc/api/v1/general/*` → mercury `MERCURY_API_PREFIX`, `/mrc/api/v1/d-image/users/profile` (multer → mercury), `/bkd/api/v1/*` → backbone `BACKBONE_API_PREFIX`, `/health`.
+- The server serves `dist/dashboard/browser` (prefers `index.csr.html`) with a client-side fallback; it does not render SSR at runtime.
 
 ## Gotchas
 
 - Standalone, mostly `OnPush` components; preserve signal patterns (expose readonly signals). Icons are class constants (`readonly Bell = Bell`).
-- Root-level `validate-*.js`, `test-*.js` and `*.sh` files are ad-hoc integration and SSL/Redis check scripts, not part of the Karma suite.
+- Root `*.sh` files are convenience wrappers around the pnpm scripts.
 - The default API endpoint in the environments is `https://jsonplaceholder.typicode.com`, a placeholder.
 - Extra docs: `docs/` (roadmap, stories, technical, user), `DEVELOPMENT_SETUP.md`, `HTTPS_README.md`, `BACKEND_INTEGRATION_LOG.md`.

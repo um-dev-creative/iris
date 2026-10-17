@@ -21,6 +21,14 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 
 ### Changed
 
+- BFF reescrito con el patrón de Stratum y zerobound-frontend: `createApp()` sin efectos, configuración por variables de entorno con validación de arranque, sesión por cookies httpOnly con renovación automática, protección CSRF por cabecera, trazas W3C, proxies a Mercury y Backbone y pruebas `node:test` (≥ 85 %). Rutas `/mrc/api/v1/*` y `/bkd/api/v1/*` conservadas; el login (`access-token`) ahora usa solo la sesión de Backbone. (F0-02)
+
+### Removed
+
+- Vault, Redis, el paquete `config`, `src/server.ts` y los scripts `validate-*.js` / `test-*.js` del BFF anterior, junto con las dependencias que solo ellos usaban.
+
+
+
 - Arranque de la aplicación con `bootstrapApplication` y SSR mediante `@angular/ssr`; se retiran los `NgModule` legados.
 - Gestor de paquetes pnpm.
 
