@@ -1,8 +1,0 @@
-{
-  "_comment": "Production environment overrides - inherits from default.json",
-  "ssl": {
-    "enabled": true,
-    "certificateType": "prx-qa"
-  }
-}
-

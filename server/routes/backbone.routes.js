@@ -1,9 +1,9 @@
-const constant = require('../config/constants.util');
-const express = require('express');
-const router = express.Router();
+'use strict';
 
-let backboneProxyController = require('../controller/backbone.controller');
+const router = require('express').Router();
+const { passThrough } = require('../shared/proxy');
 
-router.all(`${constant.INNER_BACKBONE_PATH}*`, backboneProxyController.proxyApi);
+// /bkd/api/v1/* → backbone, with the user's session
+router.use(passThrough('backbone'));
 
 module.exports = router;
