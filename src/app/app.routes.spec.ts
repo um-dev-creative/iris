@@ -72,8 +72,8 @@ describe('app.routes', () => {
   });
 
   it('tras cerrar sesión, volver (atrás) a una página del dashboard lleva al login (F2-07 AC2)', async () => {
-    const { harness, auth, url } = await navigate('/dashboard/data');
-    expect(url()).toBe('/dashboard/data');
+    const { harness, auth, url } = await navigate('/dashboard');
+    expect(url()).toBe('/dashboard');
 
     auth.service.clearSession();
     await harness.navigateByUrl('/dashboard/data');
