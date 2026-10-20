@@ -16,7 +16,10 @@ export function fakeAuth(initial: User | null = null) {
     login: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn().mockResolvedValue(undefined),
     restoreSession: vi.fn().mockResolvedValue(undefined),
-    clearSession: vi.fn(),
+    clearSession: vi.fn(() => {
+      user.set(null);
+      status.set('anonymous');
+    }),
   };
   return {
     service,
