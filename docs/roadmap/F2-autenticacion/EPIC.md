@@ -25,7 +25,7 @@ Login y logout reales contra Mercury a través del BFF, con sesión en Redis, ru
 |---|---|---|:-:|:-:|:-:|---|---|:-:|
 | [F2-01](F2-01-validar-oauth-sesion-cookie.md) | Validar el flujo OAuth del BFF y emitir sesión por cookie httpOnly | Critical |  | ● | ● | 2d | F0-08 | 🔄 |
 | [F2-02](F2-02-endpoint-sesion-actual.md) | Endpoint de sesión actual GET /mrc/api/v1/auth/me | Major |  | ● |  | 0.5d | F2-01 | ✅ |
-| [F2-03](F2-03-auth-service-signals.md) | AuthService con signals | Critical | ● |  |  | 1.5d | F1-03, F2-02 | ⬜ |
+| [F2-03](F2-03-auth-service-signals.md) | AuthService con signals | Critical | ● |  |  | 1.5d | F1-03, F2-02 | ✅ |
 | [F2-04](F2-04-pagina-login.md) | Página de inicio de sesión | Critical | ● |  |  | 2d | F2-03 | ⬜ |
 | [F2-05](F2-05-guards-reales.md) | authGuard real y guestGuard | Critical | ● |  |  | 0.5d | F2-03, F2-04 | ⬜ |
 | [F2-06](F2-06-auth-interceptor-401.md) | Interceptor de autenticación y manejo de sesión expirada | Critical | ● |  |  | 1d | F2-03 | ⬜ |

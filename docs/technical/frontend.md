@@ -14,6 +14,24 @@ Las rutas viven en `src/app/core/routes/route-paths.ts` (`ROUTE_PATHS`, segmento
 
 `routeUrl(...segmentos)` arma una URL absoluta: `routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.DATA)` → `/dashboard/data`. Úsala en `routerLink`, `router.navigate` y en cualquier enlace. Una ruta nueva se agrega primero a `ROUTE_PATHS`. Comprobación: `grep -rn "'/dashboard" src/app` solo debe encontrar el comentario de `route-paths.ts`.
 
+## Autenticación
+
+`AuthService` (`core/services`, exportado por el barrel) guarda quién tiene la sesión; los tokens viven en cookies httpOnly del BFF y nunca llegan al código. Señales de solo lectura: `user`, `status` e `isAuthenticated`. Las llamadas van a `${API_BASE_URL}/auth/*` con `withCredentials` y la cabecera `x-iris-csrf`.
+
+| `status` | Significa |
+|---|---|
+| `unknown` | Aún no se sabe (arranque, o servidor SSR) |
+| `authenticated` | Hay sesión; `user()` tiene el perfil |
+| `anonymous` | No hay sesión |
+
+| Transición | Cuándo |
+|---|---|
+| `unknown` → `authenticated` / `anonymous` | `restoreSession()` (`GET /auth/me`) al arrancar en el navegador (`provideAppInitializer` en `app.config.ts`). Las llamadas simultáneas comparten una petición. Si el BFF no responde, queda `anonymous` |
+| `unknown`/`anonymous` → `authenticated` | `login(credentials)` correcto. Si falla, la promesa se rechaza con el `HttpErrorResponse` y el estado no cambia |
+| cualquiera → `anonymous` | `logout()` (también si el BFF falla) o `clearSession()` (p. ej. un 401) |
+
+En SSR `restoreSession()` no hace nada: el estado queda `unknown` y no hay llamadas (`app.config.server.ts` tampoco registra el inicializador). `DashboardStore.user` y `userInitials` salen de `AuthService.user`. En pruebas se sustituye con `fakeAuth()` (`core/testing/auth.testing.ts`).
+
 ## Configuración
 
 La configuración por entorno se inyecta con tokens (`src/app/core/config`, barrel `core/config`). `provideAppConfig()` (en `app.config.ts` y `app.config.server.ts`) es el **único** sitio de `src/app` que importa `environments/environment`; todo lo demás inyecta `APP_CONFIG` o `API_BASE_URL`.

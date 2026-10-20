@@ -2,13 +2,14 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { SidebarComponent } from './sidebar.component';
 import { DashboardStore } from '../../core/services';
+import { fakeAuth } from '../../core/testing/auth.testing';
 
 function setWidth(width: number) {
   vi.stubGlobal('innerWidth', width);
 }
 
 function render() {
-  TestBed.configureTestingModule({ providers: [provideRouter([])] });
+  TestBed.configureTestingModule({ providers: [provideRouter([]), fakeAuth().provider] });
   const fixture = TestBed.createComponent(SidebarComponent);
   fixture.detectChanges();
   return { fixture, el: fixture.nativeElement as HTMLElement, store: TestBed.inject(DashboardStore) };
