@@ -108,7 +108,7 @@ async function start({ env = {}, appOptions } = {}) {
   });
   const { createApp } = require('../app');
   const { app } = createApp(appOptions);
-  const bff = await listen(http.createServer(app));
+  let bff = await listen(http.createServer(app));
 
   const call = (path, { method = 'GET', body, cookie, csrf = true, headers = {} } = {}) =>
     fetch(`http://127.0.0.1:${bff.port}${path}`, {
@@ -123,8 +123,14 @@ async function start({ env = {}, appOptions } = {}) {
       body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
     });
 
+  /** Stops the BFF and starts a fresh instance on a new port against the same stand-ins: a process restart. */
+  const restart = async () => {
+    await new Promise((resolve) => bff.server.close(resolve));
+    bff = await listen(http.createServer(createApp(appOptions).app));
+  };
+
   return {
-    state, call, tokens,
+    state, call, tokens, restart,
     stop: () => [backboneServer, mercuryServer, bff].forEach((s) => s.server.close()),
   };
 }

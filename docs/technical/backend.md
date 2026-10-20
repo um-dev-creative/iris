@@ -10,6 +10,21 @@ El BFF vive en `server.js` (lanzador) y `server/` (CommonJS). Ver [arquitectura]
 | `server/routes/` | `auth`, `mercury`, `media`, `backbone` |
 | `server/test/` | Especificaciones y dobles |
 
+## Sesión
+
+La sesión no se guarda en el servidor (no hay Redis): vive en dos cookies que emite el BFF al hacer login contra Backbone y que el navegador reenvía en cada llamada.
+
+| Cookie | Contenido | Atributos |
+|---|---|---|
+| `iris_session` | JWT de sesión; el BFF lo reenvía a Mercury y Backbone en la cabecera `session-token` | `HttpOnly`, `SameSite=Strict`, `Path=/`, `Secure` si `COOKIE_SECURE=true` |
+| `iris_refresh` | JWT de renovación | Igual; ambas caducan con el refresh token |
+
+- La respuesta de login lleva solo el perfil (`{ authenticated, user }`), nunca tokens.
+- Credenciales inválidas (Backbone 400/401/404/406) devuelven siempre `401 {"error":"Invalid credentials"}`: no se distingue usuario inexistente de contraseña errónea.
+- No existe un middleware `requireSession` aparte: toda ruta autenticada es un proxy (`shared/proxy.js`), que responde 401 sin cookie y, ante un 401 de Mercury/Backbone, renueva la sesión una vez con `iris_refresh` y reintenta.
+- Como el estado está en las cookies, un reinicio del BFF no cierra sesiones (`session-cookie.spec.js` lo comprueba con `bff.restart()`).
+- Las llamadas que cambian estado exigen la cabecera `x-iris-csrf: 1`.
+
 ## Pruebas
 
 `pnpm test:server` (Vitest, entorno node, cobertura v8 con umbral del 85 %). Convenciones:
