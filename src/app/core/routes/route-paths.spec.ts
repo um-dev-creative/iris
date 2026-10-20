@@ -11,7 +11,7 @@ describe('ROUTE_PATHS', () => {
     Object.values(ROUTE_PATHS).forEach((segment) => expect(segment).not.toContain('/'));
   });
 
-  it('reserva LOGIN para la fase de autenticación', () => {
+  it('define LOGIN', () => {
     expect(ROUTE_PATHS.LOGIN).toBe('login');
   });
 });
