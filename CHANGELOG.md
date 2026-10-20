@@ -33,6 +33,7 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 
 ### Changed
 
+- `authGuard` protege el dashboard con la sesión real y se agrega `guestGuard` para `/login`. (F2-05)
 - Todos los entornos consumen la API a través del BFF con URL relativa; se agregaron configuraciones de build para dev, qa y cloud. (F1-05)
 - `build:ssr` compila el target de servidor con el mismo `ENVM` (antes siempre con `production`). (F1-05)
 - La configuración de la aplicación se inyecta mediante `APP_CONFIG` y `API_BASE_URL`. (F1-03)
