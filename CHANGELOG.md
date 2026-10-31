@@ -18,6 +18,11 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 
 ### Added
 
+- Menú de usuario en la navbar con el perfil real y cierre de sesión con confirmación. (F2-07)
+- Interceptor de autenticación: las llamadas al BFF llevan cookies y cabecera CSRF, y una sesión expirada avisa una sola vez y lleva al login. (F2-06)
+- Página de inicio de sesión (`/login`) con validación, mensajes de error genéricos y redirección a `returnUrl`. (F2-04)
+- Servicio de autenticación con estado de sesión reactivo. (F2-03)
+- `GET /mrc/api/v1/auth/me` y el login devuelven el perfil con `name` y `expiresAt` (más `email`/`avatarUrl` si el token los trae) y las respuestas de `/auth/*` llevan `Cache-Control: no-store`. (F2-02)
 - Utilidades compartidas de tipos, formateo y paginación. (F1-04)
 - Proxy de desarrollo para `ng serve` hacia el BFF local. (F1-01)
 - Integración del BFF Node con el servidor SSR de Angular: proxies a Mercury (`/mrc/api/v1/general`, `/auth`, `/d-image`) y Backbone (`/bkd/api/v1`), autenticación OAuth, sesiones y locks en Redis con fallback en memoria, soporte HTTPS y endpoints `/health` y `/health/redis`. (F0-02)
@@ -30,6 +35,7 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 
 ### Changed
 
+- `authGuard` protege el dashboard con la sesión real y se agrega `guestGuard` para `/login`. (F2-05)
 - Todos los entornos consumen la API a través del BFF con URL relativa; se agregaron configuraciones de build para dev, qa y cloud. (F1-05)
 - `build:ssr` compila el target de servidor con el mismo `ENVM` (antes siempre con `production`). (F1-05)
 - La configuración de la aplicación se inyecta mediante `APP_CONFIG` y `API_BASE_URL`. (F1-03)

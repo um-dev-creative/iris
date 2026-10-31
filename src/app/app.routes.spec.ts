@@ -6,14 +6,18 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { routes } from './app.routes';
 import { authGuard } from './core/guards';
 import { provideAppConfig } from './core/config';
+import { fakeAuth } from './core/testing/auth.testing';
+import { guestGuard } from './core/guards';
 import { ROUTE_PATHS, routeUrl } from './core/routes';
 
-async function navigate(url: string) {
+async function navigate(url: string, signedIn = true) {
   localStorage.clear();
-  TestBed.configureTestingModule({ providers: [provideRouter(routes), provideAppConfig({ apiBaseUrl: '/test/api/v1' }), provideHttpClient(), provideHttpClientTesting()] });
+  const auth = fakeAuth(signedIn ? { id: 'u-1', username: 'luis', name: 'Luis Mata' } : null);
+  if (!signedIn) auth.setStatus('anonymous');
+  TestBed.configureTestingModule({ providers: [provideRouter(routes), auth.provider, provideAppConfig({ apiBaseUrl: '/test/api/v1' }), provideHttpClient(), provideHttpClientTesting()] });
   const harness = await RouterTestingHarness.create();
   await harness.navigateByUrl(url);
-  return { harness, url: () => TestBed.inject(Router).url };
+  return { harness, auth, url: () => TestBed.inject(Router).url };
 }
 
 describe('app.routes', () => {
@@ -45,9 +49,54 @@ describe('app.routes', () => {
     const dashboard = routes.find((route) => route.path === ROUTE_PATHS.DASHBOARD);
 
     expect(dashboard?.canActivate).toContain(authGuard);
+    expect(dashboard?.canActivateChild).toContain(authGuard);
   });
 
-  it('LOGIN está reservada pero aún no tiene ruta registrada', () => {
-    expect(routes.some((route) => route.path === ROUTE_PATHS.LOGIN)).toBe(false);
+  it('LOGIN es una ruta fuera del layout del dashboard, solo para visitantes', () => {
+    const login = routes.find((route) => route.path === ROUTE_PATHS.LOGIN);
+
+    expect(login?.loadComponent).toBeTypeOf('function');
+    expect(login?.component).toBeUndefined();
+    expect(login?.canActivate).toEqual([guestGuard]);
+  });
+
+  it('sin sesión, abrir una página del dashboard lleva a /login con returnUrl (AC1)', async () => {
+    const { url } = await navigate('/dashboard/data', false);
+
+    expect(url()).toBe('/login?returnUrl=%2Fdashboard%2Fdata');
+  });
+
+  it('con sesión, /login redirige a /dashboard (AC2)', async () => {
+    const { url } = await navigate('/login');
+
+    expect(url()).toBe('/dashboard');
+  });
+
+  it('tras cerrar sesión, volver (atrás) al dashboard lleva al login (F2-07 AC2)', async () => {
+    const { harness, auth, url } = await navigate('/dashboard/data');
+    auth.service.clearSession();
+    await harness.navigateByUrl('/login');
+
+    await harness.navigateByUrl('/dashboard/data');
+
+    expect(url()).toBe('/login?returnUrl=%2Fdashboard%2Fdata');
+    expect((harness.fixture.nativeElement as HTMLElement).querySelector('app-sidebar')).toBeNull();
+  });
+
+  it('sin sesión, ni siquiera navegar entre páginas del dashboard ya abierto es posible', async () => {
+    const { harness, auth, url } = await navigate('/dashboard');
+    auth.service.clearSession();
+
+    await harness.navigateByUrl('/dashboard/settings');
+
+    expect(url()).toBe('/login?returnUrl=%2Fdashboard%2Fsettings');
+  });
+
+  it('sin sesión se ve el login y no el dashboard', async () => {
+    const { harness } = await navigate('/login', false);
+
+    const el = harness.fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('app-login-page')).not.toBeNull();
+    expect(el.querySelector('app-sidebar')).toBeNull();
   });
 });

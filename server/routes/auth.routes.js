@@ -8,11 +8,32 @@ const { fixedPath } = require('../shared/proxy');
 const { decodePayload, setSessionCookies, clearSessionCookies } = require('../shared/session');
 const { SESSION_COOKIE, REFRESH_COOKIE, RATE_LIMIT_WINDOW_MS, LOGIN_RATE_LIMIT_MAX } = require('../config/constants');
 
-const toUser = (payload) => ({
-  id: payload.uid,
-  username: payload.sub,
-  firstname: payload.firstname,
-  lastname: payload.lastname,
+const text = (value) => (typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined);
+
+/**
+ * The profile the browser may see, taken from the session token (nothing else is stored). `email` and `avatarUrl`
+ * appear only when Backbone puts them in the token; today it carries uid, username, firstname and lastname.
+ */
+function toUser(payload) {
+  const username = text(payload.sub) ?? text(payload.username);
+  const firstname = text(payload.firstname);
+  const lastname = text(payload.lastname);
+  return {
+    id: payload.uid,
+    username,
+    firstname,
+    lastname,
+    name: [firstname, lastname].filter(Boolean).join(' ') || username,
+    email: text(payload.email),
+    avatarUrl: text(payload.avatarUrl) ?? text(payload.picture),
+    expiresAt: Number.isFinite(payload.exp) ? new Date(payload.exp * 1000).toISOString() : undefined,
+  };
+}
+
+// a response about who is signed in must never be stored by the browser or an intermediate cache
+router.use((_req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
 });
 
 const loginLimiter = rateLimit({ windowMs: RATE_LIMIT_WINDOW_MS, max: LOGIN_RATE_LIMIT_MAX, standardHeaders: true, legacyHeaders: false });

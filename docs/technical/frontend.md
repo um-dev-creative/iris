@@ -14,6 +14,51 @@ Las rutas viven en `src/app/core/routes/route-paths.ts` (`ROUTE_PATHS`, segmento
 
 `routeUrl(...segmentos)` arma una URL absoluta: `routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.DATA)` → `/dashboard/data`. Úsala en `routerLink`, `router.navigate` y en cualquier enlace. Una ruta nueva se agrega primero a `ROUTE_PATHS`. Comprobación: `grep -rn "'/dashboard" src/app` solo debe encontrar el comentario de `route-paths.ts`.
 
+## Autenticación
+
+`AuthService` (`core/services`, exportado por el barrel) guarda quién tiene la sesión; los tokens viven en cookies httpOnly del BFF y nunca llegan al código. Señales de solo lectura: `user`, `status` e `isAuthenticated`. Las llamadas van a `${API_BASE_URL}/auth/*` con `withCredentials` y la cabecera `x-iris-csrf`.
+
+| `status` | Significa |
+|---|---|
+| `unknown` | Aún no se sabe (arranque, o servidor SSR) |
+| `authenticated` | Hay sesión; `user()` tiene el perfil |
+| `anonymous` | No hay sesión |
+
+| Transición | Cuándo |
+|---|---|
+| `unknown` → `authenticated` / `anonymous` | `restoreSession()` (`GET /auth/me`) al arrancar en el navegador (`provideAppInitializer` en `app.config.ts`). Las llamadas simultáneas comparten una petición. Si el BFF no responde, queda `anonymous` |
+| `unknown`/`anonymous` → `authenticated` | `login(credentials)` correcto. Si falla, la promesa se rechaza con el `HttpErrorResponse` y el estado no cambia |
+| cualquiera → `anonymous` | `logout()` (también si el BFF falla) o `clearSession()` (p. ej. un 401) |
+
+En SSR `restoreSession()` no hace nada: el estado queda `unknown` y no hay llamadas (`app.config.server.ts` tampoco registra el inicializador). `DashboardStore.user` y `userInitials` salen de `AuthService.user`. En pruebas se sustituye con `fakeAuth()` (`core/testing/auth.testing.ts`).
+
+### Perfil y cierre de sesión
+
+`layout/user-menu` (en la navbar): botón con avatar o iniciales y nombre; el menú muestra nombre y correo (o `@usuario` si el token no trae correo) y "Cerrar sesión", que pide confirmación dentro del propio menú. Al confirmar llama a `AuthService.logout()` (el BFF revoca en Backbone y expira las cookies `iris_session`/`iris_refresh`) y navega a `/login` con `replaceUrl`, de modo que "atrás" no regresa al dashboard; aun así `authGuard` bloquearía cualquier regreso. Se cierra con Escape o un clic fuera.
+
+### Interceptores
+
+Orden en `provideHttpClient(withInterceptors([...]))` (`app.config.ts` y `app.config.server.ts`): **`authInterceptor` → `httpErrorInterceptor`**. El primero envuelve al segundo, así que el error ve primero al interceptor de errores y después al de autenticación.
+
+| Interceptor | Qué hace |
+|---|---|
+| `authInterceptor` | A toda llamada al BFF (`/mrc/api/**`, `/bkd/api/**`) le agrega `withCredentials` y la cabecera `x-iris-csrf: 1`; las demás URLs no se tocan. Ante un 401 de un recurso con sesión abierta: limpia el estado, avisa "Tu sesión expiró" y navega a `/login?returnUrl=<ruta actual>`. Los 401 simultáneos generan un solo aviso porque el primero deja el estado en `anonymous` |
+| `httpErrorInterceptor` | Reintenta una vez los 5xx (1 s) y muestra el aviso por código. No avisa de los 401 del BFF (los gestiona el anterior); sí los de APIs externas |
+
+Un 401 de `/auth/*` (login fallido, `/auth/me` sin sesión) es esperado: no avisa ni redirige.
+
+### Guards
+
+- `authGuard` protege `/dashboard/**`: si `status` es `unknown` espera a `restoreSession()`; sin sesión devuelve un `UrlTree` a `/login?returnUrl=<ruta pedida>` (con su query, codificada). Con el inicializador de `app.config.ts` el estado ya se conoce antes del primer render, así que el dashboard no llega a pintarse para un visitante.
+- La ruta `/dashboard` lleva el guard en `canActivate` **y** en `canActivateChild`: `canActivate` solo corre al entrar al padre, así que sin el segundo se podría navegar entre páginas del dashboard con la sesión ya terminada.
+- `guestGuard` protege `/login`: con sesión redirige a `/dashboard`.
+- En SSR ambos dejan pasar y la decisión la toma el navegador (que es quien tiene las cookies).
+- Un guard asíncrono debe hacer todos sus `inject()` **antes** del primer `await`; después se pierde el contexto de inyección.
+
+### Página de login
+
+`features/auth/login-page` (ruta pública `/login`, fuera del layout). Formulario reactivo con usuario/correo y contraseña (mostrar/ocultar), validación requerida que impide enviar vacío y enfoca el primer campo con error, botón deshabilitado con spinner mientras envía y mensajes: 401 "Usuario o contraseña incorrectos" (sin indicar cuál), 429 "Demasiados intentos", y 5xx/red "El servicio no está disponible". Tras iniciar sesión navega a `?returnUrl=` si es una ruta interna (empieza con una sola `/`; cualquier otra cosa cae en `/dashboard`).
+
 ## Configuración
 
 La configuración por entorno se inyecta con tokens (`src/app/core/config`, barrel `core/config`). `provideAppConfig()` (en `app.config.ts` y `app.config.server.ts`) es el **único** sitio de `src/app` que importa `environments/environment`; todo lo demás inyecta `APP_CONFIG` o `API_BASE_URL`.

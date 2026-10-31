@@ -50,18 +50,18 @@ Al recargar la página, el frontend necesita saber si hay sesión y quién es el
 
 ## Criterios de aceptación
 
-- [ ] **AC1** — Con sesión válida responde 200 con el perfil
-- [ ] **AC2** — Sin sesión responde 401
-- [ ] **AC3** — La respuesta no se cachea
+- [x] **AC1** — Con sesión válida responde 200 con el perfil
+- [x] **AC2** — Sin sesión responde 401
+- [x] **AC3** — La respuesta no se cachea
 
 ## Definition of Done
 
 Cumple el [DoD general](../DEFINITION_OF_DONE.md) y además:
 
-- [ ] Documentado en OpenAPI
-- [ ] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
-- [ ] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
-- [ ] Documentación técnica actualizada (ver abajo)
+- [x] Documentado en OpenAPI
+- [x] Todos los criterios de aceptación verificados por `test-writer` con evidencia (reporte PASS/FAIL)
+- [x] Entrada agregada en `CHANGELOG.md` bajo `[Unreleased]`
+- [x] Documentación técnica actualizada (ver abajo)
 
 ## Cobertura de pruebas (umbral ≥ 85 %)
 
@@ -96,3 +96,17 @@ Agregar en `CHANGELOG.md` → `[Unreleased]` → `### Added`:
 ## Comunicación a interesados
 
 Sin comunicación específica; se incluye en el [reporte semanal](../STAKEHOLDERS.md#reporte-semanal).
+
+## Reporte de validación
+
+Validado el 2026-10-17 en la rama `feat/f2-02-endpoint-sesion-actual` (apilada sobre F2-01).
+
+El endpoint `GET /mrc/api/v1/auth/me` ya existía desde la reescritura del BFF (sin la capa `controller/` que menciona la tarea: está en `server/routes/auth.routes.js`). Esta tarea completa su contrato.
+
+| Criterio | Resultado | Evidencia |
+|---|---|---|
+| AC1 sesión válida → 200 con el perfil | PASS | `me.spec.js`: `{ authenticated: true, user: { id, username, name, firstname, lastname, expiresAt } }`; `expiresAt` es la expiración del token (ISO); sin tokens en el cuerpo |
+| AC2 sin sesión → 401 | PASS | Sin cookie → `401 { authenticated: false }`; cookie basura, caducada o sin `exp` → 401 (`auth.spec.js`, `me.spec.js`) |
+| AC3 no se cachea | PASS | `Cache-Control: no-store` en 200 y 401, y en el resto de `/auth/*` (login incluido) |
+
+**Desviación — `email`:** la tarea pide `email` en el perfil, pero el token de sesión de Backbone no lo lleva (claims de `AuthKey` en `backbone-rest`: `uid`, `username`, `firstname`, `lastname`, `roles`, `sessionId`…), y el BFF no guarda estado, así que no puede recordar el que escribió el usuario al iniciar sesión. El BFF incluye `email` y `avatarUrl` **si** Backbone los agrega al token, y la UI (F2-07) mostrará nombre y usuario. Para tener el correo hace falta agregar el claim en `backbone-rest`, fuera de Iris y de Mercury. Hecho además: `name` (nombre + apellido, o el usuario) y `expiresAt`; `docs/technical/security.md` § Perfil. BFF: 94 pruebas.
