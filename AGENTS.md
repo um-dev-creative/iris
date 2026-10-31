@@ -69,7 +69,7 @@
 - **Auth/session**: login through Backbone as the Iris application client; session and refresh JWTs in httpOnly cookies; the BFF sends the JWT upstream as `session-token` and renews it once on 401. CSRF via the `x-iris-csrf: 1` header on non-GET API calls.
 - **API Routes**:
   - Mercury Standard: `/mrc/api/v1/general/*` (proxy to Mercury)
-  - Mercury Auth: `/mrc/api/v1/auth/*` (access-token, logout, me, create-user, verify-code)
+  - Mercury Auth: `/mrc/api/v1/auth/*` (access-token, logout, me, register, verify-email, resend-verification)
   - Multimedia: `/mrc/api/v1/d-image/*` (file uploads with multer)
   - Backbone: `/bkd/api/v1/*` (backbone service proxy)
 - **Tests**: `pnpm test:server` (Vitest, stub upstreams, ≥ 85 %).

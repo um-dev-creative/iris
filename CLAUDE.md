@@ -39,7 +39,7 @@ Two cooperating halves:
 - `server/` is plain CommonJS: `config/` (constants, logger, settings-check), `shared/` (proxy, backbone client, session cookies, csrf, trace, upload), `routes/`, `test/`.
 - Auth is cookie-based and stateless: login goes to backbone as the Iris application client (M2M token, cached and renewed), the session and refresh JWTs live in httpOnly cookies `iris_session` / `iris_refresh`, and the BFF forwards the JWT as the `session-token` header. `shared/proxy.js` renews it once on a 401. There is no Redis and no Vault.
 - Every API call under `/mrc/api/v1` and `/bkd/api/v1` needs the `x-iris-csrf: 1` header unless it is a GET; an unknown API path is a 404 JSON, never the SPA.
-- Routes: `/mrc/api/v1/auth/*` (login `access-token`, `logout`, legacy `session-end`, `me`, and public `create-user` / `verify-code`), `/mrc/api/v1/general/*` → mercury `MERCURY_API_PREFIX`, `/mrc/api/v1/d-image/users/profile` (multer → mercury), `/bkd/api/v1/*` → backbone `BACKBONE_API_PREFIX`, `/health`.
+- Routes: `/mrc/api/v1/auth/*` (login `access-token`, `logout`, legacy `session-end`, `me`, and public `register` / `verify-email` / `resend-verification`), `/mrc/api/v1/general/*` → mercury `MERCURY_API_PREFIX`, `/mrc/api/v1/d-image/users/profile` (multer → mercury), `/bkd/api/v1/*` → backbone `BACKBONE_API_PREFIX`, `/health`.
 - The server serves `dist/dashboard/browser` (prefers `index.csr.html`) with a client-side fallback; it does not render SSR at runtime.
 
 ## Gotchas

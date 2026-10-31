@@ -71,6 +71,32 @@ describe('AuthService', () => {
     });
   });
 
+  describe('registro', () => {
+    const request = {
+      alias: 'ana', email: 'ana@example.com', password: 'una-clave-larga', // gitleaks:allow
+      person: { firstName: 'Ana', lastName: 'Rojas', gender: 'F', birthdate: '1990-05-01' },
+      notificationEmail: true, notificationSms: false, privacyDataOutActive: false, language: 'es' as const,
+    };
+
+    it('register, verifyEmail y resendVerification llaman al BFF', async () => {
+      const ctx = setup();
+
+      const registered = ctx.auth.register(request);
+      ctx.http.expectOne(`${AUTH}/register`).flush({ status: 'PENDING_VERIFICATION' });
+      await registered;
+
+      const verified = ctx.auth.verifyEmail('ana', '123456');
+      const verify = ctx.http.expectOne(`${AUTH}/verify-email`);
+      expect(verify.request.body).toEqual({ alias: 'ana', code: '123456' });
+      verify.flush({ status: 'ACTIVE' });
+      await verified;
+
+      const resent = ctx.auth.resendVerification('ana');
+      ctx.http.expectOne(`${AUTH}/resend-verification`).flush({ status: 'PENDING_VERIFICATION' });
+      await resent;
+    });
+  });
+
   describe('logout (AC2)', () => {
     async function signedIn() {
       const ctx = setup();

@@ -3,7 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { API_BASE_URL } from '../config';
-import { AuthStatus, LoginCredentials, User } from '../models';
+import { AuthStatus, LoginCredentials, RegistrationRequest, User } from '../models';
 
 interface SessionResponse {
   authenticated: boolean;
@@ -38,6 +38,21 @@ export class AuthService {
       this.http.post<SessionResponse>(`${this.authUrl}/access-token`, credentials),
     );
     this.setSession(response.user);
+  }
+
+  /** Crea la cuenta sin activar; el correo recibe un código. Un correo ya registrado responde igual. */
+  async register(request: RegistrationRequest): Promise<void> {
+    await firstValueFrom(this.http.post(`${this.authUrl}/register`, request));
+  }
+
+  /** Confirma el correo con el código y activa la cuenta. */
+  async verifyEmail(alias: string, code: string): Promise<void> {
+    await firstValueFrom(this.http.post(`${this.authUrl}/verify-email`, { alias, code }));
+  }
+
+  /** Pide otro código. La respuesta es la misma exista o no la cuenta. */
+  async resendVerification(alias: string): Promise<void> {
+    await firstValueFrom(this.http.post(`${this.authUrl}/resend-verification`, { alias, language: 'es' }));
   }
 
   /** Cierra la sesión. El estado local pasa a `anonymous` aunque el BFF falle: nunca se queda a medias. */

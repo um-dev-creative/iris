@@ -11,6 +11,9 @@ export const ROUTE_PATHS = {
   LOGIN_CLIENTS: 'login-clients',
   /** Página pública de acceso, fuera del layout del dashboard. */
   LOGIN: 'login',
+  /** Alta pública de una cuenta y confirmación de su correo. */
+  REGISTER: 'register',
+  VERIFY_EMAIL: 'verify-email',
   WILDCARD: '**',
 } as const;
 

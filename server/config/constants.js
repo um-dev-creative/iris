@@ -36,6 +36,20 @@ module.exports = {
   RATE_LIMIT_MAX: parseInt(process.env['RATE_LIMIT_MAX'] || '1200', 10),
   // stricter than the general limit: it guards the password check
   LOGIN_RATE_LIMIT_MAX: parseInt(process.env['LOGIN_RATE_LIMIT_MAX'] || '10', 10),
+  // Monitoring: the application whose campaigns the dashboard shows (Iris' own by default), and where to probe health
+  MONITORED_APPLICATION_ID: process.env['MONITORED_APPLICATION_ID'] || process.env['BACKBONE_APPLICATION_ID'] || '',
+  MONITORING_MAX_CAMPAIGNS: parseInt(process.env['MONITORING_MAX_CAMPAIGNS'] || '50', 10),
+  MERCURY_HEALTH_PATH: process.env['MERCURY_HEALTH_PATH'] || '/mercury/actuator/health',
+  BACKBONE_HEALTH_PATH: process.env['BACKBONE_HEALTH_PATH'] || '/backbone/actuator/health',
+  REGISTRATION_RATE_LIMIT_MAX: parseInt(process.env['REGISTRATION_RATE_LIMIT_MAX'] || '5', 10),
+  // Iris as a Mercury login client (M2M): sends the verification code and checks it
+  MERCURY_LOGIN_ALIAS: process.env['MERCURY_LOGIN_ALIAS'] || '',
+  MERCURY_LOGIN_PASSWORD: process.env['MERCURY_LOGIN_PASSWORD'] || '',
+  // Sign-up: the role a new user gets in backbone, and the Mercury template that mails the code. Empty = sign-up is off.
+  REGISTRATION_ROLE_ID: process.env['REGISTRATION_ROLE_ID'] || '',
+  REGISTRATION_TEMPLATE_ES: process.env['REGISTRATION_TEMPLATE_ES'] || '',
+  REGISTRATION_TEMPLATE_EN: process.env['REGISTRATION_TEMPLATE_EN'] || '',
+  REGISTRATION_MAIL_FROM: process.env['REGISTRATION_MAIL_FROM'] || '',
   SSL_CERT_PATH: process.env['SSL_CERT_PATH'] || '',
   SSL_KEY_PATH: process.env['SSL_KEY_PATH'] || '',
   SESSION_COOKIE: 'iris_session',

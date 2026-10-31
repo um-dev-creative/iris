@@ -7,6 +7,9 @@ Iris muestra en tiempo casi real cómo se están enviando los mensajes SMS, What
 ## 1. Iniciar sesión
 _Pendiente — F2-04._ Usuario y contraseña, mensajes de error y qué hacer.
 
+## 1 bis. Crear una cuenta
+En la pantalla de inicio de sesión pulsa **Crear una cuenta** y completa el formulario. Te enviaremos un código de 6 dígitos al correo, válido por 15 minutos; escríbelo para activar la cuenta. Si no te llega, pulsa **Enviar otro código**. Tienes 3 intentos por código.
+
 ## 2. Sesión expirada
 _Pendiente — F2-06._
 
@@ -14,26 +17,28 @@ _Pendiente — F2-06._
 _Pendiente — F2-07._
 
 ## 4. Página principal
-_Pendiente — F3-05._ Qué significa cada indicador:
+Los indicadores salen de las campañas de Mercury. Si aún no hay datos, la página lo indica en lugar de mostrar cifras.
 
 | Indicador | Qué mide | Cómo se calcula |
 |---|---|---|
-| Mensajes totales (24 h) | | |
-| Tasa de entrega | | |
-| Latencia promedio | | |
-| Errores activos | | |
+| Mensajes totales | Destinatarios de las campañas | Suma de todas las campañas |
+| Tasa de entrega | Mensajes que llegaron | Entregados ÷ (entregados + fallidos) |
+| Fallidos | Mensajes que no se entregaron | Suma de todas las campañas |
+| Pendientes | Mensajes en curso | Suma de todas las campañas |
 
-## 5. Buscar mensajes
-_Pendiente — F3-06._ Filtros, búsqueda por id o destinatario, compartir una vista por enlace.
+La tendencia compara con la lectura anterior, por eso no aparece en la primera.
+
+## 5. Buscar campañas
+En **Campañas** busca por nombre y filtra por canal y estado. Una campaña está **En curso** si le quedan mensajes por enviar, **Entregada** si terminó con entregas y **Fallida** si terminó sin ninguna.
 
 ## 6. Estado de servicios
-_Pendiente — F3-07._ Significado de *Operativo*, *Degradado* y *Caído*.
+Iris comprueba Mercury y Backbone en cada actualización y muestra la latencia medida. *Operational*: responde bien. *Degraded*: responde, pero tarda más de un segundo. *Down*: no responde o informa un fallo.
 
 ## 7. Actualización automática
-_Pendiente — F3-08._
+Los datos se actualizan cada 30 segundos mientras la pestaña está visible. El botón de actualizar lo hace al momento.
 
 ## 8. Qué hacer si no cargan los datos
-_Pendiente — F3-09._
+Un aviso indica el problema. Si dice que no se pudieron actualizar, Iris reintenta sola y conserva la última lectura. Si dice que Mercury no entregó las campañas, revisa el estado de los servicios en la misma página.
 
 ## 8 bis. Clientes de login (administración)
 

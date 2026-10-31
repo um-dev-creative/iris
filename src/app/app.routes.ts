@@ -16,6 +16,18 @@ export const routes: Routes = [
       import('./features/auth/login-page/login-page.component').then((m) => m.LoginPageComponent),
   },
   {
+    path: ROUTE_PATHS.REGISTER,
+    canActivate: [guestGuard],
+    loadComponent: () =>
+      import('./features/auth/register-page/register-page.component').then((m) => m.RegisterPageComponent),
+  },
+  {
+    path: ROUTE_PATHS.VERIFY_EMAIL,
+    canActivate: [guestGuard],
+    loadComponent: () =>
+      import('./features/auth/verify-email-page/verify-email-page.component').then((m) => m.VerifyEmailPageComponent),
+  },
+  {
     path: ROUTE_PATHS.DASHBOARD,
     component: LayoutComponent,
     canActivate: [authGuard],
