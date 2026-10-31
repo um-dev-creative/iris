@@ -24,6 +24,13 @@ export const DASHBOARD_ROUTES: Routes = [
       ),
   },
   {
+    path: ROUTE_PATHS.LOGIN_CLIENTS,
+    loadComponent: () =>
+      import('./pages/login-clients-page/login-clients-page.component').then(
+        (m) => m.LoginClientsPageComponent
+      ),
+  },
+  {
     path: ROUTE_PATHS.SHOWCASE,
     loadComponent: () =>
       import('./pages/showcase-page/showcase-page.component').then(

@@ -26,8 +26,8 @@ describe('SidebarComponent', () => {
     const { el } = render();
 
     expect(el.textContent).toContain('Iris');
-    ['Overview', 'Data View', 'Settings', 'Showcase'].forEach((label) => expect(el.textContent).toContain(label));
-    expect(el.querySelectorAll('nav a')).toHaveLength(4);
+    ['Overview', 'Data View', 'Settings', 'Login clients', 'Showcase'].forEach((label) => expect(el.textContent).toContain(label));
+    expect(el.querySelectorAll('nav a')).toHaveLength(5);
     expect(el.querySelector('aside')!.className).toContain('w-64');
   });
 
@@ -35,7 +35,7 @@ describe('SidebarComponent', () => {
     const { el } = render();
 
     const hrefs = Array.from(el.querySelectorAll('nav a')).map((a) => a.getAttribute('href'));
-    expect(hrefs).toEqual(['/dashboard', '/dashboard/data', '/dashboard/settings', '/dashboard/showcase']);
+    expect(hrefs).toEqual(['/dashboard', '/dashboard/data', '/dashboard/settings', '/dashboard/login-clients', '/dashboard/showcase']);
   });
 
   it('colapsada: oculta las etiquetas y se estrecha', () => {

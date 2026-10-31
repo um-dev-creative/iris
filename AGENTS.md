@@ -10,7 +10,7 @@
 ## Architecture Map
 - Routing is split in two levels:
   - App-level in `src/app/app.routes.ts` (`/dashboard` guarded by `authGuard`).
-  - Feature-level in `src/app/features/dashboard/dashboard.routes.ts` (`home`, `data`, `settings`, `showcase`).
+  - Feature-level in `src/app/features/dashboard/dashboard.routes.ts` (`home`, `data`, `settings`, `login-clients`, `showcase`).
 - Layer intent by folder:
   - `src/app/core`: cross-cutting services, guards, interceptors, models.
   - `src/app/features/dashboard`: page-specific UI + feature data service.

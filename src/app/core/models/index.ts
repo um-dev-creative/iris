@@ -6,3 +6,4 @@ export type {
   Notification,
   KpiCard,
 } from './dashboard.model';
+export * from './login-client.model';

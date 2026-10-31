@@ -8,7 +8,7 @@ Las rutas viven en `src/app/core/routes/route-paths.ts` (`ROUTE_PATHS`, segmento
 |---|---|---|
 | `ROOT` | `''` | Redirige a `DASHBOARD` |
 | `DASHBOARD` | `dashboard` | Padre con `LayoutComponent` y `authGuard`; carga `DASHBOARD_ROUTES` |
-| `DATA` / `SETTINGS` / `SHOWCASE` | `data` / `settings` / `showcase` | Páginas hijas de `DASHBOARD` |
+| `DATA` / `SETTINGS` / `LOGIN_CLIENTS` / `SHOWCASE` | `data` / `settings` / `login-clients` / `showcase` | Páginas hijas de `DASHBOARD` |
 | `LOGIN` | `login` | Reservada para F2; sin ruta registrada todavía |
 | `WILDCARD` | `**` | Redirige a `DASHBOARD` |
 
@@ -100,3 +100,14 @@ Reglas:
 - Toda lógica protegida así debe tener una prueba con `PLATFORM_ID = 'server'` (ver `api.service.spec.ts`).
 
 Revisión de F0-04 (`grep -rn "localStorage\|window\.\|document\." src/app`): `ApiService` (corregido), `ThemeService` (ya protegido con `typeof`) y `SidebarComponent` (`typeof window`) son los únicos usos.
+
+## Clientes de login (`/dashboard/login-clients`)
+
+`LoginClientsPageComponent` (lazy) y `LoginClientsService` (`features/dashboard/services`, signals `clients` y `loading`) administran la tabla `mercury.login_clients`
+a través de `/mrc/api/v1/general/login-clients` (el BFF reenvía la sesión de la persona; ver `docs/technical/backend.md`).
+
+- La contraseña que genera Mercury llega **solo** en la respuesta de crear o rotar: vive en una señal del componente y se borra al cerrar el panel o en `ngOnDestroy`; nunca se
+  guarda en el servicio, en el store ni en `localStorage`.
+- Un 403 de Mercury (falta `LOGIN_CLIENT_MANAGE`) se muestra como estado de la página, sin redirigir al login: no es una sesión caducada.
+- Los errores de formulario (409 alias repetido, 400 datos inválidos) se muestran dentro del formulario; el interceptor global sigue avisando con su toast genérico.
+- Las reglas de alias y contraseña (`LOGIN_CLIENT_*_PATTERN`, `core/models/login-client.model.ts`) reflejan las de Mercury y avisan antes de enviar.
