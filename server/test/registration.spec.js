@@ -63,6 +63,10 @@ describe('POST /auth/register', () => {
   it.each([
     ['alias', { alias: 'a!' }],
     ['email', { email: 'no-es-correo' }],
+    ['email', { email: 'dos@arrobas@example.com' }],
+    ['email', { email: 'sin-punto@dominio' }],
+    ['email', { email: 'con espacio@example.com' }],
+    ['email', { email: `${'a'.repeat(300)}@example.com` }],
     ['password', { password: 'corta' }],
     ['person', { person: null }],
     ['name', { person: { ...person, lastName: ' ' } }],

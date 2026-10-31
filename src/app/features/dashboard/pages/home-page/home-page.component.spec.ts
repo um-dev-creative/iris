@@ -104,7 +104,7 @@ describe('HomePageComponent', () => {
   it('avisa si Mercury no entregó las campañas', () => {
     const { el } = render(overviewFixture({ campaignsAvailable: false, campaigns: [] }));
 
-    expect(el.querySelector('[role=status]')?.textContent).toContain('Mercury no entregó las campañas');
+    expect(el.querySelector('output')?.textContent).toContain('Mercury no entregó las campañas');
     expect(el.textContent).toContain('No hay campañas para mostrar.');
   });
 

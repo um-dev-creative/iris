@@ -20,7 +20,6 @@ const {
 const CODE_MINUTES = 15;
 const RESEND_SLOT_SECONDS = 60;
 const ALIAS = /^[A-Za-z0-9._-]{3,64}$/;
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CODE = /^\d{6}$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const TEMPLATES = { es: REGISTRATION_TEMPLATE_ES, en: REGISTRATION_TEMPLATE_EN };
@@ -33,6 +32,14 @@ const text = (value, max) => typeof value === 'string' && value.trim() !== '' &&
 const flag = (value) => typeof value === 'boolean';
 const languageOf = (value) => (value === 'en' ? 'en' : 'es');
 const isPast = (value) => typeof value === 'string' && DATE.test(value) && !Number.isNaN(Date.parse(value)) && new Date(value) < new Date();
+
+/** One `@`, text on both sides, a dot inside the domain and no spaces. Without a regex, so a long value cannot slow it down. */
+function isEmail(value) {
+  const at = value.indexOf('@');
+  if (at < 1 || at !== value.lastIndexOf('@') || /\s/.test(value)) return false;
+  const dot = value.indexOf('.', at + 2);
+  return dot > 0 && dot < value.length - 1;
+}
 
 /** Sign-up stays off until every value it needs exists: a half-configured flow would create users nobody can activate. */
 const configured = () =>
@@ -61,7 +68,7 @@ const guarded = (handler) => async (req, res) => {
 function invalidField(body) {
   const person = body.person;
   if (!ALIAS.test(body.alias ?? '')) return 'alias';
-  if (!text(body.email, 254) || !EMAIL.test(body.email.trim())) return 'email';
+  if (!text(body.email, 254) || !isEmail(body.email.trim())) return 'email';
   if (typeof body.password !== 'string' || body.password.length < 8 || body.password.length > 128) return 'password';
   if (!person || typeof person !== 'object' || Array.isArray(person)) return 'person';
   if (!text(person.firstName, 100) || !text(person.lastName, 100)) return 'name';

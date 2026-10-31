@@ -23,10 +23,10 @@
     <span>No fue posible actualizar los datos. Se reintentará en unos segundos.</span>
   </div>
 } @else if (monitoringService.loaded() && !monitoringService.available()) {
-  <div role="status" class="flex items-start gap-2 mb-6 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-foreground animate-fade-in">
+  <output class="flex items-start gap-2 mb-6 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-foreground animate-fade-in">
     <lucide-icon [img]="TriangleAlertIcon" [size]="16" strokeWidth="1.5" class="mt-0.5 flex-shrink-0" />
     <span>Mercury no entregó las campañas. Revisa el estado de los servicios más abajo.</span>
-  </div>
+  </output>
 }
 
 <!-- KPI Cards -->

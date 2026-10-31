@@ -30,6 +30,8 @@ spec:
       labels:
         app: iris
     spec:
+      # Iris does not call the Kubernetes API
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -52,8 +54,10 @@ spec:
             requests:
               cpu: 50m
               memory: 96Mi
+              ephemeral-storage: 64Mi
             limits:
               memory: 256Mi
+              ephemeral-storage: 128Mi
           readinessProbe:
             httpGet:
               path: /health

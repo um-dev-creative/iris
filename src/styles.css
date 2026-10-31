@@ -264,14 +264,17 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after,
+  :root {
+    --animate-fade-in: none;
+    --animate-pop: none;
+    --animate-aurora: none;
+  }
   ::view-transition-old(root),
   ::view-transition-new(root) {
-    animation-duration: 1ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 1ms !important;
+    animation: none;
+  }
+  .iris-lift {
+    transition: none;
   }
   .iris-lift:hover {
     transform: none;
