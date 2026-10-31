@@ -1,23 +1,29 @@
 import { TestBed } from '@angular/core/testing';
+import { HttpTestingController } from '@angular/common/http/testing';
 import { DataViewPageComponent } from './data-view-page.component';
 import { MonitoringDataService } from '../../services/monitoring-data.service';
+import { monitoringProviders, overviewFixture } from '../../services/monitoring.testing';
 
-async function render() {
+async function render(overview = overviewFixture()) {
+  TestBed.configureTestingModule({ providers: monitoringProviders });
   const fixture = TestBed.createComponent(DataViewPageComponent);
+  // la página pide los datos al crearse; la espera de abajo terminaría solo cuando esa petición responde
+  TestBed.inject(HttpTestingController).match(() => true).forEach((request) => request.flush(overview));
   fixture.detectChanges();
   await fixture.whenStable();
+  fixture.detectChanges();
   const settle = async () => { fixture.detectChanges(); await fixture.whenStable(); };
   return { fixture, c: fixture.componentInstance, el: fixture.nativeElement as HTMLElement, data: TestBed.inject(MonitoringDataService), settle };
 }
 
 describe('DataViewPageComponent', () => {
-  it('muestra la primera página ordenada por ID descendente', async () => {
+  it('muestra la primera página con las campañas más recientes', async () => {
     const { c, el } = await render();
 
     expect(c.paginatedLogs()).toHaveLength(10);
-    expect(c.paginatedLogs()[0].id).toBe('MSG-28430');
+    expect(c.paginatedLogs()[0].id).toBe('id-30');
     expect(c.totalPages()).toBe(3);
-    expect(el.textContent).toContain('MSG-28430');
+    expect(el.textContent).toContain('Campaña 30');
   });
 
   it('cuenta entregados, fallidos y pendientes', async () => {
@@ -27,16 +33,13 @@ describe('DataViewPageComponent', () => {
     expect(c.deliveredCount() + c.failedCount() + c.pendingCount()).toBe(total);
   });
 
-  it('busca por ID o por destinatario, ignorando mayúsculas', async () => {
+  it('busca por nombre, ignorando mayúsculas', async () => {
     const { c, settle } = await render();
 
-    c.searchTerm.set('msg-28405');
+    c.searchTerm.set('CAMPAÑA 05');
     await settle();
-    expect(c.filteredLogs().map((l) => l.id)).toEqual(['MSG-28405']);
 
-    c.searchTerm.set('+34 612');
-    await settle();
-    expect(c.filteredLogs().map((l) => l.id)).toEqual(['MSG-28401']);
+    expect(c.filteredLogs().map((l) => l.id)).toEqual(['id-05']);
     expect(c.hasActiveFilters()).toBe(true);
   });
 
@@ -64,7 +67,7 @@ describe('DataViewPageComponent', () => {
     await settle();
     expect(c.hasActiveFilters()).toBe(false);
     expect(c.filteredLogs().length).toBeGreaterThan(0);
-    expect(el.textContent).toContain('MSG-');
+    expect(el.textContent).toContain('Campaña');
   });
 
   it('ordena: misma columna alterna dirección, otra columna empieza ascendente', async () => {
@@ -73,7 +76,7 @@ describe('DataViewPageComponent', () => {
     c.toggleSort('id');
     await settle();
     expect(c.sortDir()).toBe('asc');
-    expect(c.paginatedLogs()[0].id).toBe('MSG-28401');
+    expect(c.paginatedLogs()[0].id).toBe('id-01');
 
     c.toggleSort('status');
     await settle();
@@ -98,12 +101,12 @@ describe('DataViewPageComponent', () => {
 
   it('los chips de filtros activos quitan cada filtro al pulsarlos', async () => {
     const { c, el, settle } = await render();
-    c.searchTerm.set('MSG');
+    c.searchTerm.set('Campaña');
     c.selectedProvider.set('email');
     c.selectedStatus.set('delivered');
     await settle();
 
-    const chips = () => Array.from(el.querySelectorAll('button')).filter((b) => /Búsqueda|Email|Delivered/.test(b.textContent!));
+    const chips = () => Array.from(el.querySelectorAll('button')).filter((b) => /Búsqueda|Email|Entregada/.test(b.textContent!));
     expect(chips()).toHaveLength(3);
 
     chips().find((b) => b.textContent!.includes('Búsqueda'))!.click();
@@ -114,7 +117,7 @@ describe('DataViewPageComponent', () => {
     await settle();
     expect(c.selectedProvider()).toBe('all');
 
-    chips().find((b) => b.textContent!.includes('Delivered'))!.click();
+    chips().find((b) => b.textContent!.includes('Entregada'))!.click();
     await settle();
     expect(c.hasActiveFilters()).toBe(false);
   });
@@ -127,7 +130,7 @@ describe('DataViewPageComponent', () => {
     expect(c.providerClasses('whatsapp')).toContain('chart-2');
     expect(c.providerClasses('fax')).toBe('');
     expect(c.providerIcon('fax')).toBe(c.providerIcon('email'));
-    expect(c.statusLabel('pending')).toBe('Pending');
+    expect(c.statusLabel('pending')).toBe('En curso');
     expect(c.statusLabel('otro')).toBe('otro');
     expect(c.statusClasses('failed')).toContain('bg-destructive');
     expect(c.statusClasses('otro')).toBe('');

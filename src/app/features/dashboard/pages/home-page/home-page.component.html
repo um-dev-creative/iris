@@ -1,18 +1,12 @@
 <!-- Page Header -->
 <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
   <div>
-    <h2 class="text-2xl font-bold text-foreground">Monitoring Dashboard</h2>
+    <h2 class="text-2xl font-bold text-foreground">Monitoreo</h2>
     <p class="text-sm text-muted-foreground mt-1">
-      Monitoreo en tiempo real y analíticas del sistema
+      Campañas de Mercury y estado de los servicios
     </p>
   </div>
   <div class="flex items-center gap-2">
-    <button
-      class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-border bg-card text-card-foreground hover:bg-muted transition-colors"
-    >
-      <lucide-icon [img]="CalendarIcon" [size]="16" strokeWidth="1.5" />
-      <span>Last 24h</span>
-    </button>
     <button
       class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
       [class.animate-spin]="monitoringService.loading()"
@@ -23,11 +17,28 @@
   </div>
 </div>
 
+@if (monitoringService.error()) {
+  <div role="alert" class="flex items-start gap-2 mb-6 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive-foreground animate-fade-in">
+    <lucide-icon [img]="TriangleAlertIcon" [size]="16" strokeWidth="1.5" class="mt-0.5 flex-shrink-0" />
+    <span>No fue posible actualizar los datos. Se reintentará en unos segundos.</span>
+  </div>
+} @else if (monitoringService.loaded() && !monitoringService.available()) {
+  <div role="status" class="flex items-start gap-2 mb-6 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-foreground animate-fade-in">
+    <lucide-icon [img]="TriangleAlertIcon" [size]="16" strokeWidth="1.5" class="mt-0.5 flex-shrink-0" />
+    <span>Mercury no entregó las campañas. Revisa el estado de los servicios más abajo.</span>
+  </div>
+}
+
 <!-- KPI Cards -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+  @if (!monitoringService.loaded()) {
+    @for (card of [1, 2, 3, 4]; track card) {
+      <div class="h-32 rounded-xl border border-border bg-card animate-pulse" aria-hidden="true"></div>
+    }
+  }
   @for (kpi of monitoringService.kpis(); track kpi.title; let i = $index) {
     <div
-      class="bg-card rounded-xl border border-border shadow-sm p-5 hover:shadow-md transition-shadow animate-fade-in"
+      class="iris-lift bg-card rounded-xl border border-border shadow-sm p-5 animate-fade-in"
       [style.animation-delay]="i * 100 + 'ms'"
     >
       <div class="flex items-start justify-between">
@@ -50,27 +61,31 @@
           <p class="text-2xl font-bold text-card-foreground mb-1">
             {{ kpi.value }}
           </p>
-          <div class="flex items-center gap-1">
-            <lucide-icon
-              [img]="kpi.trend >= 0 ? TrendingUpIcon : TrendingDownIcon"
-              [size]="14"
-              strokeWidth="2"
-              [class]="trendColorClass(kpi)"
+          @if (kpi.trend !== null) {
+            <div class="flex items-center gap-1">
+              <lucide-icon
+                [img]="kpi.trend >= 0 ? TrendingUpIcon : TrendingDownIcon"
+                [size]="14"
+                strokeWidth="2"
+                [class]="trendColorClass(kpi)"
+              />
+              <span [class]="'text-xs font-medium ' + trendColorClass(kpi)">
+                {{ kpi.trend >= 0 ? '+' : '' }}{{ kpi.trend }}{{ kpi.trendSuffix }}
+              </span>
+              <span class="text-xs text-muted-foreground">{{ kpi.trendLabel }}</span>
+            </div>
+          } @else {
+            <p class="text-xs text-muted-foreground">Primera lectura</p>
+          }
+        </div>
+        @if (kpi.sparklineData.length > 1) {
+          <div class="w-24 h-10 ml-3 shrink-0 self-center">
+            <app-sparkline
+              [data]="kpi.sparklineData"
+              [color]="kpi.sparklineColor"
             />
-            <span [class]="'text-xs font-medium ' + trendColorClass(kpi)">
-              {{ kpi.trend >= 0 ? '+' : '' }}{{ kpi.trend }}{{ kpi.trendSuffix }}
-            </span>
-            <span class="text-xs text-muted-foreground">
-              {{ kpi.trendLabel }}
-            </span>
           </div>
-        </div>
-        <div class="w-24 h-10 ml-3 shrink-0 self-center">
-          <app-sparkline
-            [data]="kpi.sparklineData"
-            [color]="kpi.sparklineColor"
-          />
-        </div>
+        }
       </div>
     </div>
   }
@@ -84,10 +99,10 @@
   <div class="flex flex-col sm:flex-row sm:items-center justify-between p-5 border-b border-border gap-3">
     <div>
       <h3 class="text-lg font-semibold text-card-foreground">
-        Logs en Tiempo Real
+        Campañas recientes
       </h3>
       <p class="text-xs text-muted-foreground mt-0.5">
-        Últimos mensajes procesados
+        Actualizado cada 30 segundos
       </p>
     </div>
     <div class="flex items-center gap-2">
@@ -114,17 +129,17 @@
           <th
             class="text-left text-xs font-medium text-muted-foreground px-5 py-3"
           >
-            ID
+            Campaña
           </th>
           <th
             class="text-left text-xs font-medium text-muted-foreground px-5 py-3"
           >
-            Destinatario
+            Entrega
           </th>
           <th
             class="text-left text-xs font-medium text-muted-foreground px-5 py-3"
           >
-            Proveedor
+            Canal
           </th>
           <th
             class="text-left text-xs font-medium text-muted-foreground px-5 py-3"
@@ -134,7 +149,7 @@
           <th
             class="text-left text-xs font-medium text-muted-foreground px-5 py-3"
           >
-            Timestamp
+            Creada
           </th>
         </tr>
       </thead>
@@ -144,13 +159,13 @@
             class="border-b border-border last:border-b-0 hover:bg-muted/50 transition-colors"
           >
             <td class="px-5 py-3">
-              <span class="text-sm font-mono text-card-foreground">
-                {{ log.id }}
+              <span class="text-sm font-medium text-card-foreground">
+                {{ log.name }}
               </span>
             </td>
             <td class="px-5 py-3">
-              <span class="text-sm text-card-foreground">
-                {{ log.recipient }}
+              <span class="text-sm tabular-nums text-card-foreground">
+                {{ log.delivered }} / {{ log.total }}
               </span>
             </td>
             <td class="px-5 py-3">
@@ -185,6 +200,12 @@
               <span class="text-sm text-muted-foreground font-mono">
                 {{ log.timestamp }}
               </span>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="5" class="px-5 py-10 text-center text-sm text-muted-foreground">
+              {{ monitoringService.loaded() ? 'No hay campañas para mostrar.' : 'Cargando campañas…' }}
             </td>
           </tr>
         }

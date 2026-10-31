@@ -90,22 +90,22 @@ export class SidebarComponent {
 
   readonly navItems: NavItem[] = [
     {
-      label: 'Overview',
+      label: 'Inicio',
       icon: LayoutDashboard,
       route: dashboardUrl,
     },
     {
-      label: 'Data View',
+      label: 'Campañas',
       icon: Table2,
       route: routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.DATA),
     },
     {
-      label: 'Settings',
+      label: 'Ajustes',
       icon: Settings,
       route: routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.SETTINGS),
     },
     {
-      label: 'Login clients',
+      label: 'Clientes de login',
       icon: KeyRound,
       route: routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.LOGIN_CLIENTS),
     },

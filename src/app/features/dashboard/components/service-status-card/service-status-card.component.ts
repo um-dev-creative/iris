@@ -13,7 +13,7 @@ import { ServiceStatus } from '../../models/monitoring.model';
   imports: [LucideAngularModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="bg-card rounded-xl border border-border p-4 hover:shadow-md transition-shadow">
+    <div class="iris-lift bg-card rounded-xl border border-border p-4">
       <div class="flex items-start justify-between mb-3">
         <div class="flex items-center gap-3">
           <div
@@ -45,19 +45,9 @@ import { ServiceStatus } from '../../models/monitoring.model';
         </span>
       </div>
 
-      <div class="grid grid-cols-2 gap-2">
-        <div class="text-center p-2 bg-muted/50 rounded-lg">
-          <p class="text-xs text-muted-foreground">Uptime</p>
-          <p class="text-sm font-semibold text-card-foreground">
-            {{ service().uptime }}%
-          </p>
-        </div>
-        <div class="text-center p-2 bg-muted/50 rounded-lg">
-          <p class="text-xs text-muted-foreground">Latency</p>
-          <p class="text-sm font-semibold text-card-foreground">
-            {{ service().latency }}ms
-          </p>
-        </div>
+      <div class="text-center p-2 bg-muted/50 rounded-lg">
+        <p class="text-xs text-muted-foreground">Latencia</p>
+        <p class="text-sm font-semibold text-card-foreground">{{ service().latency }} ms</p>
       </div>
     </div>
   `,

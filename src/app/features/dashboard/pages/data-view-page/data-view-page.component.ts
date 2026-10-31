@@ -1,6 +1,7 @@
 import {
   Component,
   ChangeDetectionStrategy,
+  DestroyRef,
   inject,
   signal,
   computed,
@@ -21,6 +22,8 @@ import {
   Smartphone,
   MessageCircle,
   Mail,
+  Bell,
+  Send,
 } from 'lucide-angular';
 import { AppBadgeComponent, AppButtonComponent } from '../../../../shared/components';
 import { paginate } from '../../../../shared/utils';
@@ -57,20 +60,21 @@ export class DataViewPageComponent {
   readonly searchTerm = signal('');
   readonly selectedProvider = signal<string>('all');
   readonly selectedStatus = signal<string>('all');
-  readonly sortKey = signal<string>('id');
+  readonly sortKey = signal<string>('timestamp');
   readonly sortDir = signal<'asc' | 'desc'>('desc');
   readonly currentPage = signal(1);
   readonly pageSize = 10;
 
   readonly columns = [
-    { key: 'id', label: 'ID' },
-    { key: 'recipient', label: 'Destinatario' },
-    { key: 'provider', label: 'Proveedor' },
+    { key: 'name', label: 'Campaña' },
+    { key: 'delivered', label: 'Entrega' },
+    { key: 'provider', label: 'Canal' },
     { key: 'status', label: 'Estado' },
-    { key: 'timestamp', label: 'Timestamp' },
+    { key: 'timestamp', label: 'Creada' },
   ];
 
   constructor() {
+    this.monitoringService.poll(inject(DestroyRef));
     // Reset to page 1 when filters change
     effect(() => {
       this.searchTerm();
@@ -92,8 +96,7 @@ export class DataViewPageComponent {
     if (search) {
       logs = logs.filter(
         (l) =>
-          l.id.toLowerCase().includes(search) ||
-          l.recipient.includes(search)
+          l.name.toLowerCase().includes(search)
       );
     }
     if (provider !== 'all') {
@@ -107,7 +110,7 @@ export class DataViewPageComponent {
     logs = [...logs].sort((a, b) => {
       const aVal = a[key as keyof LogEntry] ?? '';
       const bVal = b[key as keyof LogEntry] ?? '';
-      const cmp = String(aVal).localeCompare(String(bVal));
+      const cmp = typeof aVal === 'number' && typeof bVal === 'number' ? aVal - bVal : String(aVal).localeCompare(String(bVal));
       return dir === 'asc' ? cmp : -cmp;
     });
 
@@ -152,6 +155,8 @@ export class DataViewPageComponent {
     sms: Smartphone,
     whatsapp: MessageCircle,
     email: Mail,
+    telegram: Send,
+    push: Bell,
   };
 
   providerIcon(provider: string): LucideIconData {
@@ -159,7 +164,7 @@ export class DataViewPageComponent {
   }
 
   providerLabel(provider: string): string {
-    return ({ sms: 'SMS', whatsapp: 'WhatsApp', email: 'Email' } as Record<string, string>)[provider] ?? provider;
+    return ({ sms: 'SMS', whatsapp: 'WhatsApp', email: 'Email', telegram: 'Telegram', push: 'Push' } as Record<string, string>)[provider] ?? provider;
   }
 
   providerClasses(provider: string): string {
@@ -167,12 +172,14 @@ export class DataViewPageComponent {
       sms: 'bg-chart-1/10 text-chart-1 border border-chart-1/25',
       whatsapp: 'bg-chart-2/10 text-chart-2 border border-chart-2/25',
       email: 'bg-chart-4/10 text-chart-4 border border-chart-4/25',
+      telegram: 'bg-chart-3/10 text-chart-3 border border-chart-3/25',
+      push: 'bg-chart-5/10 text-chart-5 border border-chart-5/25',
     } as Record<string, string>)[provider] ?? '';
   }
 
   /* ── Status helpers ── */
   statusLabel(status: string): string {
-    return ({ delivered: 'Delivered', failed: 'Failed', pending: 'Pending' } as Record<string, string>)[status] ?? status;
+    return ({ delivered: 'Entregada', failed: 'Fallida', pending: 'En curso' } as Record<string, string>)[status] ?? status;
   }
 
   statusClasses(status: string): string {
