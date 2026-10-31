@@ -18,6 +18,7 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 
 ### Added
 
+- Página **Clientes de login** (`/dashboard/login-clients`): lista, crea, activa o desactiva, rota la contraseña y elimina los servicios backend que pueden pedir un token a Mercury (`POST /api/v1/auth/token`), con confirmación en cada acción. Si no se escribe contraseña, Mercury genera una y se muestra **una sola vez** (con botón de copiar; se borra de memoria al cerrarla o salir de la página). Usa `/mrc/api/v1/general/login-clients` del BFF, que reenvía la sesión de la persona; Mercury decide con su permiso `LOGIN_CLIENT_MANAGE` en Backbone (sin permiso la página lo explica). Necesita la API `/api/v1/login-clients` de Mercury y `LOGIN_CLIENTS_ADMIN_APPLICATION_ID` configurado allí.
 - Menú de usuario en la navbar con el perfil real y cierre de sesión con confirmación. (F2-07)
 - Interceptor de autenticación: las llamadas al BFF llevan cookies y cabecera CSRF, y una sesión expirada avisa una sola vez y lleva al login. (F2-06)
 - Página de inicio de sesión (`/login`) con validación, mensajes de error genéricos y redirección a `returnUrl`. (F2-04)

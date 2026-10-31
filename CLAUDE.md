@@ -26,7 +26,7 @@ The repo declares `packageManager: pnpm` (`pnpm-lock.yaml`); use pnpm and don't 
 Two cooperating halves:
 
 **Frontend (`src/app`)**
-- `src/main.ts` bootstraps `AppComponent`. Routing is two-level and lazy: `app.routes.ts` (`/dashboard`, guarded by `authGuard`) and `features/dashboard/dashboard.routes.ts` (`home`, `data`, `settings`, `showcase`). Keep new routes aligned with this split.
+- `src/main.ts` bootstraps `AppComponent`. Routing is two-level and lazy: `app.routes.ts` (`/dashboard`, guarded by `authGuard`) and `features/dashboard/dashboard.routes.ts` (`home`, `data`, `settings`, `login-clients`, `showcase`). Keep new routes aligned with this split.
 - `core/` holds cross-cutting services, guards, interceptors and models. `features/dashboard/` holds pages and their feature services. `layout/` is the shell: sidebar and navbar, with pages rendered in its `router-outlet`. `shared/` holds reusable UI.
 - Barrels are used heavily (`core/services/index.ts`, `shared/components/index.ts`). Import through them, and export new shared components through the barrel.
 - State is signal-first: `DashboardStore` is the UI state; `ThemeService` toggles `html.dark` and persists `app-theme`; `ApiService` holds the runtime API base config persisted as `api_config` in `localStorage`.

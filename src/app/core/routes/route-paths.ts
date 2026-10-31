@@ -8,6 +8,7 @@ export const ROUTE_PATHS = {
   DATA: 'data',
   SETTINGS: 'settings',
   SHOWCASE: 'showcase',
+  LOGIN_CLIENTS: 'login-clients',
   /** Página pública de acceso, fuera del layout del dashboard. */
   LOGIN: 'login',
   WILDCARD: '**',

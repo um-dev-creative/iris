@@ -34,3 +34,10 @@ La sesión no se guarda en el servidor (no hay Redis): vive en dos cookies que e
 - **Sin red real** (`server/test/setup.js`): `net.Socket.connect` y `dns.lookup` lanzan si el destino no es loopback; `network-guard.spec.js` lo comprueba.
 - **Confinamiento de destinos** (`upstream-confinement.spec.js`): sustituye a la antigua lista blanca de dominios; intentos como `@evil.test`, `//evil.test` o `http://evil.test` en la ruta siguen yendo al host y prefijo configurados.
 - Casos de error: Backbone o Mercury caídos (502 con `traceId`), cliente M2M rechazado (502), cuenta bloqueada (429), cookies caducadas o renovación rechazada.
+
+## Clientes de login de Mercury
+
+`/mrc/api/v1/general/login-clients[/**]` no tiene código propio: lo atiende el proxy genérico de Mercury (`passThrough('mercury')`) hacia `{MERCURY_BASE_URL}{MERCURY_API_PREFIX}/login-clients`,
+con el `session-token` de la cookie y la cabecera CSRF `x-iris-csrf: 1` en los métodos que no son GET. La autorización la decide Mercury (permiso `LOGIN_CLIENT_MANAGE` en la aplicación
+`LOGIN_CLIENTS_ADMIN_APPLICATION_ID`, comprobado con la sesión de la persona contra el IAM de Backbone); un 403 de Mercury llega tal cual a la página. `server/test/proxy.spec.js`
+fija el reenvío de métodos, rutas y cuerpos (incluida la contraseña generada, que el BFF no registra), el paso del 403 y el bloqueo sin CSRF.

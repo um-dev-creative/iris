@@ -146,3 +146,52 @@ test('mercury answering 5xx is passed back as is', async () => {
   assert.equal(res.status, 503);
   assert.deepEqual(await res.json(), { error: 'down' });
 });
+
+// Login clients (Mercury's /api/v1/login-clients): the BFF adds nothing of its own, the user's session decides at Mercury.
+test('login clients: create goes to mercury with the session token and the generated password comes back untouched', async () => {
+  bff.state.apiStatus = 201;
+  bff.state.apiBody = { client: { id: 's-1', alias: 'smartkin-backend', active: true }, password: 'generated-once-123' }; // gitleaks:allow
+
+  const res = await bff.call('/mrc/api/v1/general/login-clients', { method: 'POST', body: { alias: 'smartkin-backend' }, cookie: GOOD });
+
+  assert.equal(res.status, 201);
+  assert.deepEqual(await res.json(), bff.state.apiBody);
+  assert.equal(last().method, 'POST');
+  assert.equal(last().url, '/mercury/api/v1/login-clients');
+  assert.equal(last().token, tokens.GOOD);
+  assert.deepEqual(last().body, { alias: 'smartkin-backend' });
+});
+
+test('login clients: rotate, switch off and delete reach mercury with their method and id', async () => {
+  await bff.call('/mrc/api/v1/general/login-clients/s-1/password', { method: 'PUT', body: {}, cookie: GOOD });
+  assert.equal(last().method, 'PUT');
+  assert.equal(last().url, '/mercury/api/v1/login-clients/s-1/password');
+
+  await bff.call('/mrc/api/v1/general/login-clients/s-1', { method: 'PUT', body: { active: false }, cookie: GOOD });
+  assert.equal(last().url, '/mercury/api/v1/login-clients/s-1');
+  assert.deepEqual(last().body, { active: false });
+
+  bff.state.apiStatus = 204;
+  bff.state.apiBody = undefined;
+  const deleted = await bff.call('/mrc/api/v1/general/login-clients/s-1', { method: 'DELETE', cookie: GOOD });
+  assert.equal(deleted.status, 204);
+  assert.equal(last().method, 'DELETE');
+});
+
+test('login clients: a 403 from mercury (no permission) reaches the page as a 403, not as a renewed session', async () => {
+  bff.state.apiStatus = 403;
+  bff.state.apiBody = { status: 403, message: 'Login clients administration is not configured' };
+
+  const res = await bff.call('/mrc/api/v1/general/login-clients', { cookie: GOOD });
+
+  assert.equal(res.status, 403);
+  assert.equal(bff.state.backboneCalls.length, 0);
+  assert.equal(bff.state.apiCalls.length, 1);
+});
+
+test('login clients: without the CSRF header a mutation never reaches mercury', async () => {
+  const res = await bff.call('/mrc/api/v1/general/login-clients', { method: 'POST', body: { alias: 'x' }, cookie: GOOD, csrf: false });
+
+  assert.equal(res.status, 403);
+  assert.equal(bff.state.apiCalls.length, 0);
+});
