@@ -1,0 +1,16 @@
+.git
+.github
+.githooks
+.angular
+.idea
+.DS_Store
+node_modules
+dist
+coverage
+docs
+ssl
+*.env
+!default.env.example
+Dockerfile
+docker-compose.yml
+k8s

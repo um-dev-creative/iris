@@ -10,6 +10,8 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 
 ### Security
 
+- `multer`, `axios` and `express` updated: `pnpm audit --prod` reports no known vulnerabilities.
+- Sign-up never takes the role, application or active state from the browser, and does not reveal which e-mails have an account.
 - Las cookies de sesión del BFF (`iris_session`, `iris_refresh`) pasan de `SameSite=Lax` a `SameSite=Strict`; se agregaron pruebas de sus atributos, de la respuesta genérica ante credenciales inválidas y de que la sesión sobrevive a un reinicio. (F2-01)
 - Las acciones de GitHub del pipeline de CI se fijan por SHA de commit completo (con el tag como comentario). Seguimiento de SonarCloud S7637.
 - Los logs del proxy ya no incluyen datos de la petición (ruta ni URL), la renovación de sesión se extrajo a `renewSession` y el límite de subida bajó a 8 MB. Seguimiento de SonarCloud.
@@ -17,6 +19,11 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 - Se retiró `default.env` del control de versiones, se agregó `default.env.example` y se ampliaron las exclusiones de `.gitignore` para secretos y llaves TLS. (F0-01)
 
 ### Added
+
+- **User registration:** `/register` and `/verify-email` pages, with a six-digit code by e-mail, resend and password strength. The BFF orchestrates backbone and Mercury (`/auth/register`, `/auth/verify-email`, `/auth/resend-verification`).
+- **Real monitoring data:** `GET /monitoring/overview` aggregates Mercury's campaigns and progress and the health of Mercury and backbone. The dashboard refreshes every 30 seconds while the tab is visible, and shows loading, empty and error states.
+- `Dockerfile`, `docker-compose.yml` and `k8s/iris.yaml`. See `docs/technical/deployment.md`.
+- Page transitions, a moving background on the access pages and hover feedback on cards, respecting `prefers-reduced-motion`.
 
 - Página **Clientes de login** (`/dashboard/login-clients`): lista, crea, activa o desactiva, rota la contraseña y elimina los servicios backend que pueden pedir un token a Mercury (`POST /api/v1/auth/token`), con confirmación en cada acción. Si no se escribe contraseña, Mercury genera una y se muestra **una sola vez** (con botón de copiar; se borra de memoria al cerrarla o salir de la página). Usa `/mrc/api/v1/general/login-clients` del BFF, que reenvía la sesión de la persona; Mercury decide con su permiso `LOGIN_CLIENT_MANAGE` en Backbone (sin permiso la página lo explica). Necesita la API `/api/v1/login-clients` de Mercury y `LOGIN_CLIENTS_ADMIN_APPLICATION_ID` configurado allí.
 - Menú de usuario en la navbar con el perfil real y cierre de sesión con confirmación. (F2-07)
@@ -50,6 +57,8 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 
 ### Fixed
 
+- `create-user` and `verify-code` pointed to Mercury routes that do not exist; registration now goes through backbone.
+- `animate-fade-in` was used but never defined, so those animations did not run.
 - El renderizado en servidor ya no falla al leer la configuración de API guardada en el navegador. (F0-04)
 
 ### Removed

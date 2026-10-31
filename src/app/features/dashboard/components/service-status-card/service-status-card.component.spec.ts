@@ -3,7 +3,7 @@ import { Server } from 'lucide-angular';
 import { ServiceStatusCardComponent } from './service-status-card.component';
 import { ServiceStatus } from '../../models/monitoring.model';
 
-const service = (status: ServiceStatus['status']): ServiceStatus => ({ name: 'API Gateway', status, uptime: 99.95, latency: 45, icon: Server });
+const service = (status: ServiceStatus['status']): ServiceStatus => ({ name: 'API Gateway', status, latency: 45, icon: Server });
 
 function render(s: ServiceStatus) {
   const fixture = TestBed.createComponent(ServiceStatusCardComponent);
@@ -13,12 +13,11 @@ function render(s: ServiceStatus) {
 }
 
 describe('ServiceStatusCardComponent', () => {
-  it('muestra nombre, uptime y latencia', () => {
+  it('muestra nombre y latencia', () => {
     const el = render(service('operational'));
 
     expect(el.textContent).toContain('API Gateway');
-    expect(el.textContent).toContain('99.95%');
-    expect(el.textContent).toContain('45ms');
+    expect(el.textContent).toContain('45 ms');
   });
 
   it.each([

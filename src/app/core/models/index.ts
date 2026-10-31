@@ -1,4 +1,4 @@
-export type { User, LoginCredentials, AuthStatus } from './user.model';
+export type { User, LoginCredentials, RegistrationRequest, AuthStatus } from './user.model';
 export type {
   ApiConfig,
   TableColumn,

@@ -20,6 +20,9 @@ function settingsProblems(settings) {
   if (Boolean(settings.BACKBONE_CLIENT_ID) !== Boolean(settings.BACKBONE_CLIENT_SECRET)) {
     problems.push('BACKBONE_CLIENT_ID and BACKBONE_CLIENT_SECRET must be set together');
   }
+  if (Boolean(settings.MERCURY_LOGIN_ALIAS) !== Boolean(settings.MERCURY_LOGIN_PASSWORD)) {
+    problems.push('MERCURY_LOGIN_ALIAS and MERCURY_LOGIN_PASSWORD must be set together');
+  }
   if (settings.BACKBONE_CLIENT_ID && settings.BACKBONE_CLIENT_SCOPES.length === 0) {
     problems.push('BACKBONE_CLIENT_SCOPES must name at least one scope');
   }

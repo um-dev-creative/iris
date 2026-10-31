@@ -22,6 +22,7 @@ const { requireCsrfHeader } = require('./shared/csrf');
 const authRoutes = require('./routes/auth.routes');
 const mercuryRoutes = require('./routes/mercury.routes');
 const mediaRoutes = require('./routes/media.routes');
+const monitoringRoutes = require('./routes/monitoring.routes');
 const backboneRoutes = require('./routes/backbone.routes');
 
 const API_PREFIXES = ['/mrc/api/v1', '/bkd/api/v1'];
@@ -49,6 +50,7 @@ function createApp({ distPath = path.join(__dirname, '../dist/dashboard/browser'
 
   app.use(API_PREFIXES, requireCsrfHeader);
   app.use('/mrc/api/v1/auth', authRoutes);
+  app.use('/mrc/api/v1/monitoring', monitoringRoutes);
   app.use('/mrc/api/v1/general', mercuryRoutes);
   app.use('/mrc/api/v1/d-image', mediaRoutes);
   app.use('/bkd/api/v1', backboneRoutes);

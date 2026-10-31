@@ -102,15 +102,6 @@ test('backbone calls go to the backbone API with the session token', async () =>
   assert.equal(last().token, tokens.GOOD);
 });
 
-test('sign-up and code verification need no session', async () => {
-  await bff.call('/mrc/api/v1/auth/create-user', { method: 'POST', body: { alias: 'n' } });
-  assert.equal(last().url, '/mercury/api/v1/users');
-  assert.equal(last().token, undefined);
-
-  await bff.call('/mrc/api/v1/auth/verify-code', { method: 'POST', body: { code: '1' } });
-  assert.equal(last().url, '/mercury/api/v1/user-register');
-});
-
 test('profile image upload is re-sent to mercury as multipart', async () => {
   const form = new FormData();
   form.append('imageData', new Blob(['png-bytes'], { type: 'image/png' }), 'me.png');

@@ -4,7 +4,6 @@ const router = require('express').Router();
 const rateLimit = require('express-rate-limit');
 const logger = require('../config/logger');
 const backbone = require('../shared/backbone');
-const { fixedPath } = require('../shared/proxy');
 const { decodePayload, setSessionCookies, clearSessionCookies } = require('../shared/session');
 const { SESSION_COOKIE, REFRESH_COOKIE, RATE_LIMIT_WINDOW_MS, LOGIN_RATE_LIMIT_MAX } = require('../config/constants');
 
@@ -102,8 +101,6 @@ router.post('/logout', logout);
 router.delete('/session-end', logout); // legacy name of the logout
 router.get('/me', me);
 
-// sign-up: no session yet, mercury is the authority
-router.post('/create-user', fixedPath('mercury', '/users', { public: true }));
-router.post('/verify-code', fixedPath('mercury', '/user-register', { public: true }));
+router.use(require('./registration.routes'));
 
 module.exports = router;

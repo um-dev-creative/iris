@@ -26,7 +26,7 @@ describe('SidebarComponent', () => {
     const { el } = render();
 
     expect(el.textContent).toContain('Iris');
-    ['Overview', 'Data View', 'Settings', 'Login clients', 'Showcase'].forEach((label) => expect(el.textContent).toContain(label));
+    ['Inicio', 'Campañas', 'Ajustes', 'Clientes de login', 'Showcase'].forEach((label) => expect(el.textContent).toContain(label));
     expect(el.querySelectorAll('nav a')).toHaveLength(5);
     expect(el.querySelector('aside')!.className).toContain('w-64');
   });
@@ -45,7 +45,7 @@ describe('SidebarComponent', () => {
     fixture.detectChanges();
 
     expect(store.sidebarOpen()).toBe(false);
-    expect(el.textContent).not.toContain('Overview');
+    expect(el.textContent).not.toContain('Inicio');
     expect(el.querySelector('aside')!.className).toContain('w-16');
   });
 

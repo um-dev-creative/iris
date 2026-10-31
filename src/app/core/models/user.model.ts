@@ -20,4 +20,16 @@ export interface LoginCredentials {
 }
 
 /** `unknown` hasta que se sabe si hay sesión (inicio, o servidor SSR); después `authenticated` o `anonymous`. */
+/** Alta pública de una cuenta. El rol y la aplicación los decide el BFF, nunca el navegador. */
+export interface RegistrationRequest {
+  alias: string;
+  email: string;
+  password: string;
+  person: { firstName: string; lastName: string; gender: string; birthdate: string };
+  notificationEmail: boolean;
+  notificationSms: boolean;
+  privacyDataOutActive: boolean;
+  language: 'es' | 'en';
+}
+
 export type AuthStatus = 'unknown' | 'authenticated' | 'anonymous';

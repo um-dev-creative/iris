@@ -74,15 +74,77 @@ async function start({ env = {}, appOptions } = {}) {
     record(req);
     res.status(state.logoutStatus).end();
   });
+  // the user administration sign-up uses; off unless a test asks for it
+  backbone.use(`${root}/users`, (req, res, next) => {
+    if (!state.registration) return next();
+    const users = state.registration.users;
+    const check = req.path.match(/^\/check\/(alias|email)\/([^/]+)\/application\//);
+    if (check) return res.status(users.some((u) => u[check[1]] === decodeURIComponent(check[2])) ? 409 : 200).json({});
+    const byAlias = req.path.match(/^\/userByAlias\/([^/]+)\/application\//);
+    if (byAlias) {
+      const user = users.find((u) => u.alias === decodeURIComponent(byAlias[1]));
+      return user ? res.json(user) : res.status(404).json({});
+    }
+    const activate = req.path.match(/^\/application\/[^/]+\/user\/([^/]+)\/activate$/);
+    if (activate) {
+      users.find((u) => u.id === activate[1]).active = true;
+      return res.status(204).end();
+    }
+    if (req.method === 'POST' && req.path === '/') {
+      if (state.registration.createStatus) return res.status(state.registration.createStatus).json({});
+      const user = { ...req.body, id: `user-${users.length + 1}` };
+      users.push(user);
+      return res.status(201).json(user);
+    }
+    return next();
+  });
   // anything else under /backbone/api/v1 is a resource of the backbone API, guarded by the session token
   backbone.use(root, (req, res) => {
     state.apiCalls.push({ service: 'backbone', method: req.method, url: req.originalUrl, token: req.headers['session-token'] });
     res.status(200).json({ service: 'backbone' });
   });
+  backbone.get('/backbone/actuator/health', (_req, res) => res.status(state.backboneHealth ?? 200).json({ status: state.backboneHealthBody ?? 'UP' }));
   const backboneServer = await listen(http.createServer(backbone));
 
   const mercury = express();
   mercury.use(express.json());
+  // the campaigns the dashboard reads, guarded like the real ones: a Bearer of the application and the user's session
+  mercury.use('/mercury/api/v1/campaigns', (req, res, next) => {
+    const monitoring = state.monitoring;
+    if (!monitoring) return next();
+    monitoring.calls.push({ url: req.originalUrl, authorization: req.headers.authorization, token: req.headers['session-token'] });
+    if (monitoring.status) return res.status(monitoring.status).json({});
+    const progress = req.path.match(/^\/([^/]+)\/progress$/);
+    if (progress) {
+      const found = monitoring.progress[progress[1]];
+      return found ? res.json(found) : res.status(500).json({});
+    }
+    return res.json(monitoring.campaigns);
+  });
+  mercury.get('/mercury/actuator/health', (_req, res) => res.status(state.mercuryHealth ?? 200).json({ status: 'UP' }));
+  // Iris as a login client of Mercury; off unless a test asks for it
+  mercury.use('/mercury/api/v1', (req, res, next) => {
+    const flow = state.registration;
+    if (!flow || !['/auth/token', '/mail', '/verification-code'].includes(req.path)) return next();
+    if (req.path === '/auth/token') {
+      flow.logins = (flow.logins ?? 0) + 1;
+      return res.json({ token: jwt({ exp: inFuture(flow.tokenTtl ?? 3600) }) });
+    }
+    if (flow.rejectTokens > 0) {
+      flow.rejectTokens -= 1;
+      return res.status(401).json({});
+    }
+    if (req.path === '/mail') {
+      if (flow.mailStatus) return res.status(flow.mailStatus).json({});
+      flow.mails.push({ ...req.body, key: req.headers['idempotency-key'] });
+      return res.status(202).json({ id: 'mail-1' });
+    }
+    if (flow.codeOutcome === 'not-found') return res.status(404).end();
+    if (flow.codeOutcome === 'broken') return res.status(500).end();
+    const expected = flow.mails.at(-1)?.params.vc;
+    if (req.body.code === expected) return res.status(202).end();
+    return res.status(406).set('Attempts-Remaining', '2').end();
+  });
   mercury.use('/mercury/api/v1', (req, res) => {
     state.apiCalls.push({
       service: 'mercury', method: req.method, url: req.originalUrl, token: req.headers['session-token'], body: req.body,

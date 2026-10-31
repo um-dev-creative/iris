@@ -1,0 +1,22 @@
+# Iris for this environment. Copy default.env.example to .env.docker and fill it in; secrets come from your secret manager.
+#   docker compose up -d --build
+services:
+  iris:
+    build:
+      context: .
+      args:
+        ENVM: ${ENVM:-production}
+    image: lamata/iris:0.1.0
+    container_name: iris
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    ports:
+      - "3000:3000"
+    networks:
+      - nginx_umdc-net
+
+networks:
+  nginx_umdc-net:
+    external: true
+    name: nginx_umdc-net

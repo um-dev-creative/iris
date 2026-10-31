@@ -1,5 +1,5 @@
 import { ApplicationConfig, inject, provideAppInitializer, provideZoneChangeDetection } from '@angular/core';
-import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { provideRouter, withComponentInputBinding, withViewTransitions } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 
 import { routes } from './app.routes';
@@ -13,7 +13,7 @@ export const appConfig: ApplicationConfig = {
     // al arrancar en el navegador se averigua si ya hay sesión; el servidor (SSR) usa app.config.server.ts y no la pregunta
     provideAppInitializer(() => inject(AuthService).restoreSession()),
     provideZoneChangeDetection({ eventCoalescing: true }),
-    provideRouter(routes, withComponentInputBinding()),
+    provideRouter(routes, withComponentInputBinding(), withViewTransitions({ skipInitialTransition: true })),
     provideHttpClient(withInterceptors([authInterceptor, httpErrorInterceptor])),
   ],
 };

@@ -1,0 +1,82 @@
+# Iris on Kubernetes. Create the secret first; never store its values in this file:
+#   kubectl create secret generic iris-secrets --from-env-file=.env.secrets
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: iris-config
+data:
+  NODE_ENV: production
+  PORT: "3000"
+  MERCURY_BASE_URL: http://mercury:8118
+  MERCURY_API_PREFIX: /api/v1
+  MERCURY_HEALTH_PATH: /actuator/health
+  BACKBONE_BASE_URL: http://backbone:8443
+  BACKBONE_API_PREFIX: /api/v1
+  BACKBONE_HEALTH_PATH: /actuator/health
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iris
+  labels:
+    app: iris
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: iris
+  template:
+    metadata:
+      labels:
+        app: iris
+    spec:
+      # Iris does not call the Kubernetes API
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: iris
+          image: lamata/iris:0.1.0
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: iris-config
+            - secretRef:
+                name: iris-secrets
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 96Mi
+              ephemeral-storage: 64Mi
+            limits:
+              memory: 256Mi
+              ephemeral-storage: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: iris
+spec:
+  selector:
+    app: iris
+  ports:
+    - port: 80
+      targetPort: 3000

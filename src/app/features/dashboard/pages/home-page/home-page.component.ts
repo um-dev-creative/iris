@@ -1,6 +1,7 @@
 import {
   Component,
   ChangeDetectionStrategy,
+  DestroyRef,
   inject,
   computed,
   signal,
@@ -8,7 +9,6 @@ import {
 import {
   LucideAngularModule,
   LucideIconData,
-  Calendar,
   RefreshCw,
   TrendingUp,
   TrendingDown,
@@ -16,6 +16,9 @@ import {
   MessageCircle,
   Mail,
   Filter,
+  Bell,
+  Send,
+  TriangleAlert,
 } from 'lucide-angular';
 import { SparklineComponent } from '../../components/sparkline/sparkline.component';
 import { ServiceStatusCardComponent } from '../../components/service-status-card/service-status-card.component';
@@ -37,20 +40,24 @@ import { MonitoringKpi } from '../../models/monitoring.model';
 export class HomePageComponent {
   readonly monitoringService = inject(MonitoringDataService);
 
+  constructor() {
+    this.monitoringService.poll(inject(DestroyRef));
+  }
+
   /* ── Lucide icons ── */
-  readonly CalendarIcon = Calendar;
   readonly RefreshCwIcon = RefreshCw;
   readonly TrendingUpIcon = TrendingUp;
   readonly TrendingDownIcon = TrendingDown;
   readonly FilterIcon = Filter;
+  readonly TriangleAlertIcon = TriangleAlert;
 
   /* ── Log status filter ── */
   readonly logStatusFilter = signal<'all' | 'delivered' | 'failed' | 'pending'>('all');
   readonly logStatusOptions: { value: 'all' | 'delivered' | 'failed' | 'pending'; label: string }[] = [
-    { value: 'all', label: 'All' },
-    { value: 'delivered', label: 'Delivered' },
-    { value: 'failed', label: 'Failed' },
-    { value: 'pending', label: 'Pending' },
+    { value: 'all', label: 'Todas' },
+    { value: 'delivered', label: 'Entregadas' },
+    { value: 'failed', label: 'Fallidas' },
+    { value: 'pending', label: 'En curso' },
   ];
   readonly filteredLogs = computed(() => {
     const filter = this.logStatusFilter();
@@ -63,6 +70,8 @@ export class HomePageComponent {
     sms: Smartphone,
     whatsapp: MessageCircle,
     email: Mail,
+    telegram: Send,
+    push: Bell,
   };
 
   providerIcon(provider: string): LucideIconData {
@@ -71,7 +80,7 @@ export class HomePageComponent {
 
   providerLabel(provider: string): string {
     return (
-      ({ sms: 'SMS', whatsapp: 'WhatsApp', email: 'Email' } as Record<string, string>)[provider] ?? provider
+      ({ sms: 'SMS', whatsapp: 'WhatsApp', email: 'Email', telegram: 'Telegram', push: 'Push' } as Record<string, string>)[provider] ?? provider
     );
   }
 
@@ -81,6 +90,8 @@ export class HomePageComponent {
         sms: 'bg-chart-1/10 text-chart-1 border border-chart-1/25',
         whatsapp: 'bg-chart-2/10 text-chart-2 border border-chart-2/25',
         email: 'bg-chart-4/10 text-chart-4 border border-chart-4/25',
+        telegram: 'bg-chart-3/10 text-chart-3 border border-chart-3/25',
+        push: 'bg-chart-5/10 text-chart-5 border border-chart-5/25',
       } as Record<string, string>)[provider] ?? ''
     );
   }
@@ -88,7 +99,7 @@ export class HomePageComponent {
   /* ── Status helpers ── */
   statusLabel(status: string): string {
     return (
-      ({ delivered: 'Delivered', failed: 'Failed', pending: 'Pending' } as Record<string, string>)[
+      ({ delivered: 'Entregada', failed: 'Fallida', pending: 'En curso' } as Record<string, string>)[
         status
       ] ?? status
     );
@@ -116,18 +127,19 @@ export class HomePageComponent {
 
   /* ── Trend colour ── */
   trendColorClass(kpi: MonitoringKpi): string {
-    const isGood = kpi.invertTrend ? kpi.trend < 0 : kpi.trend >= 0;
+    const trend = kpi.trend ?? 0;
+    const isGood = kpi.invertTrend ? trend <= 0 : trend >= 0;
     return isGood ? 'text-success' : 'text-destructive';
   }
 
   /* ── Overall service status ── */
   readonly overallStatusLabel = computed(() => {
     const map: Record<string, string> = {
-      'all-operational': 'All Operational',
-      'partial-degradation': 'Partial Degradation',
-      'major-outage': 'Major Outage',
+      'all-operational': 'Todo operativo',
+      'partial-degradation': 'Degradación parcial',
+      'major-outage': 'Caída de servicio',
     };
-    return map[this.monitoringService.overallStatus()] ?? '';
+    return map[this.monitoringService.overallStatus()] ?? 'Sin datos';
   });
 
   readonly overallStatusClasses = computed(() => {
@@ -136,7 +148,7 @@ export class HomePageComponent {
       'partial-degradation': 'bg-chart-3/15 text-chart-3 border border-chart-3/25',
       'major-outage': 'bg-destructive/15 text-destructive border border-destructive/25',
     };
-    return map[this.monitoringService.overallStatus()] ?? '';
+    return map[this.monitoringService.overallStatus()] ?? 'bg-muted text-muted-foreground border border-border';
   });
 
   readonly overallDotClass = computed(() => {
@@ -145,7 +157,7 @@ export class HomePageComponent {
       'partial-degradation': 'bg-chart-3',
       'major-outage': 'bg-destructive',
     };
-    return map[this.monitoringService.overallStatus()] ?? '';
+    return map[this.monitoringService.overallStatus()] ?? 'bg-muted-foreground';
   });
 
   onRefresh(): void {

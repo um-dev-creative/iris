@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, ElementRef, inject, input, signal, viewChild } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Eye, EyeOff, LoaderCircle, LucideAngularModule, TriangleAlert } from 'lucide-angular';
 import { AuthService } from '../../../core/services';
 import { ROUTE_PATHS, routeUrl } from '../../../core/routes';
@@ -29,12 +29,12 @@ export function safeReturnUrl(value: string | null | undefined): string {
   selector: 'app-login-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, LucideAngularModule, AppButtonComponent, ThemeToggleComponent],
+  imports: [ReactiveFormsModule, RouterLink, LucideAngularModule, AppButtonComponent, ThemeToggleComponent],
   template: `
-    <main class="relative min-h-screen flex items-center justify-center bg-background px-4 py-8">
+    <main class="iris-aurora relative min-h-screen flex items-center justify-center bg-background px-4 py-8">
       <div class="absolute top-4 right-4"><app-theme-toggle /></div>
 
-      <section class="w-full max-w-sm bg-card text-card-foreground border border-border rounded-xl shadow-sm p-6 sm:p-8">
+      <section class="w-full max-w-sm iris-glass animate-pop text-card-foreground border border-border rounded-2xl shadow-lg p-6 sm:p-8">
         <header class="flex flex-col items-center gap-3 mb-6 text-center">
           <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center font-bold text-primary-foreground" aria-hidden="true">IR</div>
           <h1 class="text-xl font-semibold tracking-tight">Iniciar sesión</h1>
@@ -105,6 +105,11 @@ export function safeReturnUrl(value: string | null | undefined): string {
             }
           </app-button>
         </form>
+
+        <p class="mt-6 text-center text-sm text-muted-foreground">
+          ¿No tienes cuenta?
+          <a [routerLink]="registerUrl" class="font-medium text-primary hover:underline">Crear una cuenta</a>
+        </p>
       </section>
     </main>
   `,
@@ -127,6 +132,7 @@ export class LoginPageComponent {
   private readonly emailInput = viewChild<ElementRef<HTMLInputElement>>('emailInput');
   private readonly passwordInput = viewChild<ElementRef<HTMLInputElement>>('passwordInput');
 
+  readonly registerUrl = routeUrl(ROUTE_PATHS.REGISTER);
   readonly Eye = Eye;
   readonly EyeOff = EyeOff;
   readonly LoaderCircle = LoaderCircle;

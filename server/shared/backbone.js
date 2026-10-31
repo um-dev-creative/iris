@@ -80,6 +80,58 @@ async function asApplication(path, data, headers = {}) {
   return r;
 }
 
+/** A user-administration call made as the Iris application. */
+async function asUsersClient(method, path, data) {
+  const send = async () => {
+    const token = await applicationClientToken();
+    return axios({
+      method,
+      url: `${BACKBONE_BASE_URL}${BACKBONE_API_PREFIX}/users${path}`,
+      data,
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      validateStatus: () => true,
+      ...(httpsAgent ? { httpsAgent } : {}),
+    });
+  };
+  let r = await send();
+  if (clientToken && r.status === 401 && CLIENT_TOKEN_REJECTED.includes(r.data?.error)) {
+    clientToken = null;
+    r = await send();
+  }
+  return r;
+}
+
+const inApplication = (value) => `/${encodeURIComponent(value)}/application/${BACKBONE_APPLICATION_ID}`;
+
+/** @returns {Promise<boolean>} whether the alias or e-mail is taken in the Iris application (backbone answers 409) */
+async function isTaken(kind, value) {
+  const r = await asUsersClient('get', `/check/${kind}${inApplication(value)}`);
+  if (r.status === 200) return false;
+  if (r.status === 409) return true;
+  throw new Error(`backbone answered ${r.status} checking a ${kind}`);
+}
+
+/** The user with this alias, inactive ones included, or null. */
+async function findUserByAlias(alias) {
+  const r = await asUsersClient('get', `/userByAlias${inApplication(alias)}`);
+  if (r.status === 200) return r.data;
+  if (r.status === 404 || r.status === 409) return null;
+  throw new Error(`backbone answered ${r.status} finding a user`);
+}
+
+/** Creates the user inactive: it cannot sign in until its e-mail is confirmed. */
+const createInactiveUser = (user) =>
+  asUsersClient('post', '', { ...user, active: false, applicationId: BACKBONE_APPLICATION_ID });
+
+async function activateUser(userId) {
+  const r = await asUsersClient('put', `/application/${BACKBONE_APPLICATION_ID}/user/${encodeURIComponent(userId)}/activate`);
+  if (r.status !== 200 && r.status !== 204) throw new Error(`backbone answered ${r.status} activating a user`);
+}
+
 /** @returns {Promise<{status:number, token?:string, refreshToken?:string}>} */
 async function login(email, password) {
   const r = await asApplication('/session/token', { email, password, applicationId: BACKBONE_APPLICATION_ID });
@@ -110,4 +162,4 @@ async function logout(sessionToken, refreshToken) {
   }
 }
 
-module.exports = { login, refresh, logout, ApplicationClientError };
+module.exports = { applicationClientToken, isTaken, findUserByAlias, createInactiveUser, activateUser, login, refresh, logout, ApplicationClientError };

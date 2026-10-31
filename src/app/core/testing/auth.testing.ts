@@ -14,6 +14,9 @@ export function fakeAuth(initial: User | null = null) {
     status: status.asReadonly(),
     isAuthenticated: computed(() => status() === 'authenticated'),
     login: vi.fn().mockResolvedValue(undefined),
+    register: vi.fn().mockResolvedValue(undefined),
+    verifyEmail: vi.fn().mockResolvedValue(undefined),
+    resendVerification: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn().mockResolvedValue(undefined),
     restoreSession: vi.fn().mockResolvedValue(undefined),
     clearSession: vi.fn(() => {

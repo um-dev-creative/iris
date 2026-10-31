@@ -1,9 +1,9 @@
 <!-- Page Header -->
 <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
   <div>
-    <h2 class="text-2xl font-bold text-foreground">Data View</h2>
+    <h2 class="text-2xl font-bold text-foreground">Campañas</h2>
     <p class="text-sm text-muted-foreground mt-1">
-      Explorar y filtrar el historial de mensajes del sistema
+      Explora y filtra las campañas de Mercury
     </p>
   </div>
   <div class="flex items-center gap-2">
@@ -19,7 +19,7 @@
     <!-- Search -->
     <div class="flex-1 w-full">
       <label class="block text-xs font-medium text-muted-foreground mb-1.5">
-        Buscar por ID o destinatario
+        Buscar por nombre
       </label>
       <div class="relative">
         <lucide-icon
@@ -32,7 +32,7 @@
           type="text"
           [ngModel]="searchTerm()"
           (ngModelChange)="searchTerm.set($event)"
-          placeholder="MSG-28401, +34 612..."
+          placeholder="Nombre de la campaña"
           class="w-full pl-10 pr-4 py-2 border border-input rounded-lg text-sm focus:border-ring focus:ring-1 focus:ring-ring outline-none transition-colors bg-background text-foreground"
         />
       </div>
@@ -41,7 +41,7 @@
     <!-- Provider filter -->
     <div class="w-full lg:w-44">
       <label class="block text-xs font-medium text-muted-foreground mb-1.5">
-        Proveedor
+        Canal
       </label>
       <select
         [ngModel]="selectedProvider()"
@@ -52,6 +52,8 @@
         <option value="sms">SMS</option>
         <option value="whatsapp">WhatsApp</option>
         <option value="email">Email</option>
+        <option value="telegram">Telegram</option>
+        <option value="push">Push</option>
       </select>
     </div>
 
@@ -66,9 +68,9 @@
         class="w-full px-3 py-2 border border-input rounded-lg text-sm focus:border-ring focus:ring-1 focus:ring-ring outline-none bg-background text-foreground transition-colors"
       >
         <option value="all">Todos</option>
-        <option value="delivered">Delivered</option>
-        <option value="failed">Failed</option>
-        <option value="pending">Pending</option>
+        <option value="delivered">Entregada</option>
+        <option value="failed">Fallida</option>
+        <option value="pending">En curso</option>
       </select>
     </div>
 
@@ -120,15 +122,15 @@
 <div class="grid grid-cols-3 gap-3 mb-6">
   <div class="bg-success/10 border border-success/20 rounded-lg p-3 text-center">
     <p class="text-lg font-bold text-success">{{ deliveredCount() }}</p>
-    <p class="text-xs text-muted-foreground">Delivered</p>
+    <p class="text-xs text-muted-foreground">Entregada</p>
   </div>
   <div class="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-center">
     <p class="text-lg font-bold text-destructive">{{ failedCount() }}</p>
-    <p class="text-xs text-muted-foreground">Failed</p>
+    <p class="text-xs text-muted-foreground">Fallida</p>
   </div>
   <div class="bg-chart-1/10 border border-chart-1/20 rounded-lg p-3 text-center">
     <p class="text-lg font-bold text-chart-1">{{ pendingCount() }}</p>
-    <p class="text-xs text-muted-foreground">Pending</p>
+    <p class="text-xs text-muted-foreground">En curso</p>
   </div>
 </div>
 
@@ -163,12 +165,12 @@
             class="border-b border-border last:border-b-0 hover:bg-muted/50 transition-colors"
           >
             <td class="px-5 py-3">
-              <span class="text-sm font-mono font-medium text-card-foreground">
-                {{ log.id }}
+              <span class="text-sm font-medium text-card-foreground">
+                {{ log.name }}
               </span>
             </td>
             <td class="px-5 py-3">
-              <span class="text-sm text-card-foreground">{{ log.recipient }}</span>
+              <span class="text-sm tabular-nums text-card-foreground">{{ log.delivered }} / {{ log.total }}</span>
             </td>
             <td class="px-5 py-3">
               <span
@@ -207,7 +209,7 @@
             <td colspan="5" class="px-5 py-12 text-center">
               <div class="flex flex-col items-center gap-2">
                 <lucide-icon [img]="SearchXIcon" [size]="32" strokeWidth="1" class="text-muted-foreground" />
-                <p class="text-sm text-muted-foreground">No se encontraron registros</p>
+                <p class="text-sm text-muted-foreground">{{ monitoringService.error() ? 'No fue posible leer las campañas' : monitoringService.loaded() ? 'No se encontraron campañas' : 'Cargando campañas…' }}</p>
                 <button
                   class="text-xs text-primary hover:underline"
                   (click)="clearFilters()"
