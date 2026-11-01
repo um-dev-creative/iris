@@ -5,4 +5,4 @@ useDefault = true
 
 [allowlist]
 description = "Plantillas sin valores"
-paths = ['''\.env\.example$''', '''(^|/)config/bff\.env$''']
+paths = ['''\.env\.example$''', '''(^|/)config/local\.env$''']

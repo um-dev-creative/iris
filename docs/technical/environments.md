@@ -23,7 +23,7 @@ Todos los entornos definen `production` y `apiBaseUrl: '/mrc/api/v1'` (URL relat
 
 ## BFF por entorno
 
-El BFF no tiene archivos de configuración por entorno (no existen `server/config/{dev,qa,production}.json`): lee variables de entorno con valor por defecto para desarrollo (`server/config/constants.js`, `.env.example`). Cada despliegue define las suyas; la correspondencia con `ENVM` es esta:
+El BFF no tiene archivos de configuración por entorno (no existen `server/config/{dev,qa,production}.json`): lee variables de entorno con valor por defecto para desarrollo (`server/config/constants.js`, `config/local.env`). Cada despliegue define las suyas; la correspondencia con `ENVM` es esta:
 
 | `ENVM` | `NODE_ENV` | Qué cambia en el BFF |
 |---|---|---|
@@ -36,25 +36,35 @@ Los secretos (`BACKBONE_CLIENT_SECRET`, `MERCURY_LOGIN_PASSWORD`) salen del gest
 
 ## Dónde van las variables
 
-Se sigue el esquema del BFF de ZeroBound: un `.env` para desarrollo y, en contenedor, valores no secretos versionados y secretos ignorados por git.
+Se usan los mismos archivos que Mercury y ZeroBound. Las variables pueden estar en `local.env`, en Vault o repartidas entre ambos, y se leen igual en local y en Docker.
 
-| Ejecución | No secretos | Secretos | Quién los carga |
-|---|---|---|---|
-| Local | `.env` (copia de `.env.example`) | `.env` | dotenv, en `server.js` |
-| Docker | `config/bff.env` | `secrets/bff.env` (copia de `secrets/bff.env.example`) | `env_file` de `docker-compose.yml` |
-| Kubernetes | ConfigMap `iris-config` (`k8s/iris.yaml`) | Secret `iris-secrets`, creado desde `secrets/bff.env` | `envFrom` |
+| Fuente | Versionado | Contenido |
+|---|---|---|
+| Entorno del proceso | n/a | `environment:` de `docker-compose.yml`, ConfigMap o Secret de Kubernetes, shell |
+| `secrets/local.env` | No (copia de `secrets/local.env.example`) | Credenciales o `VAULT_TOKEN`; admite cualquier otra variable |
+| `config/local.env` | Sí | Valores no secretos y la conexión a Vault |
+| Vault (`VAULT_ENABLED=true`) | n/a | Lo que siga vacío, leído de `VAULT_PATH` al arrancar |
+
+La tabla va de mayor a menor prioridad: un valor vacío cuenta como no definido y uno escrito gana a Vault. `server/config/load-environment.js` aplica este orden antes de cargar `constants.js`.
 
 ```mermaid
-flowchart LR
-  A[.env.example] -->|cp| B[.env]
-  B -->|dotenv| BFF[BFF]
-  C[config/bff.env] -->|env_file| BFF2[Contenedor]
-  D[secrets/bff.env.example] -->|cp| E[secrets/bff.env]
-  E -->|env_file, gana| BFF2
+flowchart TD
+  A[Entorno del proceso] --> B[secrets/local.env]
+  B --> C[config/local.env]
+  C --> D{VAULT_ENABLED=true}
+  D -->|Sí| E[Vault completa lo vacío]
+  D -->|No| F[settings-check]
+  E --> F
+  F -->|Correcto| G[BFF arranca]
+  F -->|Falta algo| H[Código 78]
+  E -->|Vault falla| H
 ```
 
-- `.env` no llega al contenedor. Compose solo lo lee para sustituir `${ENVM}` y `${BFF_TLS_DIR}`.
-- `default.env` ya no se usa: dotenv nunca lo leyó.
+- `VAULT_ENABLED=true` exige `VAULT_URI`, `VAULT_PATH` y `VAULT_TOKEN`. Si Vault no responde, el BFF termina con código 78 y no usa una configuración parcial.
+- La ruta es KV v2 con el segmento `data`, como en smartkin-frontend: `dev/data/iris/qa`.
+- `VAULT_TOKEN` se borra del entorno tras usarlo y no aparece en logs ni en errores.
+- En Kubernetes, `secrets/local.env` crea el Secret `iris-secrets`.
+- `.env` es opcional y no llega al BFF: Compose solo lo usa para sustituir `${ENVM}`, `${BFF_TLS_DIR}` y `${UMDC_GATEWAY_IP}`.
 - `ENVM` es de build: el BFF no la lee y `pnpm build` la toma del shell.
 
 ## Certificados
@@ -70,7 +80,7 @@ flowchart LR
 |---|---|---|
 | `ENVM` | build | Tabla de arriba |
 | `IRIS_BFF_URL` | `pnpm start` | Destino del proxy de `ng serve` (por defecto `http://localhost:4000`) |
-| `NODE_ENV`, `PORT`, `MERCURY_*`, `BACKBONE_*`, `COOKIE_SECURE`, `CORS_ORIGIN`, `TRUST_PROXY`, `RATE_LIMIT_MAX`, `LOGIN_RATE_LIMIT_MAX`, `TRACING_ENABLED`, `TRACE_SAMPLE_RATE`, `SSL_*` | BFF | Comentadas en [`.env.example`](../../.env.example) y en [DEVELOPMENT_SETUP.md](../../DEVELOPMENT_SETUP.md) |
+| `NODE_ENV`, `PORT`, `MERCURY_*`, `BACKBONE_*`, `COOKIE_SECURE`, `CORS_ORIGIN`, `TRUST_PROXY`, `RATE_LIMIT_MAX`, `LOGIN_RATE_LIMIT_MAX`, `TRACING_ENABLED`, `TRACE_SAMPLE_RATE`, `SSL_*` | BFF | Comentadas en [`config/local.env`](../../config/local.env), [`secrets/local.env.example`](../../secrets/local.env.example) y en [DEVELOPMENT_SETUP.md](../../DEVELOPMENT_SETUP.md) |
 
 ## Verificación en CI
 

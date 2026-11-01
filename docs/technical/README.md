@@ -25,6 +25,6 @@ Documentación para quien desarrolla, prueba, despliega u opera Iris. Cada tarea
 
 ## Seguridad
 
-- Política de secretos: `.env`, `secrets/*.env`, llaves (`*.key`, `ssl/*.pem`) y logs están excluidos por `.gitignore`; se versionan `.env.example` y `secrets/bff.env.example` sin valores, y `config/bff.env` sin credenciales.
+- Política de secretos: `.env`, `secrets/*.env`, llaves (`*.key`, `ssl/*.pem`) y logs están excluidos por `.gitignore`; se versionan `.env.example` y `secrets/local.env.example` sin valores, y `config/local.env` sin credenciales.
 - Los secretos reales viven en Vault. Si un secreto llega a un remoto, rotarlo aunque se reescriba el historial.
 - Detección: `gitleaks` con `.gitleaks.toml` (pre-commit/CI).

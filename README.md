@@ -16,7 +16,7 @@ Dashboard de monitoreo construido con **Angular 22**, **Tailwind CSS 4** y **Luc
 git clone https://github.com/um-dev-creative/iris.git
 cd iris
 pnpm install                      # también activa el hook pre-commit (.githooks)
-cp .env.example .env              # opcional: todas las variables tienen valor por defecto local
+cp secrets/local.env.example secrets/local.env   # opcional: todas las variables tienen valor por defecto local
 pnpm start                        # frontend: http://localhost:4200 (proxy a /mrc, /bkd y /health hacia el BFF en :4000)
 ```
 
@@ -26,7 +26,7 @@ Para ejecutar el stack completo (app + BFF con proxies a Mercury y Backbone):
 ENVM=development pnpm serve:integrated   # http://localhost:4000
 ```
 
-Las variables de entorno están documentadas en [`.env.example`](.env.example) y su ubicación en cada forma de ejecución, en [entornos](docs/technical/environments.md#dónde-van-las-variables). `NODE_ENV=production` exige `BACKBONE_APPLICATION_ID`, `BACKBONE_CLIENT_ID` y `BACKBONE_CLIENT_SECRET`.
+Las variables de entorno están documentadas en [`config/local.env`](config/local.env) y [`secrets/local.env.example`](secrets/local.env.example) y su ubicación en cada forma de ejecución, en [entornos](docs/technical/environments.md#dónde-van-las-variables). `NODE_ENV=production` exige `BACKBONE_APPLICATION_ID`, `BACKBONE_CLIENT_ID` y `BACKBONE_CLIENT_SECRET`.
 
 ## Scripts
 

@@ -19,7 +19,7 @@ The repo declares `packageManager: pnpm` (`pnpm-lock.yaml`); use pnpm and don't 
 - `pnpm test`: Vitest via `@angular/build:unit-test`, with 85 % coverage thresholds (frontend stays below until F0-07). Single spec: `pnpm ng test --no-watch --include='src/app/path/to/x.spec.ts'`.
 - No lint script is configured.
 - `pnpm test:server`: BFF tests (Vitest, stub backbone and mercury, no network), fails under 85 %. One file: `pnpm vitest run --config vitest.server.config.mjs server/test/proxy.spec.js`. `pnpm test:all` runs both projects; `docs/technical/testing.md` has the details.
-- BFF settings are env vars read at require time by `server/config/constants.js` (loaded from `.env` by dotenv; Docker uses `config/bff.env` + `secrets/bff.env`, as zerobound's BFF); see `.env.example` and `docs/technical/environments.md`. In `NODE_ENV=production` the BFF exits with code 78 if the Backbone client settings are missing.
+- BFF settings are env vars read at require time by `server/config/constants.js` (`server/config/load-environment.js` fills them first from `secrets/local.env`, `config/local.env` and, with `VAULT_ENABLED=true`, Vault; see `docs/technical/environments.md`). In `NODE_ENV=production` the BFF exits with code 78 if the Backbone client settings are missing.
 
 ## Architecture
 
@@ -35,9 +35,9 @@ Two cooperating halves:
 - Auth: `AuthService` (signals `user`/`status`/`isAuthenticated`, restored at startup via `GET /auth/me`) is the source of the session; `authGuard` (on `canActivate` and `canActivateChild` of `/dashboard`) sends anonymous visitors to `/login?returnUrl=…`, `guestGuard` guards `/login`. `authInterceptor` (before `httpErrorInterceptor`) adds cookies and the CSRF header to BFF calls and turns a 401 into one "session expired" notice plus a redirect to login. See `docs/technical/frontend.md` and `security.md`.
 
 **Backend (`server.js` + `server/`)**: the BFF follows the same pattern as `stratum` and `zerobound-frontend`.
-- `server.js` is only the entry: dotenv, `settings-check` (exit 78 on a bad configuration), `createApp()` from `server/app.js`, optional HTTPS. `createApp({distPath})` has no side effects, which is what the tests rely on.
+- `server.js` is only the entry: `load-environment`, `settings-check` (exit 78 on a bad configuration), `createApp()` from `server/app.js`, optional HTTPS. `createApp({distPath})` has no side effects, which is what the tests rely on.
 - `server/` is plain CommonJS: `config/` (constants, logger, settings-check), `shared/` (proxy, backbone client, session cookies, csrf, trace, upload), `routes/`, `test/`.
-- Auth is cookie-based and stateless: login goes to backbone as the Iris application client (M2M token, cached and renewed), the session and refresh JWTs live in httpOnly cookies `iris_session` / `iris_refresh`, and the BFF forwards the JWT as the `session-token` header. `shared/proxy.js` renews it once on a 401. There is no Redis and no Vault.
+- Auth is cookie-based and stateless: login goes to backbone as the Iris application client (M2M token, cached and renewed), the session and refresh JWTs live in httpOnly cookies `iris_session` / `iris_refresh`, and the BFF forwards the JWT as the `session-token` header. `shared/proxy.js` renews it once on a 401. There is no Redis; Vault is optional and only read at startup.
 - Every API call under `/mrc/api/v1` and `/bkd/api/v1` needs the `x-iris-csrf: 1` header unless it is a GET; an unknown API path is a 404 JSON, never the SPA.
 - Routes: `/mrc/api/v1/auth/*` (login `access-token`, `logout`, legacy `session-end`, `me`, and public `register` / `verify-email` / `resend-verification`), `/mrc/api/v1/general/*` → mercury `MERCURY_API_PREFIX`, `/mrc/api/v1/d-image/users/profile` (multer → mercury), `/bkd/api/v1/*` → backbone `BACKBONE_API_PREFIX`, `/health`.
 - The server serves `dist/dashboard/browser` (prefers `index.csr.html`) with a client-side fallback; it does not render SSR at runtime.

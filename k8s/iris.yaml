@@ -1,5 +1,5 @@
 # Iris on Kubernetes. Create the secret first; never store its values in this file:
-#   kubectl create secret generic iris-secrets --from-env-file=secrets/bff.env
+#   kubectl create secret generic iris-secrets --from-env-file=secrets/local.env
 apiVersion: v1
 kind: ConfigMap
 metadata:
