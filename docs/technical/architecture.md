@@ -16,7 +16,7 @@ Navegador ──► BFF Express (server.js → server/app.js) ──► Mercury 
 
 ## Configuración
 
-Variables de entorno leídas en `server/config/constants.js` (ver `default.env.example`). No hay Vault ni Redis: la sesión viaja en cookies httpOnly y se renueva contra Backbone.
+Variables de entorno leídas en `server/config/constants.js` (ver `.env.example`). No hay Vault ni Redis: la sesión viaja en cookies httpOnly y se renueva contra Backbone.
 
 ## Notas sobre la tarea F0-03
 

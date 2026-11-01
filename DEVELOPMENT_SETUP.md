@@ -2,7 +2,7 @@
 
 ## Variables de entorno
 
-Copia `default.env.example` a `default.env` (ignorado por git) y completa los valores. El BFF las lee con dotenv y todas tienen valor por defecto para desarrollo local; el detalle de cada una está comentado en el ejemplo.
+Copia `.env.example` a `.env` (ignorado por git) y completa los valores. El BFF las lee con dotenv y todas tienen valor por defecto para desarrollo local; el detalle de cada una está comentado en el ejemplo. En Docker se usan `config/bff.env` y `secrets/bff.env`: ver [entornos](docs/technical/environments.md#dónde-van-las-variables).
 
 | Variable | Descripción |
 |---|---|

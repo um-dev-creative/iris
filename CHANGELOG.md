@@ -43,6 +43,7 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 
 ### Changed
 
+- **Environment files follow zerobound's BFF:** local runs use `.env` (copied from `.env.example`, which replaces `default.env.example`); Docker loads the versioned `config/bff.env` and then the git-ignored `secrets/bff.env`, and Kubernetes builds `iris-secrets` from that same file. `.env.docker` and `.env.secrets` are gone and `docker-compose.yml` now sets `PORT`, `NODE_ENV` and `TRUST_PROXY` and trusts the internal CA.
 - `authGuard` protege el dashboard con la sesión real y se agrega `guestGuard` para `/login`. (F2-05)
 - Todos los entornos consumen la API a través del BFF con URL relativa; se agregaron configuraciones de build para dev, qa y cloud. (F1-05)
 - `build:ssr` compila el target de servidor con el mismo `ENVM` (antes siempre con `production`). (F1-05)

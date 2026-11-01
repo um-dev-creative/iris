@@ -1,4 +1,7 @@
-# Iris for this environment. Copy default.env.example to .env.docker and fill it in; secrets come from your secret manager.
+# Iris for this environment. Same scheme as zerobound's BFF, split by sensitivity:
+#   config/bff.env   (versioned)  non-secret settings. Never a credential.
+#   secrets/bff.env  (gitignored, copy secrets/bff.env.example)  loaded last, so its values win.
+# A .env is optional here: Compose only reads it for the ${VAR:-default} substitutions below, never for the container.
 #   docker compose up -d --build
 services:
   iris:
@@ -10,7 +13,22 @@ services:
     container_name: iris
     restart: unless-stopped
     env_file:
-      - .env.docker
+      - config/bff.env
+      - secrets/bff.env
+    environment:
+      PORT: "3000"
+      NODE_ENV: production
+      # Mercury and backbone-rest serve HTTPS with certificates of the internal CA
+      NODE_EXTRA_CA_CERTS: /app/ssl/umdc-local-ca.crt
+      TRUST_PROXY: "1"   # nginx is the one proxy in front: the rate limits use the client IP from its X-Forwarded-For
+    # A missing file stops `docker compose` (create_host_path: false). Issued by ../nginx; override the folder with BFF_TLS_DIR.
+    volumes:
+      - type: bind
+        source: ${BFF_TLS_DIR:-../nginx/config/ssl}/umdc-local-ca.crt
+        target: /app/ssl/umdc-local-ca.crt
+        read_only: true
+        bind:
+          create_host_path: false
     ports:
       - "3000:3000"
     networks:

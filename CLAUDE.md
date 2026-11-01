@@ -19,7 +19,7 @@ The repo declares `packageManager: pnpm` (`pnpm-lock.yaml`); use pnpm and don't 
 - `pnpm test`: Vitest via `@angular/build:unit-test`, with 85 % coverage thresholds (frontend stays below until F0-07). Single spec: `pnpm ng test --no-watch --include='src/app/path/to/x.spec.ts'`.
 - No lint script is configured.
 - `pnpm test:server`: BFF tests (Vitest, stub backbone and mercury, no network), fails under 85 %. One file: `pnpm vitest run --config vitest.server.config.mjs server/test/proxy.spec.js`. `pnpm test:all` runs both projects; `docs/technical/testing.md` has the details.
-- BFF settings are env vars read at require time by `server/config/constants.js` (loaded from `.env`/`default.env` by dotenv); see `default.env.example`. In `NODE_ENV=production` the BFF exits with code 78 if the Backbone client settings are missing.
+- BFF settings are env vars read at require time by `server/config/constants.js` (loaded from `.env` by dotenv; Docker uses `config/bff.env` + `secrets/bff.env`, as zerobound's BFF); see `.env.example` and `docs/technical/environments.md`. In `NODE_ENV=production` the BFF exits with code 78 if the Backbone client settings are missing.
 
 ## Architecture
 

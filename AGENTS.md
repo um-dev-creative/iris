@@ -50,7 +50,7 @@
 ## Integration and Environment Notes
 - **Multiple Environments**: `src/environments/` holds one file per `ENVM` (`development`, `dev`, `qa`, `dev-cloud`, `qa-cloud`, `production`), all with a relative `apiBaseUrl`; see `docs/technical/environments.md`.
 - API base URL is `/mrc/api/v1` in every `src/environments/environment*.ts` (relative, through the BFF); inject `API_BASE_URL`/`APP_CONFIG` instead of importing `environment`.
-- **Backend Integration**: BFF in `/server` (`app.js`, `config/`, `shared/`, `routes/`, `test/`); settings come from env vars (`default.env.example`).
+- **Backend Integration**: BFF in `/server` (`app.js`, `config/`, `shared/`, `routes/`, `test/`); settings come from env vars (`.env.example`; Docker: `config/bff.env`, `secrets/bff.env`).
 - **API Routes**: Backend APIs are prefixed (`/mrc/api/v1/*`, `/bkd/api/v1/*`) and don't conflict with Angular routes.
 - **SSL Configuration**: Uses certificates in `/ssl` folder; falls back to HTTP if not available.
 - `SettingsPageComponent` updates runtime API config through `ApiService` and does a direct `fetch` connectivity check.
