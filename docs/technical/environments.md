@@ -45,7 +45,9 @@ Se usan los mismos archivos que Mercury y ZeroBound. Las variables pueden estar 
 | `config/local.env` | Sí | Valores no secretos y la conexión a Vault |
 | Vault (`VAULT_ENABLED=true`) | n/a | Lo que siga vacío, leído de `VAULT_PATH` al arrancar |
 
-La tabla va de mayor a menor prioridad: un valor vacío cuenta como no definido y uno escrito gana a Vault. `server/config/load-environment.js` aplica este orden antes de cargar `constants.js`.
+La tabla va de mayor a menor prioridad: un valor vacío cuenta como no definido y uno escrito gana a Vault.
+
+En local, `pnpm start:bff` carga los dos archivos en `package.json`, igual que en zerobound-frontend, y arranca `node server.js`. Después, `server/config/load-environment.js` lee Vault antes de cargar `constants.js`. Ese módulo también lee los archivos, para que `node server.js` funcione sin el script, por ejemplo en Windows. Con `pnpm start:bff`, un valor escrito en estos archivos reemplaza al que venga del shell.
 
 ```mermaid
 flowchart TD

@@ -14,6 +14,7 @@ The repo declares `packageManager: pnpm` (`pnpm-lock.yaml`); use pnpm and don't 
 
 - `pnpm start`: `ng serve` on :4200; `proxy.conf.mjs` forwards `/mrc`, `/bkd` and `/health` to the BFF (`IRIS_BFF_URL`, default `http://localhost:4000`), so run `pnpm server` alongside.
 - `pnpm build:dev`: development build. `pnpm build` and `pnpm build:ssr` need `ENVM` set (`development`, `dev`, `qa`, `dev-cloud`, `qa-cloud`, `production`; each maps to an `angular.json` configuration and a `src/environments/environment.*.ts`, see `docs/technical/environments.md`).
+- `pnpm start:bff` (alias `pnpm server`): loads `config/local.env` and `secrets/local.env`, then runs `node server.js`, like zerobound-frontend.
 - `pnpm serve:integrated`: SSR build and then `node server.js` (full stack; HTTPS only when `SSL_CERT_PATH` and `SSL_KEY_PATH` are set).
 - `pnpm dev:integrated:unix`: watches the SSR build and runs `node server.js`.
 - `pnpm test`: Vitest via `@angular/build:unit-test`, with 85 % coverage thresholds (frontend stays below until F0-07). Single spec: `pnpm ng test --no-watch --include='src/app/path/to/x.spec.ts'`.

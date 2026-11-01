@@ -45,6 +45,14 @@ test('the container loads config first and secrets last', () => {
   assert.ok(compose.indexOf('- config/local.env') < compose.indexOf('- secrets/local.env'));
 });
 
+test('pnpm start:bff loads config first and secrets last, then starts the BFF', () => {
+  const script = JSON.parse(read('package.json')).scripts['start:bff'];
+
+  assert.ok(script.indexOf('./config/local.env') > -1);
+  assert.ok(script.indexOf('./config/local.env') < script.indexOf('./secrets/local.env'));
+  assert.ok(script.endsWith('node server.js'));
+});
+
 test('git tracks the templates and ignores what holds secrets', () => {
   ['.env', 'secrets/local.env', 'default.env', '.env.docker', '.env.secrets'].forEach((file) => assert.ok(isIgnored(file), `${file} must be ignored`));
   ['.env.example', 'config/local.env', 'secrets/local.env.example'].forEach((file) => assert.ok(!isIgnored(file), `${file} must be tracked`));

@@ -26,7 +26,7 @@ if [ $? -eq 0 ]; then
     echo "Press Ctrl+C to stop the server"
     echo "==========================================="
 
-    node server.js
+    pnpm run start:bff
 else
     echo "❌ Build failed. Please check the errors above."
     exit 1

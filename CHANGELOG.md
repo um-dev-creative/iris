@@ -43,7 +43,7 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 
 ### Changed
 
-- **Settings from `local.env` or Vault:** the BFF reads `secrets/local.env`, then `config/local.env` and, with `VAULT_ENABLED=true`, Vault, which fills only what is still empty. Local runs and Docker use the same files, as Mercury and ZeroBound do, and Kubernetes builds `iris-secrets` from `secrets/local.env`. `default.env`, `.env.docker` and `.env.secrets` are gone; `.env` is only for Compose substitutions. `docker-compose.yml` now sets the port, the service URLs and the internal CA.
+- **Settings from `local.env` or Vault:** the BFF reads `secrets/local.env`, then `config/local.env` and, with `VAULT_ENABLED=true`, Vault, which fills only what is still empty. Local runs and Docker use the same files, as Mercury and ZeroBound do, and Kubernetes builds `iris-secrets` from `secrets/local.env`. `default.env`, `.env.docker` and `.env.secrets` are gone; `.env` is only for Compose substitutions. `docker-compose.yml` now sets the port, the service URLs and the internal CA. `pnpm start:bff` loads both files in `package.json`, as zerobound-frontend does.
 - `authGuard` protege el dashboard con la sesión real y se agrega `guestGuard` para `/login`. (F2-05)
 - Todos los entornos consumen la API a través del BFF con URL relativa; se agregaron configuraciones de build para dev, qa y cloud. (F1-05)
 - `build:ssr` compila el target de servidor con el mismo `ENVM` (antes siempre con `production`). (F1-05)
