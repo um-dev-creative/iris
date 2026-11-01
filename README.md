@@ -17,7 +17,7 @@ git clone https://github.com/um-dev-creative/iris.git
 cd iris
 pnpm install                      # también activa el hook pre-commit (.githooks)
 cp secrets/local.env.example secrets/local.env   # opcional: todas las variables tienen valor por defecto local
-pnpm start                        # frontend: http://localhost:4200 (proxy a /mrc, /bkd y /health hacia el BFF en :4000)
+pnpm dev                          # frontend en http://localhost:4200 y BFF en :4000, con config/local.env y secrets/local.env
 ```
 
 Para ejecutar el stack completo (app + BFF con proxies a Mercury y Backbone):
@@ -37,7 +37,8 @@ Las variables de entorno están documentadas en [`config/local.env`](config/loca
 | `pnpm build` / `pnpm build:ssr` | Build con `ENVM` (`development`, `dev`, `qa`, `dev-cloud`, `qa-cloud`, `production`; SSR en el segundo). Ver [entornos](docs/technical/environments.md) |
 | `pnpm serve:integrated` | Build SSR y `node server.js` (BFF + app) |
 | `pnpm dev:integrated:unix` | Watch del build y BFF |
-| `pnpm start:bff` / `pnpm server` | Solo el BFF: carga `config/local.env` y `secrets/local.env`, y ejecuta `node server.js` |
+| `pnpm dev` | `ng serve` y el BFF juntos, con `config/local.env` y `secrets/local.env` |
+| `pnpm start:bff` / `pnpm server` | Solo el BFF: carga `config/local.env` y `secrets/local.env`, y ejecuta `node server.js` (Windows: `pnpm start:bff:win`) |
 | `pnpm test` / `pnpm test:server` / `pnpm test:all` | Vitest frontend / BFF / ambos, con gate de cobertura 85 % |
 | `pnpm coverage:merge` | Une los `lcov.info` de ambos proyectos |
 

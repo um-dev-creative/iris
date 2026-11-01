@@ -53,6 +53,15 @@ test('pnpm start:bff loads config first and secrets last, then starts the BFF', 
   assert.ok(script.endsWith('node server.js'));
 });
 
+test('every script that starts the BFF loads the local files', () => {
+  const { scripts } = JSON.parse(read('package.json'));
+
+  assert.match(scripts.dev, /start:bff/);
+  assert.match(scripts['dev:integrated:unix'], /start:bff/);
+  assert.match(scripts['dev:integrated:win'], /start:bff:win/);
+  assert.ok(scripts['start:bff:win'].indexOf('config/local.env') < scripts['start:bff:win'].indexOf('secrets/local.env'));
+});
+
 test('git tracks the templates and ignores what holds secrets', () => {
   ['.env', 'secrets/local.env', 'default.env', '.env.docker', '.env.secrets'].forEach((file) => assert.ok(isIgnored(file), `${file} must be ignored`));
   ['.env.example', 'config/local.env', 'secrets/local.env.example'].forEach((file) => assert.ok(!isIgnored(file), `${file} must be tracked`));
