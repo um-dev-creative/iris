@@ -36,9 +36,8 @@ Las variables de entorno están documentadas en [`config/local.env`](config/loca
 | `pnpm build:dev` | Build de desarrollo |
 | `pnpm build` / `pnpm build:ssr` | Build con `ENVM` (`development`, `dev`, `qa`, `dev-cloud`, `qa-cloud`, `production`; SSR en el segundo). Ver [entornos](docs/technical/environments.md) |
 | `pnpm serve:integrated` | Build SSR y `node server.js` (BFF + app) |
-| `pnpm dev:integrated:unix` | Watch del build y BFF |
 | `pnpm dev` | `ng serve` y el BFF juntos, con `config/local.env` y `secrets/local.env` |
-| `pnpm start:bff` / `pnpm server` | Solo el BFF: carga `config/local.env` y `secrets/local.env`, y ejecuta `node server.js` (Windows: `pnpm start:bff:win`) |
+| `pnpm start:bff` | Solo el BFF: carga `config/local.env` y `secrets/local.env`, y ejecuta `node server.js` |
 | `pnpm test` / `pnpm test:server` / `pnpm test:all` | Vitest frontend / BFF / ambos, con gate de cobertura 85 % |
 | `pnpm coverage:merge` | Une los `lcov.info` de ambos proyectos |
 

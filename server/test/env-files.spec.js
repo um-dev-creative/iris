@@ -45,21 +45,15 @@ test('the container loads config first and secrets last', () => {
   assert.ok(compose.indexOf('- config/local.env') < compose.indexOf('- secrets/local.env'));
 });
 
-test('pnpm start:bff loads config first and secrets last, then starts the BFF', () => {
-  const script = JSON.parse(read('package.json')).scripts['start:bff'];
-
-  assert.ok(script.indexOf('./config/local.env') > -1);
-  assert.ok(script.indexOf('./config/local.env') < script.indexOf('./secrets/local.env'));
-  assert.ok(script.endsWith('node server.js'));
-});
-
-test('every script that starts the BFF loads the local files', () => {
+test('pnpm start:bff is the one script that starts the BFF, config first and secrets last', () => {
   const { scripts } = JSON.parse(read('package.json'));
+  const script = scripts['start:bff'];
 
+  assert.ok(script.indexOf('config/local.env') > -1);
+  assert.ok(script.indexOf('config/local.env') < script.indexOf('secrets/local.env'));
+  assert.deepEqual(Object.keys(scripts).filter((name) => scripts[name].includes('server.js') && name !== 'start:bff'), []);
   assert.match(scripts.dev, /start:bff/);
-  assert.match(scripts['dev:integrated:unix'], /start:bff/);
-  assert.match(scripts['dev:integrated:win'], /start:bff:win/);
-  assert.ok(scripts['start:bff:win'].indexOf('config/local.env') < scripts['start:bff:win'].indexOf('secrets/local.env'));
+  assert.match(scripts['serve:integrated'], /start:bff/);
 });
 
 test('git tracks the templates and ignores what holds secrets', () => {

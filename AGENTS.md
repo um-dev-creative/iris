@@ -40,10 +40,10 @@
   - `build` -> `ng build --configuration=$ENVM` (uses environment variable)
   - `build:ssr` -> builds both client and SSR server
   - `serve:integrated` -> builds and serves full-stack app with backend APIs
-  - `dev:integrated:unix` / `dev:integrated:win` -> watch mode with backend integration
+  - `dev` -> `ng serve` plus the BFF, `start:bff` -> the BFF alone
   - `watch` -> `ng build --watch --configuration development`
   - `test` -> Vitest (`ng test`), `test:server` -> Vitest for `server/`, `test:all` -> both
-- **Backend Development**: Use `serve:integrated` or `dev:integrated:*` scripts for full-stack development.
+- **Backend Development**: Use `dev` or `serve:integrated` for full-stack development.
 - **HTTPS Support**: the BFF serves HTTPS when `SSL_CERT_PATH` and `SSL_KEY_PATH` are set; certificates stay out of git.
 - Angular schematics are configured to skip test generation (`angular.json`), and there are currently no `*.spec.ts` files.
 

@@ -47,7 +47,7 @@ Se usan los mismos archivos que Mercury y ZeroBound. Las variables pueden estar 
 
 La tabla va de mayor a menor prioridad: un valor vacío cuenta como no definido y uno escrito gana a Vault.
 
-En local, `pnpm dev` levanta `ng serve` y el BFF. `pnpm start:bff` carga los dos archivos en `package.json`, igual que en zerobound-frontend, y arranca `node server.js` (`pnpm start:bff:win` en Windows). `pnpm start` solo levanta `ng serve`: no lee estos archivos. Después, `server/config/load-environment.js` lee Vault antes de cargar `constants.js`. Ese módulo también lee los archivos, para que `node server.js` funcione sin el script, por ejemplo en Windows. Con `pnpm start:bff`, un valor escrito en estos archivos reemplaza al que venga del shell.
+En local, `pnpm dev` levanta `ng serve` y el BFF. `pnpm start:bff` carga los dos archivos en `package.json` con `node --env-file-if-exists`, en cualquier sistema operativo, y arranca `server.js`. `pnpm start` solo levanta `ng serve`: no lee estos archivos. Después, `server/config/load-environment.js` lee Vault antes de cargar `constants.js`; también lee los archivos, para que `node server.js` funcione sin el script.
 
 ```mermaid
 flowchart TD
