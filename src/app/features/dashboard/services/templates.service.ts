@@ -9,6 +9,7 @@ import {
   TemplateSearchParams,
   TemplateSearchResult,
   TemplateSummary,
+  TemplateVersion,
 } from '../../../core/models';
 
 /**
@@ -53,9 +54,28 @@ export class TemplatesService {
    * Guarda el contenido. Con `etag`, sobre la versión que se leyó (`If-Match`); con `null`, crea el archivo y falla si ya existe
    * (`If-None-Match: *`). Un 422 trae `error.problems`; un 412, que alguien guardó antes.
    */
-  saveContent(id: string, content: string, etag: string | null): Promise<TemplateContent> {
+  saveContent(id: string, content: string, etag: string | null, confirmSystem = false): Promise<TemplateContent> {
     const headers: Record<string, string> = etag === null ? { 'If-None-Match': '*' } : { 'If-Match': `"${etag}"` };
-    return firstValueFrom(this.http.put<TemplateContent>(`${this.item(id)}/content`, { content }, { headers }));
+    const params: Record<string, boolean> = confirmSystem ? { confirmSystem: true } : {};
+    return firstValueFrom(this.http.put<TemplateContent>(`${this.item(id)}/content`, { content }, { headers, params }));
+  }
+
+  /** Las versiones guardadas del contenido, de la más nueva a la más antigua, sin el contenido. */
+  versions(id: string): Promise<TemplateVersion[]> {
+    return firstValueFrom(this.http.get<TemplateVersion[]>(`${this.item(id)}/versions`));
+  }
+
+  /** Una versión con su contenido. */
+  version(id: string, version: number): Promise<TemplateVersion> {
+    return firstValueFrom(this.http.get<TemplateVersion>(`${this.item(id)}/versions/${version}`));
+  }
+
+  /** Guarda una versión antigua como versión nueva (no borra nada). Necesita la huella del contenido actual. */
+  restore(id: string, version: number, etag: string, confirmSystem = false): Promise<TemplateContent> {
+    const params: Record<string, boolean> = confirmSystem ? { confirmSystem: true } : {};
+    return firstValueFrom(
+      this.http.post<TemplateContent>(`${this.item(id)}/versions/${version}/restore`, null, { headers: { 'If-Match': `"${etag}"` }, params }),
+    );
   }
 
   /** Renderiza contenido sin guardar, con parámetros de ejemplo. No envía ni guarda nada. */
