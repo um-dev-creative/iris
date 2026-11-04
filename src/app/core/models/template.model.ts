@@ -15,3 +15,90 @@ export interface UsableTemplate {
   fileFormat?: string | null;
   templateTypeName?: string | null;
 }
+
+/** Una plantilla base de Mercury (`TemplateDetailResponse`). */
+export interface TemplateSummary {
+  id: string;
+  description: string;
+  /** Nombre del archivo con el contenido (`bienvenida.md`). */
+  location: string;
+  fileFormat: string;
+  templateTypeId: string;
+  templateTypeName?: string | null;
+  severityTypeId: string;
+  severityTypeName?: string | null;
+  applicationId?: string;
+  active?: boolean;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface TemplateSearchResult {
+  items: TemplateSummary[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+export interface TemplateSearchParams {
+  q?: string;
+  templateTypeId?: string;
+  severityTypeId?: string;
+  /** Base 0, como Mercury. */
+  page?: number;
+  size?: number;
+  sort?: string;
+}
+
+/** Metadatos de una plantilla al crearla o editarla. La aplicación la pone el BFF. */
+export interface TemplateInput {
+  description: string;
+  location: string;
+  fileFormat: string;
+  templateTypeId: string;
+  severityTypeId: string;
+}
+
+/** Formato del archivo: `MARKDOWN` si termina en `.md`, `FREEMARKER` en los demás casos. */
+export type TemplateSourceFormat = 'FREEMARKER' | 'MARKDOWN';
+
+/** El contenido de una plantilla y lo que el editor necesita para trabajar con él. */
+export interface TemplateContent {
+  templateId: string;
+  name: string;
+  format: TemplateSourceFormat;
+  content: string;
+  /** Huella para guardar con `If-Match`; vacía si el archivo aún no existe. */
+  etag: string;
+  exists: boolean;
+  lastModified?: string | null;
+  /** `true` para plantillas del sistema, que no se pueden cambiar desde la API. */
+  readOnly: boolean;
+  parameters: string[];
+}
+
+/** Algo mal en una plantilla, con su posición para señalarlo en el editor. */
+export interface TemplateProblem {
+  /** Desde 1; 0 si no está ligado a una línea. */
+  line: number;
+  column: number;
+  message: string;
+}
+
+export interface TemplatePreviewResult {
+  ok: boolean;
+  format: TemplateSourceFormat;
+  output: string;
+  problems: TemplateProblem[];
+  parameters: string[];
+}
+
+/** Cuerpo de los errores 422 al guardar contenido que FreeMarker no entiende. */
+export interface TemplateProblemsBody {
+  message: string;
+  problems: TemplateProblem[];
+}
+
+export const TEMPLATE_DESCRIPTION_MAX = 200;
+export const TEMPLATE_CONTENT_MAX_BYTES = 262_144;

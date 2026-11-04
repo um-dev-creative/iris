@@ -55,6 +55,7 @@ const forward = (req, url, token, { body, headers = {}, query } = {}) =>
       ...(body === undefined ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { [SESSION_TOKEN_HEADER]: token } : {}),
       ...(req.get('if-match') ? { 'If-Match': req.get('if-match') } : {}),
+      ...(req.get('if-none-match') ? { 'If-None-Match': req.get('if-none-match') } : {}),
       ...(req.get('idempotency-key') ? { 'Idempotency-Key': req.get('idempotency-key') } : {}),
       // the upstream continues the trace the BFF is in (nothing is sent when tracing is off)
       ...(req.trace ? { traceparent: toTraceparent(req.trace) } : {}),

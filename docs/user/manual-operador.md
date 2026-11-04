@@ -103,3 +103,43 @@ flowchart LR
 | «Elige una plantilla.» | Aún no has seleccionado ninguna plantilla de la lista. | Elígela en el selector. |
 | «La gestión de campañas no está configurada» | Falta configurar la aplicación en Iris. | Avisa al administrador. |
 | «No tienes permiso para ver las campañas» | Tu cuenta no puede leer las campañas. | Avisa al administrador. |
+
+## Plantillas
+
+En **Plantillas** (menú lateral) escribes y editas el texto de los mensajes que envía Mercury, en **Markdown** o en **HTML**, y ves cómo quedará antes de guardar.
+
+```mermaid
+flowchart LR
+    A["Nueva plantilla"] --> B["Escribir el contenido"]
+    B --> C["Vista previa con parámetros de ejemplo"]
+    C -->|"hay errores"| B
+    C -->|"todo bien"| D["Guardar"]
+    D --> E["Usarla en una campaña"]
+```
+
+### Crear una plantilla
+
+1. Pulsa **Nueva plantilla**.
+2. Escribe la **descripción** y elige el **tipo** y la **severidad**.
+3. Elige el **formato**: Markdown (más sencillo: títulos, negritas, listas, enlaces) o HTML (control total del diseño). Iris propone el nombre del **archivo**; puedes cambiarlo.
+4. Escribe el contenido. Donde quieras un dato variable escribe `${nombre}`; por ejemplo `Hola ${name}`.
+5. A la derecha ves la **vista previa**. En **Parámetros de ejemplo** escribes valores de prueba (`name=Ana`); Iris agrega solo los parámetros que detecta.
+6. Pulsa **Guardar**.
+
+### Editar, desactivar y cuidar el trabajo
+
+- **Editar** abre la plantilla con su contenido. El botón **Guardar** se enciende cuando hay cambios; si intentas salir sin guardar, Iris pregunta.
+- Si otra persona guardó la misma plantilla mientras la editabas, Iris lo avisa y te ofrece **Recargar** (tus cambios se pierden, cópialos antes si los necesitas).
+- **Desactivar** (en la lista) pide confirmación: la plantilla deja de poder usarse en campañas nuevas; los mensajes y campañas anteriores no cambian.
+- Las plantillas del sistema (verificación de cuenta, avisos de ZeroBound y SmartKin) se abren de **solo lectura**: otros servicios dependen de ellas.
+
+### Mensajes que puedes ver
+
+| Mensaje | Qué significa | Qué hacer |
+|---|---|---|
+| «Línea 3, columna 5: …» | El contenido tiene un error de sintaxis (por ejemplo una etiqueta sin cerrar). | Pulsa **Ir a la línea** y corrígelo; no se puede guardar hasta entonces. |
+| «Alguien guardó la plantilla antes que tú» | Otra persona guardó una versión nueva. | Pulsa **Recargar** y vuelve a hacer tu cambio. |
+| «El contenido supera 262144 bytes» | La plantilla es demasiado larga (256 KB). | Acórtala o quita imágenes incrustadas. |
+| «No tienes permiso para administrar las plantillas» | Tu cuenta no tiene el permiso de plantillas. | Avisa al administrador. |
+| «No tienes permiso para cambiar esta plantilla, o es una plantilla del sistema» | Intentaste cambiar una plantilla del sistema o sin permiso. | Crea una plantilla nueva con el contenido que necesitas. |
+| «La gestión de plantillas no está configurada» | Falta configurar la aplicación en Iris. | Avisa al administrador. |
