@@ -15,6 +15,7 @@ const CREATE_FIELDS = ['description', 'location', 'fileFormat', 'templateTypeId'
 const UPDATE_FIELDS = CREATE_FIELDS;
 const SEARCH_FIELDS = ['q', 'templateTypeId', 'severityTypeId', 'active', 'page', 'size', 'sort'];
 const PREVIEW_FIELDS = ['name', 'content', 'params'];
+const VERSION = /^[1-9][0-9]{0,8}$/;
 
 const pick = (source, fields) => Object.fromEntries(fields.filter((f) => source?.[f] !== undefined).map((f) => [f, source[f]]));
 
@@ -46,6 +47,7 @@ router.use((_req, res, next) => {
   return res.status(503).json({ error: 'Template management is not available' });
 });
 
+router.param('version', (_req, res, next, version) => (VERSION.test(version) ? next() : res.status(400).json({ error: 'Invalid version' })));
 router.param('id', (_req, res, next, id) => (UUID.test(id) ? next() : res.status(400).json({ error: 'Invalid template id' })));
 
 const badLocation = (body) => body?.location !== undefined && !FILE_NAME.test(String(body.location));
@@ -77,8 +79,21 @@ router.delete('/:id', (req, res) => toMercury(req, res, `/templates/${req.params
 
 // the content: If-Match / If-None-Match travel to Mercury and the ETag comes back (see proxy.js)
 router.get('/:id/content', (req, res) => toMercury(req, res, `/templates/${req.params.id}/content`, { query: {} }));
-router.put('/:id/content', (req, res) =>
-  toMercury(req, res, `/templates/${req.params.id}/content`, { query: {}, body: pick(req.body, ['content']) }),
-);
+/** `?confirmSystem=true` is the only query the content writes take; anything but true/false is refused. */
+const confirmation = (req) => (['true', 'false'].includes(req.query.confirmSystem) ? { confirmSystem: req.query.confirmSystem } : {});
+const badConfirmation = (req) => req.query.confirmSystem !== undefined && !['true', 'false'].includes(req.query.confirmSystem);
+
+router.put('/:id/content', (req, res) => {
+  if (badConfirmation(req)) return res.status(400).json({ error: 'confirmSystem must be true or false' });
+  return toMercury(req, res, `/templates/${req.params.id}/content`, { query: confirmation(req), body: pick(req.body, ['content']) });
+});
+
+// the history of the content
+router.get('/:id/versions', (req, res) => toMercury(req, res, `/templates/${req.params.id}/versions`, { query: {} }));
+router.get('/:id/versions/:version', (req, res) => toMercury(req, res, `/templates/${req.params.id}/versions/${req.params.version}`, { query: {} }));
+router.post('/:id/versions/:version/restore', (req, res) => {
+  if (badConfirmation(req)) return res.status(400).json({ error: 'confirmSystem must be true or false' });
+  return toMercury(req, res, `/templates/${req.params.id}/versions/${req.params.version}/restore`, { query: confirmation(req) });
+});
 
 module.exports = router;

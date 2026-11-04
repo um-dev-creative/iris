@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, NgZone, OnInit, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { AlertTriangle, ArrowLeft, Eye, LucideAngularModule, Lock, Save } from 'lucide-angular';
+import { AlertTriangle, ArrowLeft, Eye, History, LucideAngularModule, Lock, RotateCcw, Save } from 'lucide-angular';
 import { AppBadgeComponent, AppButtonComponent, AppCardComponent } from '../../../../shared/components';
 import { HasUnsavedChanges } from '../../../../core/guards';
 import { NotificationService } from '../../../../core/services';
@@ -15,11 +16,13 @@ import {
   TemplateProblem,
   TemplateProblemsBody,
   TemplateSummary,
+  TemplateVersion,
 } from '../../../../core/models';
 import { ROUTE_PATHS, routeUrl } from '../../../../core/routes';
 import { ReferenceDataService, TemplatesService } from '../../services';
 import { loadFailure, LoadFailure } from '../../utils/campaign-errors';
-import { parseParams } from '../../utils/campaign-input';
+import { parseParams, toDate } from '../../utils/campaign-input';
+import { DiffLine, changeCount, diffLines } from '../../utils/text-diff';
 import {
   EditorFormat,
   TEMPLATE_FILE_NAME,
@@ -46,7 +49,7 @@ const STARTER: Record<EditorFormat, string> = {
 @Component({
   selector: 'app-template-editor-page',
   standalone: true,
-  imports: [FormsModule, RouterLink, LucideAngularModule, AppCardComponent, AppButtonComponent, AppBadgeComponent],
+  imports: [FormsModule, DatePipe, RouterLink, LucideAngularModule, AppCardComponent, AppButtonComponent, AppBadgeComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <a [routerLink]="listUrl" class="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
@@ -64,22 +67,27 @@ const STARTER: Record<EditorFormat, string> = {
         <div>
           <h2 class="text-2xl font-bold text-foreground">{{ creating() ? 'Nueva plantilla' : 'Editar plantilla' }}</h2>
           <div class="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-            @if (readOnly()) { <app-badge color="warning"><lucide-icon [img]="Lock" [size]="12" strokeWidth="2" class="mr-1" /> Solo lectura</app-badge> }
+            @if (system()) { <app-badge color="warning"><lucide-icon [img]="Lock" [size]="12" strokeWidth="2" class="mr-1" /> Plantilla del sistema</app-badge> }
             @if (dirty()) { <app-badge color="primary" data-testid="dirty">Cambios sin guardar</app-badge> }
             @if (!creating() && !exists()) { <app-badge color="warning">Sin contenido guardado</app-badge> }
           </div>
         </div>
         <div class="flex gap-2">
-          <app-button (click)="save()" [disabled]="saving() || readOnly() || !dirty()" data-testid="save">
+          <app-button (click)="save()" [disabled]="saving() || !dirty() || (system() && !confirmSystem())" data-testid="save">
             <lucide-icon [img]="Save" [size]="16" strokeWidth="2" /> {{ saving() ? 'Guardando…' : 'Guardar' }}
           </app-button>
         </div>
       </div>
 
-      @if (readOnly()) {
-        <p role="status" class="mb-4 rounded-lg border border-warning bg-warning/10 p-3 text-sm text-foreground" data-testid="readonly">
-          Esta es una plantilla del sistema: otros servicios dependen de su nombre y de sus parámetros, por eso no se puede cambiar desde Iris. Puedes verla y previsualizarla.
-        </p>
+      @if (system()) {
+        <div role="status" class="mb-4 rounded-lg border border-warning bg-warning/10 p-3 text-sm text-foreground" data-testid="system">
+          Esta es una plantilla del sistema: otros servicios dependen de su nombre y de sus parámetros, y un cambio equivocado puede romper sus envíos.
+          Se conserva el original para poder restaurarlo desde el historial.
+          <label class="mt-2 flex items-center gap-2">
+            <input type="checkbox" [ngModel]="confirmSystem()" (ngModelChange)="confirmSystem.set($event)" name="confirm-system" data-testid="confirm-system" />
+            Entiendo que otros servicios dependen de esta plantilla y quiero poder cambiarla
+          </label>
+        </div>
       }
 
       @if (conflict()) {
@@ -93,12 +101,12 @@ const STARTER: Record<EditorFormat, string> = {
         <div class="grid gap-4 sm:grid-cols-2">
           <div class="sm:col-span-2">
             <label for="te-description" class="block text-sm font-medium text-foreground mb-1.5">Descripción</label>
-            <input id="te-description" type="text" autocomplete="off" [maxlength]="descriptionMax" [ngModel]="description()" (ngModelChange)="onDescription($event)" [disabled]="readOnly()"
+            <input id="te-description" type="text" autocomplete="off" [maxlength]="descriptionMax" [ngModel]="description()" (ngModelChange)="onDescription($event)" [disabled]="locked()"
               class="w-full px-4 py-2.5 border border-input rounded-lg text-sm bg-background text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring disabled:opacity-60" />
           </div>
           <div>
             <label for="te-type" class="block text-sm font-medium text-foreground mb-1.5">Tipo</label>
-            <select id="te-type" [ngModel]="typeId()" (ngModelChange)="typeId.set($event)" [disabled]="readOnly()"
+            <select id="te-type" [ngModel]="typeId()" (ngModelChange)="typeId.set($event)" [disabled]="locked()"
               class="w-full px-4 py-2.5 border border-input rounded-lg text-sm bg-background text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring disabled:opacity-60">
               <option value="" disabled>Elige un tipo</option>
               @for (option of types(); track option.id) { <option [value]="option.id">{{ option.name }}</option> }
@@ -106,7 +114,7 @@ const STARTER: Record<EditorFormat, string> = {
           </div>
           <div>
             <label for="te-severity" class="block text-sm font-medium text-foreground mb-1.5">Severidad</label>
-            <select id="te-severity" [ngModel]="severityId()" (ngModelChange)="severityId.set($event)" [disabled]="readOnly()"
+            <select id="te-severity" [ngModel]="severityId()" (ngModelChange)="severityId.set($event)" [disabled]="locked()"
               class="w-full px-4 py-2.5 border border-input rounded-lg text-sm bg-background text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring disabled:opacity-60">
               <option value="" disabled>Elige una severidad</option>
               @for (option of severities(); track option.id) { <option [value]="option.id">{{ option.name }}</option> }
@@ -134,7 +142,7 @@ const STARTER: Record<EditorFormat, string> = {
 
       <div class="grid gap-4 lg:grid-cols-2">
         <app-card title="Contenido" [subtitle]="format() === 'MD' ? 'Markdown con \${parámetros}' : 'HTML con \${parámetros}'" class="block">
-          <textarea #editor id="te-content" aria-label="Contenido de la plantilla" rows="22" spellcheck="false" [ngModel]="content()" (ngModelChange)="content.set($event)" [readOnly]="readOnly()"
+          <textarea #editor id="te-content" aria-label="Contenido de la plantilla" rows="22" spellcheck="false" [ngModel]="content()" (ngModelChange)="content.set($event)" [readOnly]="locked()"
             class="w-full px-3 py-2 border border-input rounded-lg text-sm font-mono leading-relaxed bg-background text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring"></textarea>
           <p class="text-xs text-muted-foreground mt-1">{{ bytes() }} de {{ maxBytes }} bytes</p>
 
@@ -169,6 +177,62 @@ const STARTER: Record<EditorFormat, string> = {
           </app-card>
         </div>
       </div>
+
+      @if (!creating() && exists()) {
+        <app-card title="Historial" subtitle="Cada guardado queda como una versión; restaurar guarda la versión antigua como una nueva" class="block mt-4">
+          <app-button variant="secondary" size="sm" (click)="toggleHistory()" data-testid="history-toggle">
+            <lucide-icon [img]="History" [size]="14" strokeWidth="2" /> {{ historyOpen() ? 'Ocultar historial' : 'Ver historial' }}
+          </app-button>
+
+          @if (historyOpen()) {
+            @if (historyError()) {
+              <p role="alert" class="mt-3 text-sm text-destructive" data-testid="history-error">No se pudo cargar el historial.</p>
+            } @else if (historyLoading()) {
+              <p class="mt-3 text-sm text-muted-foreground">Cargando historial…</p>
+            } @else if (versions().length === 0) {
+              <p class="mt-3 text-sm text-muted-foreground" data-testid="history-empty">Aún no hay versiones guardadas.</p>
+            } @else {
+              <ul class="mt-3 divide-y divide-border text-sm" data-testid="versions">
+                @for (version of versions(); track version.version) {
+                  <li class="flex flex-wrap items-center gap-2 py-2" data-testid="version-row">
+                    <span class="font-medium text-foreground">Versión {{ version.version }}</span>
+                    <app-badge [color]="version.reason === 'BASELINE' ? 'warning' : 'neutral'">{{ reasonLabel(version.reason) }}</app-badge>
+                    <span class="text-muted-foreground">{{ when(version) ? (when(version) | date: 'short') : '' }} · {{ version.sizeBytes }} bytes</span>
+                    <span class="ml-auto flex gap-1">
+                      <app-button variant="ghost" size="sm" (click)="compare(version)" [disabled]="restoring()">Comparar</app-button>
+                      <app-button variant="ghost" size="sm" (click)="askRestore(version)" [disabled]="restoring() || locked()">
+                        <lucide-icon [img]="RotateCcw" [size]="14" strokeWidth="2" /> Restaurar
+                      </app-button>
+                    </span>
+                  </li>
+                }
+              </ul>
+            }
+
+            @if (pendingRestore(); as target) {
+              <div role="alertdialog" class="mt-3 rounded-lg border border-border bg-card p-3 text-sm text-foreground" data-testid="restore-confirm">
+                ¿Restaurar la versión {{ target.version }}? El contenido actual se guarda en el historial y se reemplaza por esa versión.
+                @if (dirty()) { <strong class="block mt-1">Tienes cambios sin guardar: se perderán.</strong> }
+                <div class="mt-2 flex gap-2">
+                  <app-button size="sm" (click)="confirmRestore()" [disabled]="restoring()">{{ restoring() ? 'Restaurando…' : 'Restaurar' }}</app-button>
+                  <app-button variant="ghost" size="sm" (click)="pendingRestore.set(null)" [disabled]="restoring()">Cancelar</app-button>
+                </div>
+              </div>
+            }
+
+            @if (comparison(); as view) {
+              <div class="mt-3" data-testid="comparison">
+                <div class="flex items-center justify-between text-sm">
+                  <span class="font-medium text-foreground">Versión {{ view.version }} → lo que tienes ahora ({{ view.changes }} {{ view.changes === 1 ? 'línea distinta' : 'líneas distintas' }})</span>
+                  <app-button variant="ghost" size="sm" (click)="comparison.set(null)">Cerrar</app-button>
+                </div>
+                <pre class="mt-2 max-h-72 overflow-auto rounded-lg border border-border bg-background p-2 text-xs leading-relaxed"><code>@for (line of view.lines; track $index) {<span [class]="lineClass(line)" data-testid="diff-line">{{ marker(line) }} {{ line.text }}
+</span>}</code></pre>
+              </div>
+            }
+          }
+        </app-card>
+      }
     }
   `,
 })
@@ -185,6 +249,8 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
   readonly ArrowLeft = ArrowLeft;
   readonly Save = Save;
   readonly Lock = Lock;
+  readonly History = History;
+  readonly RotateCcw = RotateCcw;
   readonly Eye = Eye;
   readonly AlertTriangle = AlertTriangle;
   readonly listUrl = listUrl;
@@ -207,12 +273,23 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
   readonly detected = signal<string[]>([]);
 
   readonly exists = signal(false);
-  readonly readOnly = signal(false);
+  readonly system = signal(false);
+  readonly confirmSystem = signal(false);
+  /** A system template stays locked until the person confirms they know what depends on it. */
+  readonly locked = computed(() => this.system() && !this.confirmSystem());
   readonly saving = signal(false);
   readonly conflict = signal(false);
   readonly problems = signal<TemplateProblem[]>([]);
   readonly previewing = signal(false);
   readonly previewHtml = signal<SafeHtml>('');
+
+  readonly historyOpen = signal(false);
+  readonly historyLoading = signal(false);
+  readonly historyError = signal(false);
+  readonly versions = signal<TemplateVersion[]>([]);
+  readonly comparison = signal<{ version: number; lines: DiffLine[]; changes: number } | null>(null);
+  readonly pendingRestore = signal<TemplateVersion | null>(null);
+  readonly restoring = signal(false);
 
   private etag: string | null = null;
   private fileNameTouched = false;
@@ -259,7 +336,10 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
     if (this.id === null) return;
     this.conflict.set(false);
     this.problems.set([]);
+    this.comparison.set(null);
+    this.pendingRestore.set(null);
     await this.load(this.id);
+    if (this.historyOpen()) await this.loadHistory();
   }
 
   hasUnsavedChanges(): boolean {
@@ -291,6 +371,76 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
     if (starter) this.content.set(STARTER[format]);
   }
 
+  readonly when = (version: TemplateVersion) => toDate(version.createdAt);
+
+  reasonLabel(reason: TemplateVersion['reason']): string {
+    return { SAVE: 'Guardado', RESTORE: 'Restauración', BASELINE: 'Original' }[reason] ?? reason;
+  }
+
+  marker(line: DiffLine): string {
+    return { same: ' ', add: '+', del: '-' }[line.kind];
+  }
+
+  lineClass(line: DiffLine): string {
+    return { same: 'block text-muted-foreground', add: 'block bg-success/15 text-foreground', del: 'block bg-destructive/15 text-foreground' }[line.kind];
+  }
+
+  async toggleHistory(): Promise<void> {
+    this.historyOpen.update((open) => !open);
+    if (this.historyOpen()) await this.loadHistory();
+  }
+
+  /** Shows what changed between a saved version and the text in the editor. */
+  async compare(version: TemplateVersion): Promise<void> {
+    try {
+      const full = await this.templates.version(this.id as string, version.version);
+      const lines = diffLines(full.content ?? '', this.content());
+      this.comparison.set({ version: version.version, lines, changes: changeCount(lines) });
+    } catch (error) {
+      this.notifications.error('No se pudo leer la versión', this.failure(error));
+    }
+  }
+
+  askRestore(version: TemplateVersion): void {
+    this.pendingRestore.set(version);
+  }
+
+  async confirmRestore(): Promise<void> {
+    const target = this.pendingRestore();
+    if (!target || this.etag === null) return;
+    this.restoring.set(true);
+    try {
+      const restored = await this.templates.restore(this.id as string, target.version, this.etag, this.system() && this.confirmSystem());
+      this.applyContent(restored);
+      this.content.set(restored.content);
+      this.saved.update((s) => ({ ...s, content: restored.content }));
+      this.problems.set([]);
+      this.comparison.set(null);
+      this.pendingRestore.set(null);
+      this.conflict.set(false);
+      this.notifications.success('Versión restaurada', `Versión ${target.version}`);
+      await this.loadHistory();
+    } catch (error) {
+      if (error instanceof HttpErrorResponse && error.status === 412) this.conflict.set(true);
+      this.problemsFrom(error);
+      this.notifications.error('No se pudo restaurar', this.failure(error));
+    } finally {
+      this.restoring.set(false);
+    }
+  }
+
+  private async loadHistory(): Promise<void> {
+    this.historyLoading.set(true);
+    this.historyError.set(false);
+    try {
+      this.versions.set(await this.templates.versions(this.id as string));
+    } catch {
+      this.historyError.set(true);
+    } finally {
+      this.historyLoading.set(false);
+    }
+  }
+
   goToLine(line: number): void {
     const area = this.editor()?.nativeElement;
     if (!area) return;
@@ -300,7 +450,7 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
   }
 
   async save(): Promise<void> {
-    if (this.readOnly() || this.saving()) return;
+    if (this.locked() || this.saving()) return;
     const invalid = this.validate();
     if (invalid) {
       this.notifications.error('Revisa la plantilla', invalid);
@@ -363,7 +513,7 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
         this.saved.update((s) => ({ ...s, description: this.description(), typeId: this.typeId(), severityId: this.severityId() }));
       }
       if (this.content() !== before.content) {
-        const saved = await this.templates.saveContent(id, this.content(), this.exists() ? this.etag : null);
+        const saved = await this.templates.saveContent(id, this.content(), this.exists() ? this.etag : null, this.system() && this.confirmSystem());
         this.applyContent(saved);
         this.saved.update((s) => ({ ...s, content: saved.content }));
       }
@@ -397,7 +547,7 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
   private applyContent(content: TemplateContent): void {
     this.etag = content.exists ? content.etag : null;
     this.exists.set(content.exists);
-    this.readOnly.set(content.readOnly);
+    this.system.set(content.system);
     this.detected.set(content.parameters);
   }
 
@@ -430,7 +580,7 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
     const status = error instanceof HttpErrorResponse ? error.status : 0;
     switch (status) {
       case 403:
-        return 'No tienes permiso para cambiar esta plantilla, o es una plantilla del sistema.';
+        return 'No tienes permiso para cambiar esta plantilla, o es una plantilla del sistema y falta confirmarlo.';
       case 412:
         return 'Alguien guardó la plantilla antes que tú.';
       case 413:

@@ -33,8 +33,10 @@ sequenceDiagram
 | `POST /templates` | `POST /templates` | Solo `description`, `location`, `fileFormat`, `templateTypeId`, `severityTypeId`. `location` debe ser un nombre de archivo (`.ftl`, `.ftlh`, `.md`, `.html`); si no, 400 sin llamar a Mercury. |
 | `GET/PUT/DELETE /templates/:id` | igual | `:id` debe ser UUID. DELETE desactiva (borrado lógico). |
 | `GET /templates/:id/content` | igual | Devuelve el contenido y su `etag`. |
-| `PUT /templates/:id/content` | igual | Pasa `If-Match` o `If-None-Match: *` y devuelve el `ETag`. Solo viaja `content`. |
+| `PUT /templates/:id/content` | igual | Pasa `If-Match` o `If-None-Match: *` y devuelve el `ETag`. Solo viaja `content`; la única consulta que pasa es `confirmSystem=true\|false` (otro valor, 400). |
 | `POST /templates/preview` | `POST /templates/preview` | Solo `name`, `content`, `params`; la aplicación la pone el BFF. |
+| `GET /templates/:id/versions`, `GET /templates/:id/versions/:n` | igual | `:n` entero positivo (hasta 9 cifras); otro valor es 400 sin llamar a Mercury. |
+| `POST /templates/:id/versions/:n/restore` | igual | Pasa `If-Match`. Guarda la versión antigua como una nueva. |
 | `GET /templates/{types,severities,defined}` | listas de referencia | Ver `docs/technical/campaigns.md`. |
 
 Escribir (`PUT`, `POST /preview`, `DELETE`) necesita `mercury:message:write` en `BACKBONE_CLIENT_SCOPES`, registrado antes en el cliente M2M de Backbone; la persona, además, el permiso `TEMPLATE_MANAGE` en la aplicación.
@@ -47,6 +49,7 @@ Escribir (`PUT`, `POST /preview`, `DELETE`) necesita `mercury:message:write` en 
 | Crear y editar | `/dashboard/templates/new`, `/dashboard/templates/:id` · `template-editor-page` |
 | Llamadas al BFF | `TemplatesService`, `ReferenceDataService` |
 | Nombre de archivo, líneas, parámetros, documento de la vista previa | `features/dashboard/utils/template-input.ts` |
+| Diferencia entre dos textos | `features/dashboard/utils/text-diff.ts` |
 | Aviso al salir con cambios | `unsavedChangesGuard` (`canDeactivate`) y `beforeunload` |
 
 ### Cómo funciona el editor
@@ -56,7 +59,17 @@ Escribir (`PUT`, `POST /preview`, `DELETE`) necesita `mercury:message:write` en 
 - **Conflictos:** un 412 muestra un aviso con **Recargar**, que descarta lo escrito y trae la versión de la otra persona.
 - **Errores de sintaxis:** un 422 (al guardar) o `problems` de la vista previa (al escribir) se listan con línea y columna; **Ir a la línea** selecciona esa línea en el cuadro de texto.
 - **Vista previa:** 500 ms después de la última tecla se pide `POST /templates/preview` con los parámetros de ejemplo. El resultado se muestra en un `iframe` con `sandbox=""` (sin scripts ni acceso al sitio) y un documento con una política CSP que bloquea todo salvo estilos propios, imágenes `https:` y `data:`. Los parámetros detectados se agregan solos a la lista de ejemplo.
-- **Plantillas del sistema** (`zb_`, `sk_`, `iris_`, `ds_`): Mercury las marca `readOnly`; el editor las abre de solo lectura, con vista previa.
+- **Plantillas del sistema** (`zb_`, `sk_`, `iris_`, `ds_`): Mercury las marca `system`. El editor las abre **bloqueadas** con un aviso y una casilla de confirmación; al marcarla se desbloquea y el guardado (y la restauración) viaja con `confirmSystem=true`. Mercury conserva el original como versión `BASELINE`, así que siempre se puede volver a él.
+- **Historial:** en una plantilla con archivo, **Ver historial** lista las versiones (`Guardado`, `Restauración`, `Original`). **Comparar** muestra la diferencia línea por línea entre esa versión y el texto del editor (`diffLines`, subsecuencia común más larga; por encima de 2000 líneas por lado se marca todo como cambiado para no bloquear el navegador). **Restaurar** pide confirmación, avisa si hay cambios sin guardar, envía `If-Match` con la huella actual y deja el editor con el contenido restaurado; un 412 muestra el aviso de conflicto.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Bloqueada: plantilla del sistema
+    Bloqueada --> Editable: confirmar la casilla
+    [*] --> Editable: plantilla normal
+    Editable --> Editable: guardar (nueva versión)
+    Editable --> Editable: restaurar una versión (nueva versión)
+```
 - **Sin editor de código externo:** el contenido se edita en un `<textarea>`; un editor con resaltado (CodeMirror) queda como mejora (ver `docs/analysis/editor-plantillas-y-campanas.md`).
 
 ## Pruebas

@@ -114,6 +114,52 @@ describe('TemplatesService', () => {
     await expect(invalid).rejects.toMatchObject({ status: 422, error: { problems: [{ line: 1 }] } });
   });
 
+  it('saveContent envía confirmSystem solo cuando se confirma', async () => {
+    const { service, http } = setup();
+
+    const plain = service.saveContent('n', 'x', 'abc');
+    const first = http.expectOne((r) => r.url === `${URL}/n/content`);
+    expect(first.request.params.has('confirmSystem')).toBe(false);
+    first.flush({ templateId: 'n', content: 'x', etag: 'e' });
+    await plain;
+
+    const confirmed = service.saveContent('n', 'x', 'abc', true);
+    const second = http.expectOne((r) => r.url === `${URL}/n/content`);
+    expect(second.request.params.get('confirmSystem')).toBe('true');
+    second.flush({ templateId: 'n', content: 'x', etag: 'e' });
+    await confirmed;
+  });
+
+  it('versions y version piden su ruta', async () => {
+    const { service, http } = setup();
+
+    const list = service.versions('n');
+    http.expectOne(`${URL}/n/versions`).flush([{ version: 2 }]);
+    expect(await list).toHaveLength(1);
+
+    const one = service.version('n', 2);
+    http.expectOne(`${URL}/n/versions/2`).flush({ version: 2, content: 'abc' });
+    expect((await one).content).toBe('abc');
+  });
+
+  it('restore hace POST con If-Match y, si se confirma, confirmSystem', async () => {
+    const { service, http } = setup();
+
+    const plain = service.restore('n', 2, 'abc');
+    const first = http.expectOne((r) => r.url === `${URL}/n/versions/2/restore`);
+    expect(first.request.method).toBe('POST');
+    expect(first.request.headers.get('If-Match')).toBe('"abc"');
+    expect(first.request.params.has('confirmSystem')).toBe(false);
+    first.flush({ templateId: 'n', content: 'viejo', etag: 'e2' });
+    expect((await plain).etag).toBe('e2');
+
+    const confirmed = service.restore('n', 2, 'abc', true);
+    const second = http.expectOne((r) => r.url === `${URL}/n/versions/2/restore`);
+    expect(second.request.params.get('confirmSystem')).toBe('true');
+    second.flush({ templateId: 'n', content: 'viejo', etag: 'e3' });
+    await confirmed;
+  });
+
   it('preview envía nombre, contenido y parámetros', async () => {
     const { service, http } = setup();
 

@@ -131,6 +131,48 @@ describe('templates (listas de referencia)', () => {
       assert.equal(last().ifNoneMatch, '*');
     });
 
+    it('pasa confirmSystem al guardar y rechaza otros valores', async () => {
+      await bff.call(`${api}/${ID}/content?confirmSystem=true&evil=1`, { method: 'PUT', cookie: SESSION, headers: { 'If-Match': '"a"' }, body: { content: 'x' } });
+      assert.equal(last().url, `/mercury/api/v1/templates/${ID}/content?confirmSystem=true`);
+
+      bff.state.apiCalls.length = 0;
+      const bad = await bff.call(`${api}/${ID}/content?confirmSystem=maybe`, { method: 'PUT', cookie: SESSION, body: { content: 'x' } });
+      assert.equal(bad.status, 400);
+      assert.equal(bff.state.apiCalls.length, 0);
+    });
+
+    it('lista y lee las versiones', async () => {
+      await bff.call(`${api}/${ID}/versions`, { cookie: SESSION });
+      assert.equal(last().url, `/mercury/api/v1/templates/${ID}/versions`);
+
+      await bff.call(`${api}/${ID}/versions/3`, { cookie: SESSION });
+      assert.equal(last().url, `/mercury/api/v1/templates/${ID}/versions/3`);
+    });
+
+    it.each([['0'], ['-1'], ['abc'], ['1.5'], ['1234567890']])('rechaza la versión %s sin llamar a Mercury', async (version) => {
+      const res = await bff.call(`${api}/${ID}/versions/${version}`, { cookie: SESSION });
+
+      assert.equal(res.status, 400);
+      assert.equal(bff.state.apiCalls.length, 0);
+    });
+
+    it('restaura una versión pasando If-Match y confirmSystem', async () => {
+      bff.state.apiHeaders = { ETag: '"nuevo"' };
+      const res = await bff.call(`${api}/${ID}/versions/2/restore?confirmSystem=true`, { method: 'POST', cookie: SESSION, headers: { 'If-Match': '"actual"' } });
+
+      assert.equal(res.headers.get('etag'), '"nuevo"');
+      assert.equal(last().method, 'POST');
+      assert.equal(last().url, `/mercury/api/v1/templates/${ID}/versions/2/restore?confirmSystem=true`);
+      assert.equal(last().ifMatch, '"actual"');
+      bff.state.apiHeaders = {};
+    });
+
+    it('rechaza un confirmSystem inválido al restaurar', async () => {
+      const res = await bff.call(`${api}/${ID}/versions/2/restore?confirmSystem=x`, { method: 'POST', cookie: SESSION });
+
+      assert.equal(res.status, 400);
+    });
+
     it('la vista previa lleva la aplicación del BFF y solo nombre, contenido y parámetros', async () => {
       await bff.call(`${api}/preview`, { method: 'POST', cookie: SESSION, body: { name: 'a.md', content: '# Hola', params: { a: 1 }, applicationId: 'other', x: 1 } });
 

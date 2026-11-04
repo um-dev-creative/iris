@@ -3,7 +3,7 @@ import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { TemplateEditorPageComponent } from './template-editor-page.component';
 import { NotificationService } from '../../../../core/services';
 import { fakeReferences, httpError } from '../../testing/campaigns.testing';
-import { contentOf, fakeTemplates, previewOf, summary } from '../../testing/templates.testing';
+import { contentOf, fakeTemplates, previewOf, summary, versionOf } from '../../testing/templates.testing';
 import { HttpErrorResponse } from '@angular/common/http';
 
 async function render(id: string | null = null, setup?: (fake: ReturnType<typeof fakeTemplates>) => void) {
@@ -240,13 +240,13 @@ describe('TemplateEditorPageComponent (editar)', () => {
     await component.save();
 
     expect(fake.service.update).not.toHaveBeenCalled();
-    expect(fake.service.saveContent).toHaveBeenCalledWith('a', 'nuevo', 'etag-1');
+    expect(fake.service.saveContent).toHaveBeenCalledWith('a', 'nuevo', 'etag-1', false);
     expect(notifications.success).toHaveBeenCalled();
     expect(component.dirty()).toBe(false);
 
     component.content.set('otra vez');
     await component.save();
-    expect(fake.service.saveContent).toHaveBeenLastCalledWith('a', 'otra vez', 'etag-2');
+    expect(fake.service.saveContent).toHaveBeenLastCalledWith('a', 'otra vez', 'etag-2', false);
   });
 
   it('si solo cambian los metadatos no toca el contenido', async () => {
@@ -267,7 +267,7 @@ describe('TemplateEditorPageComponent (editar)', () => {
 
     await component.save();
 
-    expect(fake.service.saveContent).toHaveBeenCalledWith('a', 'primero', null);
+    expect(fake.service.saveContent).toHaveBeenCalledWith('a', 'primero', null, false);
   });
 
   it('un 412 muestra el aviso de conflicto y Recargar descarta lo escrito', async () => {
@@ -322,16 +322,40 @@ describe('TemplateEditorPageComponent (editar)', () => {
     expect(notifications.error).toHaveBeenCalledWith('No se pudo guardar', expect.stringContaining(text));
   });
 
-  it('una plantilla del sistema se abre de solo lectura y no se guarda', async () => {
-    const { fixture, component, el, fake } = await render('a', (f) => f.service.content.mockResolvedValue(contentOf('a', { readOnly: true })));
+  it('una plantilla del sistema se abre bloqueada hasta que la persona confirma', async () => {
+    const { fixture, component, el, fake } = await render('a', (f) => f.service.content.mockResolvedValue(contentOf('a', { system: true })));
     component.content.set('intento');
     fixture.detectChanges();
 
-    expect(el.querySelector('[data-testid="readonly"]')).not.toBeNull();
+    expect(el.querySelector('[data-testid="system"]')).not.toBeNull();
     expect((el.querySelector('#te-content') as HTMLTextAreaElement).readOnly).toBe(true);
     expect((el.querySelector('[data-testid="save"] button') as HTMLButtonElement).disabled).toBe(true);
     await component.save();
     expect(fake.service.saveContent).not.toHaveBeenCalled();
+  });
+
+  it('al confirmar se puede editar y se guarda con confirmSystem', async () => {
+    const { fixture, component, el, fake } = await render('a', (f) => f.service.content.mockResolvedValue(contentOf('a', { system: true })));
+    const check = el.querySelector('[data-testid="confirm-system"]') as HTMLInputElement;
+
+    check.checked = true;
+    check.dispatchEvent(new Event('change'));
+    component.content.set('cambio consciente');
+    fixture.detectChanges();
+
+    expect((el.querySelector('#te-content') as HTMLTextAreaElement).readOnly).toBe(false);
+    expect((el.querySelector('[data-testid="save"] button') as HTMLButtonElement).disabled).toBe(false);
+    await component.save();
+    expect(fake.service.saveContent).toHaveBeenCalledWith('a', 'cambio consciente', 'etag-1', true);
+  });
+
+  it('una plantilla normal se guarda sin confirmSystem', async () => {
+    const { component, fake } = await render('a');
+    component.content.set('x');
+
+    await component.save();
+
+    expect(fake.service.saveContent).toHaveBeenCalledWith('a', 'x', 'etag-1', false);
   });
 
   it.each([[403, 'No tienes permiso'], [503, 'no está configurada'], [500, 'No se pudo cargar']])('si cargar falla con %s lo dice', async (status, text) => {
@@ -473,5 +497,185 @@ describe('TemplateEditorPageComponent (vista previa)', () => {
     const { el } = await render('a');
 
     expect(el.querySelector('iframe[data-testid="preview"]')?.getAttribute('sandbox')).toBe('');
+  });
+});
+
+describe('TemplateEditorPageComponent (historial)', () => {
+  const open = async (id: string | null = 'a', setup?: (fake: ReturnType<typeof fakeTemplates>) => void) => {
+    const ctx = await render(id, setup);
+    (ctx.el.querySelector('[data-testid="history-toggle"] button') as HTMLButtonElement | null)?.click();
+    await ctx.fixture.whenStable();
+    ctx.fixture.detectChanges();
+    return ctx;
+  };
+  const button = (el: HTMLElement, text: string) => Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.includes(text)) as HTMLButtonElement;
+
+  it('no hay historial en una plantilla nueva', async () => {
+    expect((await render()).el.querySelector('[data-testid="history-toggle"]')).toBeNull();
+  });
+
+  it('ni en una plantilla que aún no tiene archivo', async () => {
+    const { el } = await render('a', (f) => f.service.content.mockResolvedValue(contentOf('a', { exists: false, etag: '', content: '' })));
+
+    expect(el.querySelector('[data-testid="history-toggle"]')).toBeNull();
+  });
+
+  it('abre el historial y lista las versiones con su motivo', async () => {
+    const { el, fake } = await open();
+
+    expect(fake.service.versions).toHaveBeenCalledWith('a');
+    const rows = Array.from(el.querySelectorAll('[data-testid="version-row"]'));
+    expect(rows).toHaveLength(2);
+    expect(rows[0].textContent).toContain('Versión 2');
+    expect(rows[0].textContent).toContain('Guardado');
+    expect(rows[1].textContent).toContain('Original');
+  });
+
+  it('el botón alterna entre ver y ocultar', async () => {
+    const { fixture, el } = await open();
+
+    (el.querySelector('[data-testid="history-toggle"] button') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-testid="versions"]')).toBeNull();
+  });
+
+  it('sin versiones lo dice', async () => {
+    const { el } = await open('a', (f) => f.service.versions.mockResolvedValue([]));
+
+    expect(el.querySelector('[data-testid="history-empty"]')).not.toBeNull();
+  });
+
+  it('si cargar el historial falla avisa', async () => {
+    const { el } = await open('a', (f) => f.service.versions.mockRejectedValue(httpError(500)));
+
+    expect(el.querySelector('[data-testid="history-error"]')).not.toBeNull();
+  });
+
+  it('compara una versión con lo que hay en el editor, línea por línea', async () => {
+    const { fixture, component, el, fake } = await open();
+    component.content.set('uno\ntres');
+    fixture.detectChanges();
+
+    button(el.querySelector('[data-testid="version-row"]') as HTMLElement, 'Comparar').click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fake.service.version).toHaveBeenCalledWith('a', 2);
+    const lines = Array.from(el.querySelectorAll('[data-testid="diff-line"]')).map((l) => l.textContent?.trim());
+    expect(lines).toEqual(['uno', '- dos', '+ tres']);
+    expect(el.querySelector('[data-testid="comparison"]')?.textContent).toContain('2 líneas distintas');
+
+    button(el.querySelector('[data-testid="comparison"]') as HTMLElement, 'Cerrar').click();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="comparison"]')).toBeNull();
+  });
+
+  it('con una sola línea distinta usa el singular y una versión vacía se compara como todo agregado', async () => {
+    const { fixture, component, el, fake } = await open();
+    fake.service.version.mockResolvedValue({ ...versionOf(2), content: null });
+    component.content.set('solo');
+    fixture.detectChanges();
+
+    await component.compare(versionOf(2));
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-testid="comparison"]')?.textContent).toContain('1 línea distinta');
+  });
+
+  it('si leer la versión falla avisa', async () => {
+    const { component, fake, notifications } = await open();
+    fake.service.version.mockRejectedValue(httpError(404));
+
+    await component.compare(versionOf(2));
+
+    expect(notifications.error).toHaveBeenCalledWith('No se pudo leer la versión', expect.stringContaining('ya no existe'));
+  });
+
+  it('restaurar pide confirmación y avisa si hay cambios sin guardar', async () => {
+    const { fixture, component, el, fake } = await open();
+    component.content.set('cambio sin guardar');
+    fixture.detectChanges();
+
+    button(el.querySelector('[data-testid="version-row"]') as HTMLElement, 'Restaurar').click();
+    fixture.detectChanges();
+
+    expect(fake.service.restore).not.toHaveBeenCalled();
+    expect(el.querySelector('[data-testid="restore-confirm"]')?.textContent).toContain('se perderán');
+    button(el.querySelector('[data-testid="restore-confirm"]') as HTMLElement, 'Cancelar').click();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="restore-confirm"]')).toBeNull();
+  });
+
+  it('confirmar la restauración usa la huella actual, actualiza el editor y recarga el historial', async () => {
+    const { fixture, component, el, fake, notifications } = await open();
+
+    button(el.querySelector('[data-testid="version-row"]') as HTMLElement, 'Restaurar').click();
+    fixture.detectChanges();
+    button(el.querySelector('[data-testid="restore-confirm"]') as HTMLElement, 'Restaurar').click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fake.service.restore).toHaveBeenCalledWith('a', 2, 'etag-1', false);
+    expect(component.content()).toBe('uno\ndos');
+    expect(component.dirty()).toBe(false);
+    expect(notifications.success).toHaveBeenCalledWith('Versión restaurada', 'Versión 2');
+    expect(fake.service.versions).toHaveBeenCalledTimes(2);
+  });
+
+  it('restaurar una plantilla del sistema envía la confirmación', async () => {
+    const { component, fake } = await open('a', (f) => f.service.content.mockResolvedValue(contentOf('a', { system: true })));
+    component.confirmSystem.set(true);
+    component.askRestore(versionOf(1));
+
+    await component.confirmRestore();
+
+    expect(fake.service.restore).toHaveBeenCalledWith('a', 1, 'etag-1', true);
+  });
+
+  it('un 412 al restaurar muestra el conflicto; otro error lo explica', async () => {
+    const { fixture, component, el, fake, notifications } = await open();
+    fake.service.restore.mockRejectedValue(httpError(412));
+    component.askRestore(versionOf(2));
+
+    await component.confirmRestore();
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-testid="conflict"]')).not.toBeNull();
+    expect(notifications.error).toHaveBeenCalledWith('No se pudo restaurar', expect.stringContaining('antes que tú'));
+    expect(component.restoring()).toBe(false);
+
+    fake.service.restore.mockRejectedValue(unprocessable([{ line: 1, column: 1, message: 'ya no es válida' }]));
+    await component.confirmRestore();
+    expect(component.problems()[0].message).toBe('ya no es válida');
+  });
+
+  it('confirmRestore sin versión elegida no hace nada', async () => {
+    const { component, fake } = await open();
+
+    await component.confirmRestore();
+
+    expect(fake.service.restore).not.toHaveBeenCalled();
+  });
+
+  it('Recargar también refresca el historial abierto y cierra la comparación', async () => {
+    const { component, fake } = await open();
+    component.comparison.set({ version: 1, lines: [], changes: 0 });
+
+    await component.reload();
+
+    expect(component.comparison()).toBeNull();
+    expect(fake.service.versions).toHaveBeenCalledTimes(2);
+  });
+
+  it('etiqueta cada motivo', async () => {
+    const { component } = await render('a');
+
+    expect(component.reasonLabel('SAVE')).toBe('Guardado');
+    expect(component.reasonLabel('RESTORE')).toBe('Restauración');
+    expect(component.reasonLabel('BASELINE')).toBe('Original');
+    expect(component.marker({ kind: 'add', text: '' })).toBe('+');
+    expect(component.lineClass({ kind: 'del', text: '' })).toContain('destructive');
   });
 });

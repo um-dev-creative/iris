@@ -131,7 +131,15 @@ flowchart LR
 - **Editar** abre la plantilla con su contenido. El botón **Guardar** se enciende cuando hay cambios; si intentas salir sin guardar, Iris pregunta.
 - Si otra persona guardó la misma plantilla mientras la editabas, Iris lo avisa y te ofrece **Recargar** (tus cambios se pierden, cópialos antes si los necesitas).
 - **Desactivar** (en la lista) pide confirmación: la plantilla deja de poder usarse en campañas nuevas; los mensajes y campañas anteriores no cambian.
-- Las plantillas del sistema (verificación de cuenta, avisos de ZeroBound y SmartKin) se abren de **solo lectura**: otros servicios dependen de ellas.
+- Las plantillas del sistema (verificación de cuenta, avisos de ZeroBound y SmartKin) se abren **bloqueadas**: otros servicios dependen de ellas. Para cambiarlas marca la casilla «Entiendo que otros servicios dependen de esta plantilla»; el original queda guardado en el historial.
+
+### Historial y restaurar
+
+Cada vez que guardas, Iris conserva esa versión (las últimas 50). En una plantilla ya guardada pulsa **Ver historial**:
+
+- **Comparar** muestra, línea por línea, qué cambió entre esa versión y lo que tienes en el editor (`+` agregado, `-` quitado).
+- **Restaurar** vuelve a esa versión. No borra nada: la versión restaurada se guarda como una versión nueva, así que también puedes deshacer la restauración. Si tenías cambios sin guardar, se pierden.
+- La versión **Original** es el contenido que tenía la plantilla antes de que la editaras por primera vez desde Iris.
 
 ### Mensajes que puedes ver
 
@@ -141,5 +149,5 @@ flowchart LR
 | «Alguien guardó la plantilla antes que tú» | Otra persona guardó una versión nueva. | Pulsa **Recargar** y vuelve a hacer tu cambio. |
 | «El contenido supera 262144 bytes» | La plantilla es demasiado larga (256 KB). | Acórtala o quita imágenes incrustadas. |
 | «No tienes permiso para administrar las plantillas» | Tu cuenta no tiene el permiso de plantillas. | Avisa al administrador. |
-| «No tienes permiso para cambiar esta plantilla, o es una plantilla del sistema» | Intentaste cambiar una plantilla del sistema o sin permiso. | Crea una plantilla nueva con el contenido que necesitas. |
+| «No tienes permiso para cambiar esta plantilla, o es una plantilla del sistema y falta confirmarlo» | No tienes el permiso, o intentaste cambiar una plantilla del sistema sin marcar la casilla de confirmación. | Marca la casilla (plantillas del sistema) o pide el permiso al administrador. |
 | «La gestión de plantillas no está configurada» | Falta configurar la aplicación en Iris. | Avisa al administrador. |

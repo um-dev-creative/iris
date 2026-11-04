@@ -73,8 +73,8 @@ export interface TemplateContent {
   etag: string;
   exists: boolean;
   lastModified?: string | null;
-  /** `true` para plantillas del sistema, que no se pueden cambiar desde la API. */
-  readOnly: boolean;
+  /** `true` para plantillas del sistema, de las que dependen otros servicios: guardarlas pide confirmación explícita. */
+  system: boolean;
   parameters: string[];
 }
 
@@ -102,3 +102,16 @@ export interface TemplateProblemsBody {
 
 export const TEMPLATE_DESCRIPTION_MAX = 200;
 export const TEMPLATE_CONTENT_MAX_BYTES = 262_144;
+
+/** Una versión guardada del contenido de una plantilla. */
+export interface TemplateVersion {
+  version: number;
+  etag: string;
+  sizeBytes: number;
+  /** `SAVE` (guardado), `RESTORE` (restauración) o `BASELINE` (el contenido original, antes de la primera edición desde Iris). */
+  reason: 'SAVE' | 'RESTORE' | 'BASELINE';
+  createdBy?: string | null;
+  createdAt?: string | null;
+  /** Solo al leer una versión, no en la lista. */
+  content?: string | null;
+}

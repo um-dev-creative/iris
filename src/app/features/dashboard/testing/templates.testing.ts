@@ -1,6 +1,6 @@
 import { Provider } from '@angular/core';
 import { TemplatesService } from '../services/templates.service';
-import { TemplateContent, TemplatePreviewResult, TemplateSearchResult, TemplateSummary } from '../../../core/models';
+import { TemplateContent, TemplatePreviewResult, TemplateSearchResult, TemplateSummary, TemplateVersion } from '../../../core/models';
 
 export const summary = (id: string, extra: Partial<TemplateSummary> = {}): TemplateSummary => ({
   id,
@@ -18,7 +18,11 @@ export const summary = (id: string, extra: Partial<TemplateSummary> = {}): Templ
 
 export const contentOf = (id: string, extra: Partial<TemplateContent> = {}): TemplateContent => ({
   templateId: id, name: `plantilla-${id}.md`, format: 'MARKDOWN', content: '# Hola ${name}', etag: 'etag-1', exists: true,
-  readOnly: false, parameters: ['name'], ...extra,
+  system: false, parameters: ['name'], ...extra,
+});
+
+export const versionOf = (version: number, extra: Partial<TemplateVersion> = {}): TemplateVersion => ({
+  version, etag: `e${version}`, sizeBytes: 10, reason: 'SAVE', createdBy: 'u-1', createdAt: '2026-02-01 10:00:00', ...extra,
 });
 
 export const previewOf = (extra: Partial<TemplatePreviewResult> = {}): TemplatePreviewResult => ({
@@ -40,6 +44,9 @@ export function fakeTemplates(items: TemplateSummary[] = []) {
     content: vi.fn().mockResolvedValue(contentOf('a')),
     saveContent: vi.fn().mockResolvedValue(contentOf('a', { etag: 'etag-2', content: 'nuevo' })),
     preview: vi.fn().mockResolvedValue(previewOf()),
+    versions: vi.fn().mockResolvedValue([versionOf(2), versionOf(1, { reason: 'BASELINE' })]),
+    version: vi.fn().mockResolvedValue({ ...versionOf(1), content: 'uno\ndos' }),
+    restore: vi.fn().mockResolvedValue(contentOf('a', { etag: 'etag-3', content: 'uno\ndos' })),
   };
   return { service, provider: { provide: TemplatesService, useValue: service } as Provider };
 }
