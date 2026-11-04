@@ -22,6 +22,8 @@ sequenceDiagram
 |---|---|---|
 | `GET /campaigns` | `GET /campaigns/application/{MONITORED_APPLICATION_ID}` | Campañas **creadas por la persona** en la aplicación. |
 | `GET /campaigns/channel-types` | `GET /channel-types/enabled` | Canales para el selector. Va antes de `/:id`. |
+| `GET /templates/defined` | `GET /templates/defined?applicationId={MONITORED_APPLICATION_ID}` | Plantillas que la campaña puede usar. El BFF fija la aplicación y descarta cualquier `applicationId` del navegador. Mercury exige el permiso `TEMPLATE_READ_PERMISSION` (por defecto `TEMPLATE_MANAGE`). |
+| `GET /templates/types`, `GET /templates/severities` | igual | Listas para los formularios de plantillas. |
 | `GET /campaigns/:id` | `GET /campaigns/{id}` | |
 | `GET /campaigns/:id/progress` | `GET /campaigns/{id}/progress` | |
 | `POST /campaigns` | `POST /campaigns` | El BFF fija `applicationId`; solo pasan `name`, `channelTypeCode`, `templateId`, `userId`, `recipients`, `templateParams`, `scheduledAt` y `status`. |
@@ -51,7 +53,7 @@ Por qué no basta `/general/*`: Mercury exige en `/campaigns` el `Bearer` de la 
 
 Reglas que aplica la pantalla (Mercury vuelve a comprobarlas):
 
-- Nombre obligatorio de hasta 150 caracteres; plantilla con formato UUID; al menos un destinatario al crear; hasta 5000 destinatarios.
+- Nombre obligatorio de hasta 150 caracteres; la plantilla se elige de un selector (`ReferenceDataService.usableTemplates()`) y, si la persona no tiene permiso para listarlas (403) o la lista falla, queda un campo de texto que exige un UUID; al menos un destinatario al crear; hasta 5000 destinatarios.
 - Destinatarios: una persona por línea, `identificador[,nombre]` separado por coma, punto y coma o tabulador; se ignoran la cabecera y los repetidos (sin distinguir mayúsculas).
 - Parámetros: una línea `clave=valor`, con la clave como nombre FreeMarker válido.
 - Una campaña **programada** exige fecha futura. El valor se envía como `YYYY-MM-DDTHH:mm:ss` (hora local, sin zona).

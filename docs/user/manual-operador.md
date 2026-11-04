@@ -79,7 +79,7 @@ flowchart LR
 
 1. Pulsa **Nueva campaña**.
 2. Escribe el **nombre** y elige el **canal** (correo, Telegram…).
-3. Indica el **id de la plantilla** que se enviará.
+3. Elige la **plantilla** que se enviará. Si tu cuenta no puede ver la lista de plantillas, escribe su id.
 4. Pega los **destinatarios**, una persona por línea (`correo,nombre`), o pulsa **Importar CSV**. Los repetidos se descartan solos y el contador te dice cuántos quedan.
 5. Si la plantilla usa datos variables, escríbelos en **Parámetros** (`nombre=Ana`, uno por línea).
 6. Elige **Borrador** o **Programada**. Una campaña programada necesita fecha y hora futuras.
@@ -100,5 +100,6 @@ flowchart LR
 | «No puedes … esta campaña: solo quien la creó puede hacerlo…» | Otra persona creó la campaña, o a Iris le falta permiso de escritura en Mercury. | Pide a quien la creó que lo haga, o avisa al administrador. |
 | «Mercury rechazó los datos…» | La plantilla, el canal o los destinatarios no son válidos. | Revisa el id de la plantilla y que el canal esté habilitado. |
 | «La campaña ya no existe» | Alguien la eliminó. | Actualiza la lista. |
+| «Elige una plantilla.» | Aún no has seleccionado ninguna plantilla de la lista. | Elígela en el selector. |
 | «La gestión de campañas no está configurada» | Falta configurar la aplicación en Iris. | Avisa al administrador. |
 | «No tienes permiso para ver las campañas» | Tu cuenta no puede leer las campañas. | Avisa al administrador. |

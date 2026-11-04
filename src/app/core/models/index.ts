@@ -8,3 +8,4 @@ export type {
 } from './dashboard.model';
 export * from './login-client.model';
 export * from './campaign.model';
+export * from './template.model';
