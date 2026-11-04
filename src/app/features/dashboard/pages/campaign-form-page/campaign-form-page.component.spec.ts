@@ -3,7 +3,7 @@ import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { CampaignFormPageComponent } from './campaign-form-page.component';
 import { AuthService, NotificationService } from '../../../../core/services';
 import { fakeAuth } from '../../../../core/testing/auth.testing';
-import { campaign, fakeCampaigns, httpError } from '../../testing/campaigns.testing';
+import { campaign, fakeCampaigns, fakeReferences, httpError, usableTemplate } from '../../testing/campaigns.testing';
 
 const TEMPLATE = '11111111-1111-4111-8111-111111111111';
 
@@ -12,7 +12,7 @@ async function render(id: string | null = null, existing = campaign('a', { statu
   const auth = fakeAuth({ id: 'u-1', username: 'luis', name: 'Luis' });
   TestBed.configureTestingModule({
     providers: [
-      provideRouter([]), fake.provider, auth.provider,
+      provideRouter([]), fake.provider, auth.provider, fakeReferences().provider,
       { provide: ActivatedRoute, useValue: { snapshot: { paramMap: new Map(id ? [['id', id]] : []) } } },
     ],
   });
@@ -46,7 +46,7 @@ describe('CampaignFormPageComponent (crear)', () => {
     const fake = fakeCampaigns([]);
     fake.service.channelTypes.mockRejectedValue(httpError(500));
     TestBed.configureTestingModule({
-      providers: [provideRouter([]), fake.provider, fakeAuth().provider, { provide: ActivatedRoute, useValue: { snapshot: { paramMap: new Map() } } }],
+      providers: [provideRouter([]), fake.provider, fakeAuth().provider, fakeReferences().provider, { provide: ActivatedRoute, useValue: { snapshot: { paramMap: new Map() } } }],
     });
     const fixture = TestBed.createComponent(CampaignFormPageComponent);
     fixture.detectChanges();
@@ -164,6 +164,54 @@ describe('CampaignFormPageComponent (crear)', () => {
     await component.submit();
 
     expect(fake.service.create).toHaveBeenCalled();
+  });
+});
+
+describe('CampaignFormPageComponent (plantillas)', () => {
+  async function renderWith(templates: Parameters<typeof fakeReferences>[0]) {
+    const fake = fakeCampaigns([campaign('a')]);
+    TestBed.configureTestingModule({
+      providers: [provideRouter([]), fake.provider, fakeAuth({ id: 'u-1', username: 'l', name: 'L' }).provider, fakeReferences(templates).provider,
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: new Map() } } }],
+    });
+    const fixture = TestBed.createComponent(CampaignFormPageComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return { fixture, component: fixture.componentInstance, el: fixture.nativeElement as HTMLElement };
+  }
+
+  it('con permiso muestra las plantillas en un selector', async () => {
+    const { el } = await renderWith([usableTemplate('t1'), usableTemplate('t2', { templateTypeName: null })]);
+
+    const options = Array.from(el.querySelectorAll('select#cf-template option')).map((o) => o.textContent?.trim());
+    expect(options).toEqual(['Elige una plantilla', 'Plantilla t1 · WELCOME', 'Plantilla t2']);
+    expect(el.querySelector('input#cf-template')).toBeNull();
+  });
+
+  it('elegir una plantilla del selector la guarda en el formulario', async () => {
+    const { fixture, component, el } = await renderWith([usableTemplate('t1')]);
+    const select = el.querySelector('select#cf-template') as HTMLSelectElement;
+
+    select.value = select.options[1].value;
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(component.templateId()).toBe('t1');
+  });
+
+  it('con selector, un valor vacío pide elegir una plantilla', async () => {
+    const { component } = await renderWith([usableTemplate('t1')]);
+    component.name.set('N');
+    component.channel.set('email');
+
+    expect(component.validate()).toBe('Elige una plantilla.');
+  });
+
+  it('sin permiso (403) conserva el campo de id', async () => {
+    const { el } = await renderWith(httpError(403));
+
+    expect(el.querySelector('input#cf-template')).not.toBeNull();
   });
 });
 
@@ -285,7 +333,7 @@ describe('CampaignFormPageComponent (editar)', () => {
     const fake = fakeCampaigns([]);
     fake.service.get.mockRejectedValue(httpError(status));
     TestBed.configureTestingModule({
-      providers: [provideRouter([]), fake.provider, fakeAuth().provider, { provide: ActivatedRoute, useValue: { snapshot: { paramMap: new Map([['id', 'a']]) } } }],
+      providers: [provideRouter([]), fake.provider, fakeAuth().provider, fakeReferences().provider, { provide: ActivatedRoute, useValue: { snapshot: { paramMap: new Map([['id', 'a']]) } } }],
     });
     const fixture = TestBed.createComponent(CampaignFormPageComponent);
     fixture.detectChanges();

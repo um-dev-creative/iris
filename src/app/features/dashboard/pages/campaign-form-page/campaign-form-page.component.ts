@@ -10,11 +10,12 @@ import {
   CampaignDraftStatus,
   CampaignRecipient,
   ChannelType,
+  UsableTemplate,
   CreateCampaignRequest,
   UpdateCampaignRequest,
 } from '../../../../core/models';
 import { ROUTE_PATHS, routeUrl } from '../../../../core/routes';
-import { CampaignsService } from '../../services';
+import { CampaignsService, ReferenceDataService } from '../../services';
 import { actionErrorMessage, loadFailure } from '../../utils/campaign-errors';
 import {
   MAX_RECIPIENTS,
@@ -82,11 +83,22 @@ const listUrl = routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.CAMPAIGNS);
               }
             </div>
             <div>
-              <label for="cf-template" class="block text-sm font-medium text-foreground mb-1.5">Plantilla (id)</label>
-              <input id="cf-template" name="template" type="text" autocomplete="off" [ngModel]="templateId()" (ngModelChange)="templateId.set($event)"
-                placeholder="00000000-0000-0000-0000-000000000000"
-                class="w-full px-4 py-2.5 border border-input rounded-lg text-sm font-mono bg-background text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring" />
-              <p class="text-xs text-muted-foreground mt-1">Id de la plantilla definida (<code>template_defined</code>) que usará la campaña.</p>
+              @if (templates().length > 0) {
+                <label for="cf-template" class="block text-sm font-medium text-foreground mb-1.5">Plantilla</label>
+                <select id="cf-template" name="template" [ngModel]="templateId()" (ngModelChange)="templateId.set($event)"
+                  class="w-full px-4 py-2.5 border border-input rounded-lg text-sm bg-background text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring">
+                  <option value="" disabled>Elige una plantilla</option>
+                  @for (option of templates(); track option.id) {
+                    <option [value]="option.id">{{ option.description }}{{ option.templateTypeName ? ' · ' + option.templateTypeName : '' }}</option>
+                  }
+                </select>
+              } @else {
+                <label for="cf-template" class="block text-sm font-medium text-foreground mb-1.5">Plantilla (id)</label>
+                <input id="cf-template" name="template" type="text" autocomplete="off" [ngModel]="templateId()" (ngModelChange)="templateId.set($event)"
+                  placeholder="00000000-0000-0000-0000-000000000000"
+                  class="w-full px-4 py-2.5 border border-input rounded-lg text-sm font-mono bg-background text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring" />
+                <p class="text-xs text-muted-foreground mt-1">Id de la plantilla definida (<code>template_defined</code>) que usará la campaña.</p>
+              }
             </div>
           </div>
 
@@ -150,6 +162,7 @@ const listUrl = routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.CAMPAIGNS);
 })
 export class CampaignFormPageComponent implements OnInit {
   private readonly service = inject(CampaignsService);
+  private readonly references = inject(ReferenceDataService);
   private readonly auth = inject(AuthService);
   private readonly notifications = inject(NotificationService);
   private readonly router = inject(Router);
@@ -164,6 +177,7 @@ export class CampaignFormPageComponent implements OnInit {
   readonly original = signal<Campaign | null>(null);
   readonly loadFailed = signal<'forbidden' | 'unavailable' | 'failed' | null>(null);
   readonly channels = signal<ChannelType[]>([]);
+  readonly templates = signal<UsableTemplate[]>([]);
 
   readonly name = signal('');
   readonly channel = signal('');
@@ -184,6 +198,8 @@ export class CampaignFormPageComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     // the channels fill the selector; without them the field stays a text box
     this.service.channelTypes().then((list) => this.channels.set(list.filter((c) => c.enabled !== false)), () => undefined);
+    // the same for the templates: without permission to list them the field stays an id box
+    this.references.usableTemplates().then((list) => this.templates.set(list), () => undefined);
     if (this.id === null) return;
     try {
       const campaign = await this.service.get(this.id);
@@ -239,7 +255,7 @@ export class CampaignFormPageComponent implements OnInit {
     if (name === '') return 'Escribe un nombre.';
     if (name.length > CAMPAIGN_NAME_MAX) return `El nombre admite hasta ${CAMPAIGN_NAME_MAX} caracteres.`;
     if (this.channel().trim() === '') return 'Elige un canal.';
-    if (!UUID_PATTERN.test(this.templateId().trim())) return 'La plantilla debe ser un id válido (UUID).';
+    if (!UUID_PATTERN.test(this.templateId().trim())) return this.templates().length > 0 ? 'Elige una plantilla.' : 'La plantilla debe ser un id válido (UUID).';
     const recipients = this.parsedRecipients();
     if (recipients.invalidLines.length > 0) return `Hay líneas de destinatarios sin identificador: ${recipients.invalidLines.join(', ')}.`;
     if (recipients.recipients.length === 0 && !this.editing()) return 'Agrega al menos un destinatario.';

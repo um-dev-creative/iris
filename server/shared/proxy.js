@@ -44,7 +44,7 @@ function isSafePath(path) {
 /** The trace id of the request, when tracing is on (it is validated hex by the trace middleware). */
 const traceOf = (req) => (req.trace ? { traceId: req.trace.traceId } : {});
 
-const forward = (req, url, token, { body, headers = {} } = {}) =>
+const forward = (req, url, token, { body, headers = {}, query } = {}) =>
   axios({
     ...upstreamTls,
     method: req.method,
@@ -60,7 +60,8 @@ const forward = (req, url, token, { body, headers = {} } = {}) =>
       ...(req.trace ? { traceparent: toTraceparent(req.trace) } : {}),
       ...headers,
     },
-    params: req.query,
+    // `query` replaces the browser's: a value the BFF decides (the application) must not be overridable
+    params: query ?? req.query,
     // a repeated parameter (`sort=a&sort=b`) must stay `sort=a&sort=b`: axios' default `sort[]=a` is not bound by Spring
     paramsSerializer: { indexes: null },
     data: body === undefined ? (['POST', 'PUT', 'PATCH'].includes(req.method) ? req.body : undefined) : body,
@@ -98,6 +99,7 @@ async function renewSession(req, res) {
  * @param {boolean} [options.public]  no session needed (sign-up, code verification): the call goes out without token
  * @param {*} [options.body]          a prepared body (e.g. FormData) instead of `req.body`
  * @param {object} [options.headers]  extra upstream headers
+ * @param {object} [options.query]    the query string to send instead of the request's
  *
  * With a session, a 401 silently renews it through backbone once and retries.
  */
