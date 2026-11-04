@@ -98,6 +98,7 @@ async function start({ env = {}, appOptions } = {}) {
     }
     return next();
   });
+  backbone.get(`${root}/session/validate`, (_req, res) => res.status(200).json(state.sessionActive ?? true));
   // anything else under /backbone/api/v1 is a resource of the backbone API, guarded by the session token
   backbone.use(root, (req, res) => {
     state.apiCalls.push({ service: 'backbone', method: req.method, url: req.originalUrl, token: req.headers['session-token'] });

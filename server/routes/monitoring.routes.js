@@ -1,6 +1,7 @@
 'use strict';
 
 const axios = require('axios');
+const { upstreamTls } = require('../shared/tls');
 const router = require('express').Router();
 const logger = require('../config/logger');
 const backbone = require('../shared/backbone');
@@ -23,12 +24,13 @@ const fromMercury = (path, bearer, sessionToken) =>
   axios.get(`${MERCURY_BASE_URL}${MERCURY_API_PREFIX}${path}`, {
     headers: { Accept: 'application/json', 'session-token': sessionToken, ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}) },
     validateStatus: () => true,
+    ...upstreamTls,
   });
 
 async function probe(name, url) {
   const started = Date.now();
   try {
-    const r = await axios.get(url, { timeout: PROBE_TIMEOUT_MS, validateStatus: () => true });
+    const r = await axios.get(url, { timeout: PROBE_TIMEOUT_MS, validateStatus: () => true, ...upstreamTls });
     const latencyMs = Date.now() - started;
     if (r.status !== 200 || r.data?.status !== 'UP') return { name, status: 'down', latencyMs };
     return { name, status: latencyMs > SLOW_MS ? 'degraded' : 'operational', latencyMs };
@@ -72,7 +74,10 @@ function summarize(campaigns) {
 
 async function overview(req, res) {
   const sessionToken = req.cookies?.[SESSION_COOKIE];
-  if (!sessionToken) return res.status(401).json({ error: 'Session required' });
+  if (!sessionToken) {
+    logger.warn('Monitoring: the request carries no iris_session cookie');
+    return res.status(401).json({ error: 'Session required' });
+  }
 
   const services = await servicesHealth();
   if (!MONITORED_APPLICATION_ID) {
@@ -81,7 +86,16 @@ async function overview(req, res) {
   try {
     const bearer = await backbone.applicationClientToken();
     const list = await fromMercury(`/campaigns/application/${encodeURIComponent(MONITORED_APPLICATION_ID)}`, bearer, sessionToken);
-    if (list.status === 401) return res.status(401).json({ error: 'Session required' });
+    if (list.status === 401) {
+      // mercury also answers 401 to a session backbone accepts when it cannot verify it (its signing secret differs): that is not
+      // an expired session, and answering 401 would sign the person out of a dashboard that works
+      if (!(await backbone.isSessionActive(sessionToken))) {
+        logger.warn('Monitoring: mercury and backbone both reject the session (expired or revoked): the person is sent to the login');
+        return res.status(401).json({ error: 'Session required' });
+      }
+      logger.warn('Monitoring: mercury rejected a session that backbone accepts; check that both share APP_TOKEN_SECRET');
+      return res.json({ generatedAt: new Date().toISOString(), campaignsAvailable: false, totals: summarize([]), campaigns: [], services });
+    }
     if (list.status !== 200 || !Array.isArray(list.data)) {
       logger.warn(`Monitoring: mercury answered ${list.status} listing campaigns`);
       return res.json({ generatedAt: new Date().toISOString(), campaignsAvailable: false, totals: summarize([]), campaigns: [], services });
