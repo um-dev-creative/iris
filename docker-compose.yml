@@ -27,6 +27,9 @@ services:
       BACKBONE_API_PREFIX: /api/v1
       BACKBONE_HEALTH_PATH: /actuator/health
       CORS_ORIGIN: http://localhost:3000
+      # nginx terminates TLS; the certificate paths of config/local.env only exist on a developer's machine
+      SSL_CERT_PATH: ""
+      SSL_KEY_PATH: ""
       # Mercury and backbone-rest serve HTTPS with certificates of the internal CA
       NODE_EXTRA_CA_CERTS: /app/ssl/umdc-local-ca.crt
       TRUST_PROXY: "1"   # nginx is the one proxy in front: the rate limits use the client IP from its X-Forwarded-For

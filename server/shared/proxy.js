@@ -1,6 +1,7 @@
 'use strict';
 
 const axios = require('axios');
+const { upstreamTls } = require('./tls');
 const logger = require('../config/logger');
 const { SESSION_COOKIE, REFRESH_COOKIE, MERCURY_BASE_URL, MERCURY_API_PREFIX, BACKBONE_BASE_URL, BACKBONE_API_PREFIX } = require('../config/constants');
 const backbone = require('./backbone');
@@ -45,6 +46,7 @@ const traceOf = (req) => (req.trace ? { traceId: req.trace.traceId } : {});
 
 const forward = (req, url, token, { body, headers = {} } = {}) =>
   axios({
+    ...upstreamTls,
     method: req.method,
     url,
     headers: {

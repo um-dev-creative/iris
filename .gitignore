@@ -48,6 +48,7 @@ Thumbs.db
 # Non-secret settings, versioned on purpose; secrets live in secrets/*.env
 !config/*.env
 ssl/*.key
+ssl/localhost.crt
 ssl/*.pem
 *.key
 *.log

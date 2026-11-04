@@ -14,7 +14,7 @@ Copia `secrets/local.env.example` a `secrets/local.env` (ignorado por git) y com
 | `BACKBONE_APPLICATION_ID` | Aplicación Iris registrada en Backbone |
 | `BACKBONE_CLIENT_ID` / `BACKBONE_CLIENT_SECRET` | Cliente M2M de Iris; el secreto viene del gestor de secretos, nunca de git |
 | `COOKIE_SECURE`, `CORS_ORIGIN`, `TRUST_PROXY` | Cookies, CORS y proxies de confianza |
-| `SSL_CERT_PATH` / `SSL_KEY_PATH` | HTTPS opcional (ambas juntas) |
+| `SSL_CERT_PATH` / `SSL_KEY_PATH` | Certificado del BFF (ambas juntas). En local lo genera `scripts/dev-cert.mjs` |
 
 Pruebas: `pnpm test:server` (BFF), `pnpm test` (frontend) y `pnpm test:all`; ver `docs/technical/testing.md`.
 
@@ -33,6 +33,6 @@ curl localhost:4200/health   # {"status":"UP"}
 
 | Variable | Qué hace |
 |---|---|
-| `IRIS_BFF_URL` | Destino del proxy. Por defecto `http://localhost:4000`. Con el BFF en HTTPS: `IRIS_BFF_URL=https://localhost:4001 pnpm start` (el proxy acepta certificados autofirmados, solo en desarrollo) |
+| `IRIS_BFF_URL` | Destino del proxy. Por defecto `https://localhost:4000`. Otro BFF: `IRIS_BFF_URL=https://localhost:4001 pnpm start` (el proxy acepta certificados autofirmados, solo en desarrollo) |
 
 Las llamadas a `/mrc/api/v1/**` y `/bkd/api/v1/**` exigen la cabecera `x-iris-csrf: 1` y, salvo las públicas, una sesión.

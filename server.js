@@ -12,7 +12,7 @@ const EX_CONFIG = 78; // do not start half-configured
 function start(vaultVariables) {
   const logger = require('./server/config/logger');
   const constants = require('./server/config/constants');
-  const { settingsProblems } = require('./server/config/settings-check');
+  const { settingsProblems, missingForRegistration } = require('./server/config/settings-check');
 
   const { PORT, NODE_ENV, SSL_CERT_PATH, SSL_KEY_PATH, MERCURY_BASE_URL, BACKBONE_BASE_URL } = constants;
 
@@ -35,6 +35,9 @@ function start(vaultVariables) {
   server.listen(PORT, () => {
     logger.info(`iris BFF on ${SSL_CERT_PATH ? 'https' : 'http'}://localhost:${PORT} → mercury ${MERCURY_BASE_URL}, backbone ${BACKBONE_BASE_URL} [${NODE_ENV}]`);
   });
+
+  const missingRegistration = missingForRegistration(constants);
+  if (missingRegistration.length > 0) logger.warn(`Registration is off, missing: ${missingRegistration.join(', ')}`);
 
   if (vaultVariables.length > 0) logger.info(`${vaultVariables.length} settings read from Vault`);
 }

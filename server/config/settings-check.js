@@ -1,6 +1,16 @@
 'use strict';
 
 const REQUIRED_IN_PRODUCTION = ['BACKBONE_APPLICATION_ID', 'BACKBONE_CLIENT_ID', 'BACKBONE_CLIENT_SECRET'];
+const REQUIRED_FOR_REGISTRATION = [
+  'BACKBONE_APPLICATION_ID',
+  'REGISTRATION_ROLE_ID',
+  'REGISTRATION_TEMPLATE_ES',
+  'REGISTRATION_MAIL_FROM',
+  'MERCURY_LOGIN_ALIAS',
+];
+
+/** Names, never values, of the settings sign-up still needs. Sign-up is optional: they do not stop the BFF from starting. */
+const missingForRegistration = (settings) => REQUIRED_FOR_REGISTRATION.filter((name) => !settings[name]);
 
 /**
  * What stops the BFF from starting. In production a missing application or client is a deployment error, not
@@ -26,6 +36,9 @@ function settingsProblems(settings) {
   if (settings.BACKBONE_CLIENT_ID && settings.BACKBONE_CLIENT_SCOPES.length === 0) {
     problems.push('BACKBONE_CLIENT_SCOPES must name at least one scope');
   }
+  if (settings.NODE_ENV === 'production' && !settings.COOKIE_SECURE) {
+    problems.push('COOKIE_SECURE must be true in production: Iris runs on HTTPS');
+  }
   if (settings.NODE_ENV === 'production' && settings.BACKBONE_TLS_INSECURE) {
     problems.push('BACKBONE_TLS_INSECURE must not be set in production');
   }
@@ -38,4 +51,4 @@ function settingsProblems(settings) {
   return problems;
 }
 
-module.exports = { settingsProblems };
+module.exports = { settingsProblems, missingForRegistration };

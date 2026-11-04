@@ -1,6 +1,5 @@
 'use strict';
 
-const https = require('node:https');
 const axios = require('axios');
 const logger = require('../config/logger');
 const {
@@ -10,10 +9,8 @@ const {
   BACKBONE_CLIENT_ID,
   BACKBONE_CLIENT_SECRET,
   BACKBONE_CLIENT_SCOPES,
-  BACKBONE_TLS_INSECURE,
 } = require('../config/constants');
-
-const httpsAgent = BACKBONE_TLS_INSECURE ? new https.Agent({ rejectUnauthorized: false }) : undefined;
+const { upstreamTls } = require('./tls');
 
 // Renewed a minute before it expires, so a token is never sent in its last seconds.
 const CLIENT_TOKEN_MARGIN_MS = 60_000;
@@ -24,7 +21,7 @@ const post = (path, data, headers = {}) =>
   axios.post(`${BACKBONE_BASE_URL}${BACKBONE_API_PREFIX}${path}`, data, {
     headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...headers },
     validateStatus: () => true,
-    ...(httpsAgent ? { httpsAgent } : {}),
+    ...upstreamTls,
   });
 
 /** Thrown when backbone does not accept this front end's application client: a configuration error, never the user's. */
@@ -94,7 +91,7 @@ async function asUsersClient(method, path, data) {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       validateStatus: () => true,
-      ...(httpsAgent ? { httpsAgent } : {}),
+      ...upstreamTls,
     });
   };
   let r = await send();
@@ -145,6 +142,27 @@ async function refresh(refreshToken) {
 }
 
 /**
+ * Whether backbone itself still considers the session active (its public `GET /session/validate`, the same call mercury makes).
+ * Tells an expired session apart from mercury refusing one backbone accepts, which is mercury's configuration, not the person's.
+ * The token goes in both headers, as mercury does, so it works with every backbone version.
+ *
+ * @returns {Promise<boolean>} false when backbone says no or cannot be asked
+ */
+async function isSessionActive(sessionToken) {
+  if (!sessionToken) return false;
+  try {
+    const r = await axios.get(`${BACKBONE_BASE_URL}${BACKBONE_API_PREFIX}/session/validate`, {
+      headers: { Accept: 'application/json', 'session-token': sessionToken, Authorization: sessionToken },
+      validateStatus: () => true,
+      ...upstreamTls,
+    });
+    return r.status === 200 && r.data === true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Ends the session in backbone-rest: both tokens go on its deny-list, which mercury consults on every call.
  * Never throws: the browser's cookies are cleared whatever happens here.
  *
@@ -162,4 +180,4 @@ async function logout(sessionToken, refreshToken) {
   }
 }
 
-module.exports = { applicationClientToken, isTaken, findUserByAlias, createInactiveUser, activateUser, login, refresh, logout, ApplicationClientError };
+module.exports = { applicationClientToken, isTaken, findUserByAlias, createInactiveUser, activateUser, login, refresh, logout, isSessionActive, ApplicationClientError };

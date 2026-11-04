@@ -17,13 +17,13 @@ git clone https://github.com/um-dev-creative/iris.git
 cd iris
 pnpm install                      # también activa el hook pre-commit (.githooks)
 cp secrets/local.env.example secrets/local.env   # opcional: todas las variables tienen valor por defecto local
-pnpm dev                          # frontend en http://localhost:4200 y BFF en :4000, con config/local.env y secrets/local.env
+pnpm dev                          # frontend en https://localhost:4200 y BFF en :4000, con config/local.env y secrets/local.env
 ```
 
 Para ejecutar el stack completo (app + BFF con proxies a Mercury y Backbone):
 
 ```bash
-ENVM=development pnpm serve:integrated   # http://localhost:4000
+ENVM=development pnpm serve:integrated   # https://localhost:4000
 ```
 
 Las variables de entorno están documentadas en [`config/local.env`](config/local.env) y [`secrets/local.env.example`](secrets/local.env.example) y su ubicación en cada forma de ejecución, en [entornos](docs/technical/environments.md#dónde-van-las-variables). `NODE_ENV=production` exige `BACKBONE_APPLICATION_ID`, `BACKBONE_CLIENT_ID` y `BACKBONE_CLIENT_SECRET`.

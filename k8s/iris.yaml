@@ -7,6 +7,7 @@ metadata:
 data:
   NODE_ENV: production
   PORT: "3000"
+  COOKIE_SECURE: "true"
   MERCURY_BASE_URL: http://mercury:8118
   MERCURY_API_PREFIX: /api/v1
   MERCURY_HEALTH_PATH: /actuator/health

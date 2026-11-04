@@ -71,7 +71,7 @@ flowchart TD
 
 ## Certificados
 
-- **BFF**: HTTPS opcional con `SSL_CERT_PATH` y `SSL_KEY_PATH` (ambas juntas, fuera de git). Sin ellas sirve HTTP.
+- **Iris corre en HTTPS.** En local, `pnpm start`, `pnpm start:bff` y `pnpm dev` generan con `scripts/dev-cert.mjs` un certificado autofirmado en `ssl/localhost.*` (fuera de git; necesita `openssl`). `ng serve` y el BFF lo usan; `SSL_CERT_PATH` y `SSL_KEY_PATH` están en `config/local.env`. En Docker nginx termina el TLS y compose vacía esas rutas. En producción el BFF no arranca sin `COOKIE_SECURE=true`.
 - **Backbone/Mercury con certificado autofirmado**: solo en desarrollo, `BACKBONE_TLS_INSECURE=true`.
 - **Backbone/Mercury con la CA interna, en Docker**: `NODE_EXTRA_CA_CERTS` apunta a `umdc-local-ca.crt`, montado por `docker-compose.yml`.
 - **`ng serve`**: el proxy de desarrollo acepta certificados autofirmados del BFF (`IRIS_BFF_URL=https://...`).
@@ -81,7 +81,7 @@ flowchart TD
 | Variable | Dónde se usa | Detalle |
 |---|---|---|
 | `ENVM` | build | Tabla de arriba |
-| `IRIS_BFF_URL` | `pnpm start` | Destino del proxy de `ng serve` (por defecto `http://localhost:4000`) |
+| `IRIS_BFF_URL` | `pnpm start` | Destino del proxy de `ng serve` (por defecto `https://localhost:4000`) |
 | `NODE_ENV`, `PORT`, `MERCURY_*`, `BACKBONE_*`, `COOKIE_SECURE`, `CORS_ORIGIN`, `TRUST_PROXY`, `RATE_LIMIT_MAX`, `LOGIN_RATE_LIMIT_MAX`, `TRACING_ENABLED`, `TRACE_SAMPLE_RATE`, `SSL_*` | BFF | Comentadas en [`config/local.env`](../../config/local.env), [`secrets/local.env.example`](../../secrets/local.env.example) y en [DEVELOPMENT_SETUP.md](../../DEVELOPMENT_SETUP.md) |
 
 ## Verificación en CI

@@ -12,11 +12,11 @@ See `AGENTS.md` for the detailed conventions and the multi-agent delivery model 
 
 The repo declares `packageManager: pnpm` (`pnpm-lock.yaml`); use pnpm and don't mix lockfiles.
 
-- `pnpm start`: `ng serve` on :4200; `proxy.conf.mjs` forwards `/mrc`, `/bkd` and `/health` to the BFF (`IRIS_BFF_URL`, default `http://localhost:4000`), so run `pnpm dev`, or `pnpm start:bff` alongside.
+- `pnpm start`: `ng serve` on :4200; `proxy.conf.mjs` forwards `/mrc`, `/bkd` and `/health` to the BFF (`IRIS_BFF_URL`, default `https://localhost:4000`), so run `pnpm dev`, or `pnpm start:bff` alongside.
 - `pnpm build:dev`: development build. `pnpm build` and `pnpm build:ssr` need `ENVM` set (`development`, `dev`, `qa`, `dev-cloud`, `qa-cloud`, `production`; each maps to an `angular.json` configuration and a `src/environments/environment.*.ts`, see `docs/technical/environments.md`).
 - `pnpm dev`: `ng serve` plus the BFF, with the local env files.
 - `pnpm start:bff`: loads `config/local.env` and `secrets/local.env` with `node --env-file-if-exists` and runs `server.js`, on every OS.
-- `pnpm serve:integrated`: SSR build and then `node server.js` (full stack; HTTPS only when `SSL_CERT_PATH` and `SSL_KEY_PATH` are set).
+- `pnpm serve:integrated`: SSR build and then `node server.js` (full stack, HTTPS with the certificate of `scripts/dev-cert.mjs`).
 - `pnpm test`: Vitest via `@angular/build:unit-test`, with 85 % coverage thresholds (frontend stays below until F0-07). Single spec: `pnpm ng test --no-watch --include='src/app/path/to/x.spec.ts'`.
 - No lint script is configured.
 - `pnpm test:server`: BFF tests (Vitest, stub backbone and mercury, no network), fails under 85 %. One file: `pnpm vitest run --config vitest.server.config.mjs server/test/proxy.spec.js`. `pnpm test:all` runs both projects; `docs/technical/testing.md` has the details.
