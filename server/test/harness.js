@@ -148,7 +148,7 @@ async function start({ env = {}, appOptions } = {}) {
   });
   mercury.use('/mercury/api/v1', (req, res) => {
     state.apiCalls.push({
-      service: 'mercury', method: req.method, url: req.originalUrl, token: req.headers['session-token'], body: req.body,
+      service: 'mercury', method: req.method, url: req.originalUrl, token: req.headers['session-token'], authorization: req.headers.authorization, body: req.body,
       ifMatch: req.headers['if-match'], idempotencyKey: req.headers['idempotency-key'], traceparent: req.headers['traceparent'],
       contentType: req.headers['content-type'],
     });

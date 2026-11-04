@@ -7,3 +7,4 @@ export type {
   KpiCard,
 } from './dashboard.model';
 export * from './login-client.model';
+export * from './campaign.model';

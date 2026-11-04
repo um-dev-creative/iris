@@ -59,3 +59,46 @@ _Pendiente — F5-06 (a partir de la UAT)._
 
 ## Glosario
 _Pendiente — F5-05._
+
+## Campañas
+
+En **Campañas** (menú lateral) ves las campañas que has creado, con su canal, su estado y cuántos mensajes se han entregado o han fallado.
+
+```mermaid
+flowchart LR
+    A["Nueva campaña"] --> B{"¿Cuándo se envía?"}
+    B -->|"Más adelante"| C["Programada"]
+    B -->|"Aún no sé"| D["Borrador"]
+    C --> E["Seguimiento del avance"]
+    D -->|"Editar y programar"| C
+    E --> F["Pausar o reanudar"]
+    E --> G["Eliminar"]
+```
+
+### Crear una campaña
+
+1. Pulsa **Nueva campaña**.
+2. Escribe el **nombre** y elige el **canal** (correo, Telegram…).
+3. Indica el **id de la plantilla** que se enviará.
+4. Pega los **destinatarios**, una persona por línea (`correo,nombre`), o pulsa **Importar CSV**. Los repetidos se descartan solos y el contador te dice cuántos quedan.
+5. Si la plantilla usa datos variables, escríbelos en **Parámetros** (`nombre=Ana`, uno por línea).
+6. Elige **Borrador** o **Programada**. Una campaña programada necesita fecha y hora futuras.
+7. Pulsa **Crear campaña**.
+
+### Seguir, pausar y eliminar
+
+- La lista muestra una barra con el avance de cada campaña y puedes filtrar por nombre, estado o canal.
+- **Ver** abre el detalle con enviados, entregados, fallidos y pendientes; se actualiza solo cada 15 segundos.
+- **Pausar** detiene los envíos que aún no han salido (lo ya enviado no se puede detener). **Reanudar** los retoma.
+- **Eliminar** pide confirmación y no se puede deshacer.
+- **Editar** solo está disponible mientras la campaña es borrador o está programada. Si dejas vacío el cuadro de destinatarios se conservan los actuales.
+
+### Mensajes que puedes ver
+
+| Mensaje | Qué significa | Qué hacer |
+|---|---|---|
+| «No puedes … esta campaña: solo quien la creó puede hacerlo…» | Otra persona creó la campaña, o a Iris le falta permiso de escritura en Mercury. | Pide a quien la creó que lo haga, o avisa al administrador. |
+| «Mercury rechazó los datos…» | La plantilla, el canal o los destinatarios no son válidos. | Revisa el id de la plantilla y que el canal esté habilitado. |
+| «La campaña ya no existe» | Alguien la eliminó. | Actualiza la lista. |
+| «La gestión de campañas no está configurada» | Falta configurar la aplicación en Iris. | Avisa al administrador. |
+| «No tienes permiso para ver las campañas» | Tu cuenta no puede leer las campañas. | Avisa al administrador. |
