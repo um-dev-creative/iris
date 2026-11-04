@@ -16,7 +16,13 @@ describe('buildAppConfig', () => {
   it('mezcla features por clave: lo no definido conserva su valor por defecto', () => {
     const config = buildAppConfig({ features: { mockData: false } });
 
-    expect(config.features).toEqual({ mockData: false, showcase: DEFAULT_APP_CONFIG.features.showcase });
+    expect(config.features).toEqual({ mockData: false, showcase: true });
+  });
+
+  it('el showcase sigue al entorno: activo fuera de producción, apagado en producción, salvo que se defina', () => {
+    expect(buildAppConfig({ production: false }).features.showcase).toBe(true);
+    expect(buildAppConfig({ production: true }).features.showcase).toBe(false);
+    expect(buildAppConfig({ production: true, features: { showcase: true } }).features.showcase).toBe(true);
   });
 
   it('no modifica los valores por defecto', () => {

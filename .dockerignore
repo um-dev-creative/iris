@@ -10,7 +10,9 @@ coverage
 docs
 ssl
 *.env
-!default.env.example
+.env.*
+config
+secrets
 Dockerfile
 docker-compose.yml
 k8s

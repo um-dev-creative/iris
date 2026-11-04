@@ -6,7 +6,7 @@ import { Router, RouterLink } from '@angular/router';
 import { Eye, EyeOff, LoaderCircle, LucideAngularModule, TriangleAlert } from 'lucide-angular';
 import { AuthService } from '../../../core/services';
 import { ROUTE_PATHS, routeUrl } from '../../../core/routes';
-import { AppButtonComponent } from '../../../shared/components';
+import { AppButtonComponent, AppLogoComponent } from '../../../shared/components';
 import { ThemeToggleComponent } from '../../../shared/components/theme-toggle/theme-toggle.component';
 
 export const REGISTER_MESSAGES = {
@@ -41,21 +41,26 @@ type FieldName = 'firstName' | 'lastName' | 'alias' | 'email' | 'gender' | 'birt
   selector: 'app-register-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink, LucideAngularModule, AppButtonComponent, ThemeToggleComponent],
+  imports: [ReactiveFormsModule, RouterLink, LucideAngularModule, AppButtonComponent, AppLogoComponent, ThemeToggleComponent],
   template: `
     <main class="iris-aurora relative min-h-screen flex items-center justify-center bg-background px-4 py-8">
       <div class="absolute top-4 right-4"><app-theme-toggle /></div>
 
       <section class="w-full max-w-lg iris-glass animate-pop text-card-foreground border border-border rounded-2xl shadow-lg p-6 sm:p-8">
         <header class="flex flex-col items-center gap-3 mb-6 text-center">
-          <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center font-bold text-primary-foreground">I</div>
+          <div class="flex flex-col items-center gap-2">
+            <div class="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center text-primary-foreground shadow-md">
+              <app-logo [size]="42" [animated]="true" />
+            </div>
+            <span class="text-sm font-semibold tracking-[0.3em] uppercase pl-[0.3em]">Iris</span>
+          </div>
           <h1 class="text-xl font-semibold tracking-tight">Crear una cuenta</h1>
           <p class="text-sm text-muted-foreground">Te enviaremos un código para confirmar tu correo</p>
         </header>
 
         <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="space-y-4">
           @if (errorMessage(); as message) {
-            <div role="alert" class="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive-foreground">
+            <div role="alert" class="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               <lucide-icon [img]="TriangleAlert" [size]="16" strokeWidth="1.5" class="mt-0.5 flex-shrink-0" />
               <span>{{ message }}</span>
             </div>
@@ -65,25 +70,25 @@ type FieldName = 'firstName' | 'lastName' | 'alias' | 'email' | 'gender' | 'birt
             <div class="space-y-1.5">
               <label for="register-firstName" class="block text-sm font-medium">Nombre</label>
               <input id="register-firstName" type="text" formControlName="firstName" autocomplete="given-name" [attr.aria-invalid]="invalid('firstName')" [class]="inputClass" />
-              @if (invalid('firstName')) { <p class="text-xs text-destructive-foreground">Ingresa tu nombre.</p> }
+              @if (invalid('firstName')) { <p class="text-xs text-destructive">Ingresa tu nombre.</p> }
             </div>
             <div class="space-y-1.5">
               <label for="register-lastName" class="block text-sm font-medium">Apellido</label>
               <input id="register-lastName" type="text" formControlName="lastName" autocomplete="family-name" [attr.aria-invalid]="invalid('lastName')" [class]="inputClass" />
-              @if (invalid('lastName')) { <p class="text-xs text-destructive-foreground">Ingresa tu apellido.</p> }
+              @if (invalid('lastName')) { <p class="text-xs text-destructive">Ingresa tu apellido.</p> }
             </div>
           </div>
 
           <div class="space-y-1.5">
             <label for="register-alias" class="block text-sm font-medium">Usuario</label>
             <input id="register-alias" type="text" formControlName="alias" autocomplete="username" autocapitalize="none" spellcheck="false" [attr.aria-invalid]="invalid('alias')" [class]="inputClass" />
-            @if (invalid('alias')) { <p class="text-xs text-destructive-foreground">De 3 a 64 letras, números, puntos, guiones o guiones bajos.</p> }
+            @if (invalid('alias')) { <p class="text-xs text-destructive">De 3 a 64 letras, números, puntos, guiones o guiones bajos.</p> }
           </div>
 
           <div class="space-y-1.5">
             <label for="register-email" class="block text-sm font-medium">Correo</label>
             <input id="register-email" type="email" formControlName="email" autocomplete="email" [attr.aria-invalid]="invalid('email')" [class]="inputClass" />
-            @if (invalid('email')) { <p class="text-xs text-destructive-foreground">Ingresa un correo válido.</p> }
+            @if (invalid('email')) { <p class="text-xs text-destructive">Ingresa un correo válido.</p> }
           </div>
 
           <div class="grid gap-4 sm:grid-cols-2">
@@ -95,12 +100,12 @@ type FieldName = 'firstName' | 'lastName' | 'alias' | 'email' | 'gender' | 'birt
                 <option value="M">Masculino</option>
                 <option value="O">Otro</option>
               </select>
-              @if (invalid('gender')) { <p class="text-xs text-destructive-foreground">Selecciona una opción.</p> }
+              @if (invalid('gender')) { <p class="text-xs text-destructive">Selecciona una opción.</p> }
             </div>
             <div class="space-y-1.5">
               <label for="register-birthdate" class="block text-sm font-medium">Fecha de nacimiento</label>
               <input id="register-birthdate" type="date" formControlName="birthdate" autocomplete="bday" [attr.aria-invalid]="invalid('birthdate')" [class]="inputClass" />
-              @if (invalid('birthdate')) { <p class="text-xs text-destructive-foreground">Ingresa una fecha pasada.</p> }
+              @if (invalid('birthdate')) { <p class="text-xs text-destructive">Ingresa una fecha pasada.</p> }
             </div>
           </div>
 
@@ -122,13 +127,13 @@ type FieldName = 'firstName' | 'lastName' | 'alias' | 'email' | 'gender' | 'birt
                 <span class="text-xs text-muted-foreground">{{ strengthLabel() }}</span>
               </div>
             }
-            @if (invalid('password')) { <p class="text-xs text-destructive-foreground">Usa entre 8 y 128 caracteres.</p> }
+            @if (invalid('password')) { <p class="text-xs text-destructive">Usa entre 8 y 128 caracteres.</p> }
           </div>
 
           <div class="space-y-1.5">
             <label for="register-confirm" class="block text-sm font-medium">Repite la contraseña</label>
             <input id="register-confirm" [type]="showPassword() ? 'text' : 'password'" formControlName="confirmPassword" autocomplete="new-password" [attr.aria-invalid]="mismatch()" [class]="inputClass" />
-            @if (mismatch()) { <p class="text-xs text-destructive-foreground">Las contraseñas no coinciden.</p> }
+            @if (mismatch()) { <p class="text-xs text-destructive">Las contraseñas no coinciden.</p> }
           </div>
 
           <fieldset class="space-y-2">

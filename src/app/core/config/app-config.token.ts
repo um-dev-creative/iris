@@ -14,7 +14,7 @@ export interface AppConfig {
   features: {
     /** Usa datos simulados en lugar de la API. */
     mockData: boolean;
-    /** Muestra la página de showcase de componentes. */
+    /** Muestra la página de showcase de componentes. Por defecto, solo fuera de producción. */
     showcase: boolean;
   };
 }

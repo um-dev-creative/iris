@@ -18,7 +18,7 @@
 </div>
 
 @if (monitoringService.error()) {
-  <div role="alert" class="flex items-start gap-2 mb-6 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive-foreground animate-fade-in">
+  <div role="alert" class="flex items-start gap-2 mb-6 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive animate-fade-in">
     <lucide-icon [img]="TriangleAlertIcon" [size]="16" strokeWidth="1.5" class="mt-0.5 flex-shrink-0" />
     <span>No fue posible actualizar los datos. Se reintentará en unos segundos.</span>
   </div>

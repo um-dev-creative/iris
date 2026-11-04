@@ -1,13 +1,17 @@
 import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { LucideAngularModule, PanelLeftClose, PanelLeftOpen, LayoutDashboard, Table2, Settings, Palette, KeyRound, LucideIconData } from 'lucide-angular';
+import { LucideAngularModule, PanelLeftClose, PanelLeftOpen, LayoutDashboard, FileText, Megaphone, Table2, Settings, Palette, KeyRound, LucideIconData } from 'lucide-angular';
+import { APP_CONFIG } from '../../core/config';
 import { DashboardStore } from '../../core/services';
 import { ROUTE_PATHS, routeUrl } from '../../core/routes';
+import { AppLogoComponent } from '../../shared/components';
 
 interface NavItem {
   label: string;
   icon: LucideIconData;
   route: string;
+  /** Hidden when false. */
+  enabled?: boolean;
 }
 
 const dashboardUrl = routeUrl(ROUTE_PATHS.DASHBOARD);
@@ -15,7 +19,7 @@ const dashboardUrl = routeUrl(ROUTE_PATHS.DASHBOARD);
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, LucideAngularModule],
+  imports: [RouterLink, RouterLinkActive, LucideAngularModule, AppLogoComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <aside
@@ -28,8 +32,8 @@ const dashboardUrl = routeUrl(ROUTE_PATHS.DASHBOARD);
       <!-- Logo -->
       <div class="flex items-center h-16 px-4 border-b border-sidebar-border flex-shrink-0">
         <div class="flex items-center gap-3">
-          <div class="w-8 h-8 bg-sidebar-primary rounded-lg flex items-center justify-center font-bold text-sm text-sidebar-primary-foreground">
-            IR
+          <div class="w-8 h-8 bg-sidebar-primary rounded-lg flex items-center justify-center text-sidebar-primary-foreground">
+            <app-logo [size]="24" />
           </div>
           @if (store.sidebarOpen()) {
             <span class="text-lg font-bold tracking-tight whitespace-nowrap animate-fade-in">Iris</span>
@@ -44,7 +48,7 @@ const dashboardUrl = routeUrl(ROUTE_PATHS.DASHBOARD);
             [routerLink]="item.route"
             routerLinkActive="bg-sidebar-primary text-sidebar-primary-foreground"
             [routerLinkActiveOptions]="{ exact: item.route === dashboardUrl }"
-            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors duration-200 group"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors duration-200 group"
             [class.justify-center]="!store.sidebarOpen()"
           >
             <lucide-icon [img]="item.icon" [size]="20" strokeWidth="1.5" class="flex-shrink-0" />
@@ -58,7 +62,7 @@ const dashboardUrl = routeUrl(ROUTE_PATHS.DASHBOARD);
       <!-- Collapse toggle (desktop only) -->
       <div class="hidden lg:flex items-center justify-center p-4 border-t border-sidebar-border">
         <button
-          class="p-2 rounded-lg hover:bg-sidebar-accent transition-colors text-sidebar-foreground/50 hover:text-sidebar-foreground"
+          class="p-2 rounded-lg hover:bg-sidebar-accent transition-colors text-sidebar-foreground/80 hover:text-sidebar-foreground"
           (click)="store.toggleSidebar()"
           aria-label="Toggle sidebar"
         >
@@ -88,7 +92,9 @@ export class SidebarComponent {
   /** El enlace al dashboard solo está activo en su ruta exacta, no en las hijas. */
   readonly dashboardUrl = dashboardUrl;
 
-  readonly navItems: NavItem[] = [
+  private readonly config = inject(APP_CONFIG);
+
+  readonly navItems: NavItem[] = ([
     {
       label: 'Inicio',
       icon: LayoutDashboard,
@@ -96,6 +102,16 @@ export class SidebarComponent {
     },
     {
       label: 'Campañas',
+      icon: Megaphone,
+      route: routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.CAMPAIGNS),
+    },
+    {
+      label: 'Plantillas',
+      icon: FileText,
+      route: routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.TEMPLATES),
+    },
+    {
+      label: 'Explorador',
       icon: Table2,
       route: routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.DATA),
     },
@@ -113,8 +129,9 @@ export class SidebarComponent {
       label: 'Showcase',
       icon: Palette,
       route: routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.SHOWCASE),
+      enabled: this.config.features.showcase,
     },
-  ];
+  ] as NavItem[]).filter((item) => item.enabled !== false);
 
   get isMobileHidden(): boolean {
     return !this.store.sidebarOpen() && typeof window !== 'undefined' && window.innerWidth < 1024;

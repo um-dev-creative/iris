@@ -1,6 +1,7 @@
 'use strict';
 
 const axios = require('axios');
+const { upstreamTls } = require('./tls');
 const logger = require('../config/logger');
 const { SESSION_COOKIE, REFRESH_COOKIE, MERCURY_BASE_URL, MERCURY_API_PREFIX, BACKBONE_BASE_URL, BACKBONE_API_PREFIX } = require('../config/constants');
 const backbone = require('./backbone');
@@ -40,11 +41,30 @@ function isSafePath(path) {
   return !decoded.split('/').some((segment) => segment === '..' || segment === '.');
 }
 
+/**
+ * The upstream URL for `path`, or null if it would leave the service: the address is parsed and must keep the origin and the
+ * path prefix of the upstream, whatever the path says.
+ */
+function targetUrl(base, prefix, path) {
+  let root;
+  let target;
+  try {
+    root = new URL(`${base}${prefix}`);
+    target = new URL(`${root.href.replace(/\/$/, '')}${path}`);
+  } catch {
+    return null;
+  }
+  const rootPath = root.pathname.replace(/\/$/, '');
+  const inside = target.pathname === rootPath || target.pathname.startsWith(`${rootPath}/`);
+  return target.origin === root.origin && inside ? target.href : null;
+}
+
 /** The trace id of the request, when tracing is on (it is validated hex by the trace middleware). */
 const traceOf = (req) => (req.trace ? { traceId: req.trace.traceId } : {});
 
-const forward = (req, url, token, { body, headers = {} } = {}) =>
+const forward = (req, url, token, { body, headers = {}, query } = {}) =>
   axios({
+    ...upstreamTls,
     method: req.method,
     url,
     headers: {
@@ -53,12 +73,14 @@ const forward = (req, url, token, { body, headers = {} } = {}) =>
       ...(body === undefined ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { [SESSION_TOKEN_HEADER]: token } : {}),
       ...(req.get('if-match') ? { 'If-Match': req.get('if-match') } : {}),
+      ...(req.get('if-none-match') ? { 'If-None-Match': req.get('if-none-match') } : {}),
       ...(req.get('idempotency-key') ? { 'Idempotency-Key': req.get('idempotency-key') } : {}),
       // the upstream continues the trace the BFF is in (nothing is sent when tracing is off)
       ...(req.trace ? { traceparent: toTraceparent(req.trace) } : {}),
       ...headers,
     },
-    params: req.query,
+    // `query` replaces the browser's: a value the BFF decides (the application) must not be overridable
+    params: query ?? req.query,
     // a repeated parameter (`sort=a&sort=b`) must stay `sort=a&sort=b`: axios' default `sort[]=a` is not bound by Spring
     paramsSerializer: { indexes: null },
     data: body === undefined ? (['POST', 'PUT', 'PATCH'].includes(req.method) ? req.body : undefined) : body,
@@ -96,13 +118,15 @@ async function renewSession(req, res) {
  * @param {boolean} [options.public]  no session needed (sign-up, code verification): the call goes out without token
  * @param {*} [options.body]          a prepared body (e.g. FormData) instead of `req.body`
  * @param {object} [options.headers]  extra upstream headers
+ * @param {object} [options.query]    the query string to send instead of the request's
  *
  * With a session, a 401 silently renews it through backbone once and retries.
  */
 async function proxyToApi(req, res, upstream, path, options = {}) {
   const { base, prefix } = UPSTREAMS[upstream];
   if (!isSafePath(path)) return res.status(400).json({ error: 'Invalid path' });
-  const url = `${base}${prefix}${path}`;
+  const url = targetUrl(base, prefix, path);
+  if (url === null) return res.status(400).json({ error: 'Invalid path' });
   let token = req.cookies?.[SESSION_COOKIE];
   if (!token && !options.public) return res.status(401).json({ error: 'Not authenticated' });
 
@@ -132,4 +156,4 @@ const passThrough = (upstream, options) => (req, res) =>
 /** Router-level handler for a route that maps to one fixed upstream path. */
 const fixedPath = (upstream, path, options) => (req, res) => proxyToApi(req, res, upstream, path, options);
 
-module.exports = { proxyToApi, passThrough, fixedPath };
+module.exports = { proxyToApi, passThrough, fixedPath, targetUrl };

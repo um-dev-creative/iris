@@ -59,3 +59,95 @@ _Pendiente — F5-06 (a partir de la UAT)._
 
 ## Glosario
 _Pendiente — F5-05._
+
+## Campañas
+
+En **Campañas** (menú lateral) ves las campañas que has creado, con su canal, su estado y cuántos mensajes se han entregado o han fallado.
+
+```mermaid
+flowchart LR
+    A["Nueva campaña"] --> B{"¿Cuándo se envía?"}
+    B -->|"Más adelante"| C["Programada"]
+    B -->|"Aún no sé"| D["Borrador"]
+    C --> E["Seguimiento del avance"]
+    D -->|"Editar y programar"| C
+    E --> F["Pausar o reanudar"]
+    E --> G["Eliminar"]
+```
+
+### Crear una campaña
+
+1. Pulsa **Nueva campaña**.
+2. Escribe el **nombre** y elige el **canal** (correo, Telegram…).
+3. Elige la **plantilla** que se enviará. Si tu cuenta no puede ver la lista de plantillas, escribe su id.
+4. Pega los **destinatarios**, una persona por línea (`correo,nombre`), o pulsa **Importar CSV**. Los repetidos se descartan solos y el contador te dice cuántos quedan.
+5. Si la plantilla usa datos variables, escríbelos en **Parámetros** (`nombre=Ana`, uno por línea).
+6. Elige **Borrador** o **Programada**. Una campaña programada necesita fecha y hora futuras.
+7. Pulsa **Crear campaña**.
+
+### Seguir, pausar y eliminar
+
+- La lista muestra una barra con el avance de cada campaña y puedes filtrar por nombre, estado o canal.
+- **Ver** abre el detalle con enviados, entregados, fallidos y pendientes; se actualiza solo cada 15 segundos.
+- **Pausar** detiene los envíos que aún no han salido (lo ya enviado no se puede detener). **Reanudar** los retoma.
+- **Eliminar** pide confirmación y no se puede deshacer.
+- **Editar** solo está disponible mientras la campaña es borrador o está programada. Si dejas vacío el cuadro de destinatarios se conservan los actuales.
+
+### Mensajes que puedes ver
+
+| Mensaje | Qué significa | Qué hacer |
+|---|---|---|
+| «No puedes … esta campaña: solo quien la creó puede hacerlo…» | Otra persona creó la campaña, o a Iris le falta permiso de escritura en Mercury. | Pide a quien la creó que lo haga, o avisa al administrador. |
+| «Mercury rechazó los datos…» | La plantilla, el canal o los destinatarios no son válidos. | Revisa el id de la plantilla y que el canal esté habilitado. |
+| «La campaña ya no existe» | Alguien la eliminó. | Actualiza la lista. |
+| «Elige una plantilla.» | Aún no has seleccionado ninguna plantilla de la lista. | Elígela en el selector. |
+| «La gestión de campañas no está configurada» | Falta configurar la aplicación en Iris. | Avisa al administrador. |
+| «No tienes permiso para ver las campañas» | Tu cuenta no puede leer las campañas. | Avisa al administrador. |
+
+## Plantillas
+
+En **Plantillas** (menú lateral) escribes y editas el texto de los mensajes que envía Mercury, en **Markdown** o en **HTML**, y ves cómo quedará antes de guardar.
+
+```mermaid
+flowchart LR
+    A["Nueva plantilla"] --> B["Escribir el contenido"]
+    B --> C["Vista previa con parámetros de ejemplo"]
+    C -->|"hay errores"| B
+    C -->|"todo bien"| D["Guardar"]
+    D --> E["Usarla en una campaña"]
+```
+
+### Crear una plantilla
+
+1. Pulsa **Nueva plantilla**.
+2. Escribe la **descripción** y elige el **tipo** y la **severidad**.
+3. Elige el **formato**: Markdown (más sencillo: títulos, negritas, listas, enlaces) o HTML (control total del diseño). Iris propone el nombre del **archivo**; puedes cambiarlo.
+4. Escribe el contenido. Donde quieras un dato variable escribe `${nombre}`; por ejemplo `Hola ${name}`.
+5. A la derecha ves la **vista previa**. En **Parámetros de ejemplo** escribes valores de prueba (`name=Ana`); Iris agrega solo los parámetros que detecta.
+6. Pulsa **Guardar**.
+
+### Editar, desactivar y cuidar el trabajo
+
+- **Editar** abre la plantilla con su contenido. El botón **Guardar** se enciende cuando hay cambios; si intentas salir sin guardar, Iris pregunta.
+- Si otra persona guardó la misma plantilla mientras la editabas, Iris lo avisa y te ofrece **Recargar** (tus cambios se pierden, cópialos antes si los necesitas).
+- **Desactivar** (en la lista) pide confirmación: la plantilla deja de poder usarse en campañas nuevas; los mensajes y campañas anteriores no cambian.
+- Las plantillas del sistema (verificación de cuenta, avisos de ZeroBound y SmartKin) se abren **bloqueadas**: otros servicios dependen de ellas. Para cambiarlas marca la casilla «Entiendo que otros servicios dependen de esta plantilla»; el original queda guardado en el historial.
+
+### Historial y restaurar
+
+Cada vez que guardas, Iris conserva esa versión (las últimas 50). En una plantilla ya guardada pulsa **Ver historial**:
+
+- **Comparar** muestra, línea por línea, qué cambió entre esa versión y lo que tienes en el editor (`+` agregado, `-` quitado).
+- **Restaurar** vuelve a esa versión. No borra nada: la versión restaurada se guarda como una versión nueva, así que también puedes deshacer la restauración. Si tenías cambios sin guardar, se pierden.
+- La versión **Original** es el contenido que tenía la plantilla antes de que la editaras por primera vez desde Iris.
+
+### Mensajes que puedes ver
+
+| Mensaje | Qué significa | Qué hacer |
+|---|---|---|
+| «Línea 3, columna 5: …» | El contenido tiene un error de sintaxis (por ejemplo una etiqueta sin cerrar). | Pulsa **Ir a la línea** y corrígelo; no se puede guardar hasta entonces. |
+| «Alguien guardó la plantilla antes que tú» | Otra persona guardó una versión nueva. | Pulsa **Recargar** y vuelve a hacer tu cambio. |
+| «El contenido supera 262144 bytes» | La plantilla es demasiado larga (256 KB). | Acórtala o quita imágenes incrustadas. |
+| «No tienes permiso para administrar las plantillas» | Tu cuenta no tiene el permiso de plantillas. | Avisa al administrador. |
+| «No tienes permiso para cambiar esta plantilla, o es una plantilla del sistema y falta confirmarlo» | No tienes el permiso, o intentaste cambiar una plantilla del sistema sin marcar la casilla de confirmación. | Marca la casilla (plantillas del sistema) o pide el permiso al administrador. |
+| «La gestión de plantillas no está configurada» | Falta configurar la aplicación en Iris. | Avisa al administrador. |

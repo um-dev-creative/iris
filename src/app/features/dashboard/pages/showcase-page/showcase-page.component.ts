@@ -49,6 +49,7 @@ import {
   AppBadgeComponent,
   AppSkeletonComponent,
   ThemeToggleComponent,
+  AppLogoComponent,
 } from '../../../../shared/components';
 import { NotificationService } from '../../../../core/services';
 import {
@@ -60,6 +61,7 @@ import {
   standalone: true,
   imports: [
     LucideAngularModule,
+    AppLogoComponent,
     AppCardComponent,
     AppButtonComponent,
     AppBadgeComponent,

@@ -10,6 +10,7 @@ const {
   BACKBONE_APPLICATION_ID,
 } = require('../config/constants');
 const { decodePayload } = require('./session');
+const { upstreamTls } = require('./tls');
 
 const SESSION_TOKEN_HEADER = 'session-token';
 // Renewed a minute before it expires, so a token is never sent in its last seconds.
@@ -24,6 +25,7 @@ const send = (method, path, data, headers = {}) =>
     data,
     headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...headers },
     validateStatus: () => true,
+    ...upstreamTls,
   });
 
 let cached = null; // { value, expiresAt }

@@ -1,6 +1,12 @@
 import { Component, ChangeDetectionStrategy, inject, computed, signal } from '@angular/core';
-import { LucideAngularModule, Sun, Moon } from 'lucide-angular';
-import { ThemeService } from '../../../core/services';
+import { LucideAngularModule, Sun, Moon, Monitor } from 'lucide-angular';
+import { ThemeService, ThemePreference } from '../../../core/services';
+
+const LABELS: Record<ThemePreference, string> = {
+  light: 'Tema claro',
+  dark: 'Tema oscuro',
+  system: 'Tema del sistema',
+};
 
 @Component({
   selector: 'app-theme-toggle',
@@ -9,21 +15,21 @@ import { ThemeService } from '../../../core/services';
   imports: [LucideAngularModule],
   template: `
     <button
+      type="button"
       (click)="onToggle()"
       [class]="buttonClass"
-      aria-label="Toggle theme">
-      @if (isDark()) {
-        <lucide-icon
-          [img]="Sun"
-          [size]="18"
-          strokeWidth="1.5"
-          [class]="iconClass" />
-      } @else {
-        <lucide-icon
-          [img]="Moon"
-          [size]="18"
-          strokeWidth="1.5"
-          [class]="iconClass" />
+      [attr.aria-label]="label()"
+      [attr.title]="label()">
+      @switch (preference()) {
+        @case ('light') {
+          <lucide-icon [img]="Sun" [size]="18" strokeWidth="1.5" [class]="iconClass" />
+        }
+        @case ('dark') {
+          <lucide-icon [img]="Moon" [size]="18" strokeWidth="1.5" [class]="iconClass" />
+        }
+        @default {
+          <lucide-icon [img]="Monitor" [size]="18" strokeWidth="1.5" [class]="iconClass" />
+        }
       }
     </button>
   `,
@@ -32,7 +38,10 @@ export class ThemeToggleComponent {
   private themeService = inject(ThemeService);
   readonly Sun = Sun;
   readonly Moon = Moon;
+  readonly Monitor = Monitor;
+  readonly preference = this.themeService.preference;
   isDark = computed(() => this.themeService.currentTheme() === 'dark');
+  label = computed(() => `${LABELS[this.preference()]}. Pulsa para cambiar`);
   isAnimating = signal(false);
 
   buttonClass = `
@@ -49,9 +58,10 @@ export class ThemeToggleComponent {
     return this.isAnimating() ? 'animate-spin' : 'transition-transform duration-300';
   }
 
+  /** Light, dark, system, and back to light. */
   onToggle() {
     this.isAnimating.set(true);
-    this.themeService.toggleTheme();
+    this.themeService.cyclePreference();
     setTimeout(() => this.isAnimating.set(false), 400);
   }
 }

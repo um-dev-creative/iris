@@ -10,7 +10,7 @@
 ## Architecture Map
 - Routing is split in two levels:
   - App-level in `src/app/app.routes.ts` (`/dashboard` guarded by `authGuard`).
-  - Feature-level in `src/app/features/dashboard/dashboard.routes.ts` (`home`, `data`, `settings`, `login-clients`, `showcase`).
+  - Feature-level in `src/app/features/dashboard/dashboard.routes.ts` (`home`, `data`, `campaigns`, `templates`, `settings`, `login-clients`, `showcase`).
 - Layer intent by folder:
   - `src/app/core`: cross-cutting services, guards, interceptors, models.
   - `src/app/features/dashboard`: page-specific UI + feature data service.
@@ -36,21 +36,21 @@
 - Use one package manager consistently per session; avoid mixing lockfile updates.
 - **Project Name**: Use `dashboard` for Angular CLI commands (not `iris`); e.g., `ng build dashboard`.
 - Core scripts from `package.json`:
-  - `start` -> `ng serve` with `proxy.conf.mjs` to the BFF (`IRIS_BFF_URL`, default `http://localhost:4000`)
+  - `start` -> `ng serve` with `proxy.conf.mjs` to the BFF (`IRIS_BFF_URL`, default `https://localhost:4000`)
   - `build` -> `ng build --configuration=$ENVM` (uses environment variable)
   - `build:ssr` -> builds both client and SSR server
   - `serve:integrated` -> builds and serves full-stack app with backend APIs
-  - `dev:integrated:unix` / `dev:integrated:win` -> watch mode with backend integration
+  - `dev` -> `ng serve` plus the BFF, `start:bff` -> the BFF alone
   - `watch` -> `ng build --watch --configuration development`
   - `test` -> Vitest (`ng test`), `test:server` -> Vitest for `server/`, `test:all` -> both
-- **Backend Development**: Use `serve:integrated` or `dev:integrated:*` scripts for full-stack development.
+- **Backend Development**: Use `dev` or `serve:integrated` for full-stack development.
 - **HTTPS Support**: the BFF serves HTTPS when `SSL_CERT_PATH` and `SSL_KEY_PATH` are set; certificates stay out of git.
 - Angular schematics are configured to skip test generation (`angular.json`), and there are currently no `*.spec.ts` files.
 
 ## Integration and Environment Notes
 - **Multiple Environments**: `src/environments/` holds one file per `ENVM` (`development`, `dev`, `qa`, `dev-cloud`, `qa-cloud`, `production`), all with a relative `apiBaseUrl`; see `docs/technical/environments.md`.
 - API base URL is `/mrc/api/v1` in every `src/environments/environment*.ts` (relative, through the BFF); inject `API_BASE_URL`/`APP_CONFIG` instead of importing `environment`.
-- **Backend Integration**: BFF in `/server` (`app.js`, `config/`, `shared/`, `routes/`, `test/`); settings come from env vars (`default.env.example`).
+- **Backend Integration**: BFF in `/server` (`app.js`, `config/`, `shared/`, `routes/`, `test/`); settings come from env vars (`config/local.env`, `secrets/local.env` or Vault).
 - **API Routes**: Backend APIs are prefixed (`/mrc/api/v1/*`, `/bkd/api/v1/*`) and don't conflict with Angular routes.
 - **SSL Configuration**: Uses certificates in `/ssl` folder; falls back to HTTP if not available.
 - `SettingsPageComponent` updates runtime API config through `ApiService` and does a direct `fetch` connectivity check.

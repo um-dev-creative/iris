@@ -6,6 +6,25 @@
 </div>
 
 <!-- ═══════════════════════════════════════════ -->
+<!-- MARCA                                       -->
+<!-- ═══════════════════════════════════════════ -->
+<app-card title="Marca" subtitle="Un ojo que es también un globo de mensaje: supervisión de la mensajería" class="block mb-6">
+  <div class="flex flex-wrap items-center gap-6">
+    <div class="w-20 h-20 bg-primary rounded-2xl flex items-center justify-center text-primary-foreground">
+      <app-logo [size]="60" [animated]="true" />
+    </div>
+    <div class="w-11 h-11 bg-primary rounded-lg flex items-center justify-center text-primary-foreground">
+      <app-logo [size]="32" />
+    </div>
+    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground">
+      <app-logo [size]="24" />
+    </div>
+    <div class="text-primary"><app-logo [size]="48" /></div>
+    <div class="text-foreground"><app-logo [size]="48" /></div>
+  </div>
+</app-card>
+
+<!-- ═══════════════════════════════════════════ -->
 <!-- COLOR TOKENS                                -->
 <!-- ═══════════════════════════════════════════ -->
 <app-card title="Color Tokens" subtitle="oklch-based design tokens with automatic dark mode">
@@ -234,10 +253,10 @@
 <!-- THEME TOGGLE                                -->
 <!-- ═══════════════════════════════════════════ -->
 <div class="mt-6">
-  <app-card title="Theme Toggle" subtitle="Switch between light and dark mode with spin animation">
+  <app-card title="Theme Toggle" subtitle="Cycle light, dark and system mode with spin animation">
     <div class="flex items-center gap-4">
       <app-theme-toggle />
-      <span class="text-sm text-muted-foreground">Click the button to toggle theme</span>
+      <span class="text-sm text-muted-foreground">Click the button to change the theme</span>
     </div>
   </app-card>
 </div>

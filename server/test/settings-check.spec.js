@@ -1,11 +1,11 @@
 'use strict';
 
 const assert = require('node:assert/strict');
-const { settingsProblems } = require('../config/settings-check');
+const { settingsProblems, missingForRegistration } = require('../config/settings-check');
 
 const complete = {
   NODE_ENV: 'production', BACKBONE_APPLICATION_ID: 'app', BACKBONE_CLIENT_ID: 'id', BACKBONE_CLIENT_SECRET: 'secret',
-  BACKBONE_CLIENT_SCOPES: ['session:manage'], BACKBONE_TLS_INSECURE: false, TRUST_PROXY: false, SSL_CERT_PATH: '', SSL_KEY_PATH: '',
+  BACKBONE_CLIENT_SCOPES: ['session:manage'], BACKBONE_TLS_INSECURE: false, COOKIE_SECURE: true, TRUST_PROXY: false, SSL_CERT_PATH: '', SSL_KEY_PATH: '',
 };
 
 test('a complete production configuration starts', () => {
@@ -45,4 +45,18 @@ test('TRUST_PROXY=true is refused', () => {
 test('the TLS certificate and its key come together', () => {
   assert.deepEqual(settingsProblems({ ...complete, SSL_CERT_PATH: '/c.crt' }), ['SSL_CERT_PATH and SSL_KEY_PATH must be set together']);
   assert.deepEqual(settingsProblems({ ...complete, SSL_CERT_PATH: '/c.crt', SSL_KEY_PATH: '/c.key' }), []);
+});
+
+test('names the settings sign-up still needs', () => {
+  const full = {
+    BACKBONE_APPLICATION_ID: 'app', REGISTRATION_ROLE_ID: 'role', REGISTRATION_TEMPLATE_ES: 'tpl',
+    REGISTRATION_MAIL_FROM: 'iris@test', MERCURY_LOGIN_ALIAS: 'iris',
+  };
+
+  assert.deepEqual(missingForRegistration(full), []);
+  assert.deepEqual(missingForRegistration({ ...full, REGISTRATION_ROLE_ID: '', MERCURY_LOGIN_ALIAS: '' }), ['REGISTRATION_ROLE_ID', 'MERCURY_LOGIN_ALIAS']);
+});
+
+test('production refuses session cookies without Secure', () => {
+  assert.deepEqual(settingsProblems({ ...complete, COOKIE_SECURE: false }), ['COOKIE_SECURE must be true in production: Iris runs on HTTPS']);
 });

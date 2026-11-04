@@ -98,6 +98,7 @@ async function start({ env = {}, appOptions } = {}) {
     }
     return next();
   });
+  backbone.get(`${root}/session/validate`, (_req, res) => res.status(200).json(state.sessionActive ?? true));
   // anything else under /backbone/api/v1 is a resource of the backbone API, guarded by the session token
   backbone.use(root, (req, res) => {
     state.apiCalls.push({ service: 'backbone', method: req.method, url: req.originalUrl, token: req.headers['session-token'] });
@@ -147,8 +148,8 @@ async function start({ env = {}, appOptions } = {}) {
   });
   mercury.use('/mercury/api/v1', (req, res) => {
     state.apiCalls.push({
-      service: 'mercury', method: req.method, url: req.originalUrl, token: req.headers['session-token'], body: req.body,
-      ifMatch: req.headers['if-match'], idempotencyKey: req.headers['idempotency-key'], traceparent: req.headers['traceparent'],
+      service: 'mercury', method: req.method, url: req.originalUrl, token: req.headers['session-token'], authorization: req.headers.authorization, body: req.body,
+      ifMatch: req.headers['if-match'], ifNoneMatch: req.headers['if-none-match'], idempotencyKey: req.headers['idempotency-key'], traceparent: req.headers['traceparent'],
       contentType: req.headers['content-type'],
     });
     const public_ = req.originalUrl.startsWith('/mercury/api/v1/users') || req.originalUrl.startsWith('/mercury/api/v1/user-register');

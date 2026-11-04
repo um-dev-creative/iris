@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { ROUTE_PATHS } from '../../core/routes';
+import { showcaseGuard, unsavedChangesGuard } from '../../core/guards';
 
 export const DASHBOARD_ROUTES: Routes = [
   {
@@ -24,6 +25,43 @@ export const DASHBOARD_ROUTES: Routes = [
       ),
   },
   {
+    path: ROUTE_PATHS.TEMPLATES,
+    loadComponent: () =>
+      import('./pages/templates-page/templates-page.component').then((m) => m.TemplatesPageComponent),
+  },
+  {
+    path: `${ROUTE_PATHS.TEMPLATES}/${ROUTE_PATHS.NEW}`,
+    canDeactivate: [unsavedChangesGuard],
+    loadComponent: () =>
+      import('./pages/template-editor-page/template-editor-page.component').then((m) => m.TemplateEditorPageComponent),
+  },
+  {
+    path: `${ROUTE_PATHS.TEMPLATES}/:id`,
+    canDeactivate: [unsavedChangesGuard],
+    loadComponent: () =>
+      import('./pages/template-editor-page/template-editor-page.component').then((m) => m.TemplateEditorPageComponent),
+  },
+  {
+    path: ROUTE_PATHS.CAMPAIGNS,
+    loadComponent: () =>
+      import('./pages/campaigns-page/campaigns-page.component').then((m) => m.CampaignsPageComponent),
+  },
+  {
+    path: `${ROUTE_PATHS.CAMPAIGNS}/${ROUTE_PATHS.NEW}`,
+    loadComponent: () =>
+      import('./pages/campaign-form-page/campaign-form-page.component').then((m) => m.CampaignFormPageComponent),
+  },
+  {
+    path: `${ROUTE_PATHS.CAMPAIGNS}/:id/${ROUTE_PATHS.EDIT}`,
+    loadComponent: () =>
+      import('./pages/campaign-form-page/campaign-form-page.component').then((m) => m.CampaignFormPageComponent),
+  },
+  {
+    path: `${ROUTE_PATHS.CAMPAIGNS}/:id`,
+    loadComponent: () =>
+      import('./pages/campaign-detail-page/campaign-detail-page.component').then((m) => m.CampaignDetailPageComponent),
+  },
+  {
     path: ROUTE_PATHS.LOGIN_CLIENTS,
     loadComponent: () =>
       import('./pages/login-clients-page/login-clients-page.component').then(
@@ -32,6 +70,7 @@ export const DASHBOARD_ROUTES: Routes = [
   },
   {
     path: ROUTE_PATHS.SHOWCASE,
+    canMatch: [showcaseGuard],
     loadComponent: () =>
       import('./pages/showcase-page/showcase-page.component').then(
         (m) => m.ShowcasePageComponent

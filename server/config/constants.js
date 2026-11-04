@@ -30,7 +30,7 @@ module.exports = {
   COOKIE_SECURE: bool(process.env['COOKIE_SECURE']),
   PORT: parseInt(process.env['PORT'] || '4000', 10),
   NODE_ENV: process.env['NODE_ENV'] || 'development',
-  CORS_ORIGIN: process.env['CORS_ORIGIN'] || 'http://localhost:4200',
+  CORS_ORIGIN: process.env['CORS_ORIGIN'] || 'https://localhost:4200',
   TRUST_PROXY: trustProxy(process.env['TRUST_PROXY']),
   RATE_LIMIT_WINDOW_MS: 15 * 60 * 1000,
   RATE_LIMIT_MAX: parseInt(process.env['RATE_LIMIT_MAX'] || '1200', 10),

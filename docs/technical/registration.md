@@ -27,7 +27,7 @@ sequenceDiagram
 - Un correo ya registrado responde igual que uno nuevo, para no revelar quién tiene cuenta. Un alias ocupado responde 409.
 - `resend-verification` responde siempre lo mismo, exista o no la cuenta.
 - Las tres rutas limitan a `REGISTRATION_RATE_LIMIT_MAX` intentos por ventana.
-- Sin configuración completa responden 503 y no crean nada.
+- Sin configuración completa responden 503 y no crean nada. El BFF nombra lo que falta en el log al arrancar y en cada intento.
 
 ## Configuración
 
@@ -37,7 +37,7 @@ sequenceDiagram
 | `REGISTRATION_TEMPLATE_ES`, `REGISTRATION_TEMPLATE_EN` | `template_defined` de Mercury (`scripts/iris/seed-templates.sql`). |
 | `REGISTRATION_MAIL_FROM` | Remitente del correo. |
 | `MERCURY_LOGIN_ALIAS`, `MERCURY_LOGIN_PASSWORD` | Iris como cliente de login de Mercury. |
-| `BACKBONE_CLIENT_ID`, `BACKBONE_CLIENT_SECRET` | Cliente M2M. Necesita permiso sobre `/users`. |
+| `BACKBONE_CLIENT_ID`, `BACKBONE_CLIENT_SECRET` | Cliente M2M. Debe estar registrado en backbone para la misma aplicación que `BACKBONE_APPLICATION_ID` y tener el scope `users:manage` (además pedido en `BACKBONE_CLIENT_SCOPES`). Si no, backbone responde 403 al comprobar el correo y registra `Managed client '…' may not administer users of application '…'` (`UserAdminGuard`). |
 
 # Datos de monitoreo
 

@@ -9,6 +9,8 @@ Documentación para quien desarrolla, prueba, despliega u opera Iris. Cada tarea
 | `backend.md` | Módulos del BFF, rutas, controladores, proxies, sesiones Redis, monitoreo, health checks, pruebas | F0-08, F3-02, F3-07 |
 | [`security.md`](security.md) | Secretos, sesión por cookie, CSRF, matriz de controles por entorno | F0-01, F2-01, F5-02 |
 | [`registration.md`](registration.md) | Registro de usuarios y datos de monitoreo |
+| [`campaigns.md`](campaigns.md) | Gestión de campañas: rutas del BFF, formulario, permisos y estados |
+| [`templates.md`](templates.md) | Editor de plantillas (HTML y Markdown), vista previa, bloqueo optimista, historial y plantillas del sistema |
 | [`deployment.md`](deployment.md) | Docker y Kubernetes |
 | [`environments.md`](environments.md) | Tabla de entornos (`ENVM`), URLs, certificados y variables | F1-05 |
 | `testing.md` | Vitest, ejemplos por tipo de prueba, e2e, presupuestos; ver también la [política de cobertura](../roadmap/COVERAGE_POLICY.md) | F0-06, F0-07, F4-01, F4-03 |
@@ -25,6 +27,6 @@ Documentación para quien desarrolla, prueba, despliega u opera Iris. Cada tarea
 
 ## Seguridad
 
-- Política de secretos: `default.env`, llaves (`*.key`, `ssl/*.pem`) y logs están excluidos por `.gitignore`; solo se versiona `default.env.example` sin valores.
+- Política de secretos: `.env`, `secrets/*.env`, llaves (`*.key`, `ssl/*.pem`) y logs están excluidos por `.gitignore`; se versionan `.env.example` y `secrets/local.env.example` sin valores, y `config/local.env` sin credenciales.
 - Los secretos reales viven en Vault. Si un secreto llega a un remoto, rotarlo aunque se reescriba el historial.
 - Detección: `gitleaks` con `.gitleaks.toml` (pre-commit/CI).

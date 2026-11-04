@@ -8,8 +8,18 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 
 ## [Unreleased]
 
+### Changed
+
+- El showcase de componentes (enlace del menú y ruta `/dashboard/showcase`) solo existe fuera de producción: `features.showcase` sigue a `production` salvo que el entorno lo defina, y en producción la ruta redirige al dashboard.
+
+### Fixed
+
+- El dashboard ya no te devuelve al login cuando Mercury rechaza una sesión que Backbone da por activa (p. ej. Mercury con otro `APP_TOKEN_SECRET`): el panel carga sin campañas y el BFF avisa en el log. Un 401 solo cierra la sesión si Backbone también la rechaza.
+- Sign-up asks backbone for the `users:manage` scope (`BACKBONE_CLIENT_SCOPES`), which `UserAdminGuard` requires to check e-mails and create and activate users; the docs state that the M2M client must belong to `BACKBONE_APPLICATION_ID`.
+
 ### Security
 
+- Iris corre en HTTPS: `ng serve` y el BFF usan en local un certificado autofirmado (`scripts/dev-cert.mjs`), las cookies de sesión llevan `Secure` y en producción el BFF no arranca sin `COOKIE_SECURE=true`.
 - `multer`, `axios` and `express` updated: `pnpm audit --prod` reports no known vulnerabilities.
 - Sign-up never takes the role, application or active state from the browser, and does not reveal which e-mails have an account.
 - Las cookies de sesión del BFF (`iris_session`, `iris_refresh`) pasan de `SameSite=Lax` a `SameSite=Strict`; se agregaron pruebas de sus atributos, de la respuesta genérica ante credenciales inválidas y de que la sesión sobrevive a un reinicio. (F2-01)
@@ -20,6 +30,12 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 
 ### Added
 
+- **Template history:** in the editor, **Ver historial** lists the saved versions (saved, restored, original), **Comparar** shows a line diff against the text in the editor and **Restaurar** saves an old version as a new one (with `If-Match`, confirmation and a warning about unsaved changes). System templates open locked until the person ticks a confirmation, and then save with `confirmSystem=true` (the original is kept as a baseline). New BFF routes for the versions and the `confirmSystem` query; the content response field `readOnly` is now `system`. Needs Mercury's `V2032__template_versions.sql` and version endpoints. See `docs/technical/templates.md`.
+- **Template editor:** `/dashboard/templates` lists, searches (server-side filters and pagination), creates and deactivates templates; `/templates/new` and `/templates/:id` edit one with Markdown or HTML content, a debounced live preview in a sandboxed iframe, sample parameters detected from the text, syntax errors with line and column ("go to line"), optimistic locking (`ETag`/`If-Match`, a 412 offers to reload), read-only system templates and a warning before leaving with unsaved changes. New BFF routes `/mrc/api/v1/templates/*` (application fixed by the BFF, only whitelisted fields, `location` must be a file name) and `unsavedChangesGuard`. Needs Mercury's template content API; writing needs `mercury:message:write` in `BACKBONE_CLIENT_SCOPES`. See `docs/technical/templates.md` and the operator manual.
+- **Template and reference selectors:** BFF routes `/mrc/api/v1/templates/{types,severities,defined}` (Bearer of the application + session; the application is always the BFF's) and `ReferenceDataService`. The campaign form now offers a template selector and keeps an id box when the person cannot list templates (Mercury `TEMPLATE_READ_PERMISSION`). `proxyToApi` accepts a `query` option that replaces the browser's. See `docs/technical/campaigns.md`.
+- **Campaign management:** `/dashboard/campaigns` lists the campaigns the person created, with filters, per-row delivery progress and pagination; `/campaigns/new` and `/campaigns/:id/edit` create and edit them (recipients pasted or imported from a CSV, template parameters, draft or scheduled); `/campaigns/:id` shows the live progress and lets the person pause, resume or delete. New BFF routes `/mrc/api/v1/campaigns/*` add the application client's Bearer that Mercury requires, fix the application and drop any field the browser should not set. Writing needs `mercury:message:write` in `BACKBONE_CLIENT_SCOPES` (registered first in Backbone; left off by default so a missing scope cannot break sign-in). The old table is now "Explorador" in the menu. Needs Mercury's `enabled` in the campaign detail to tell paused from active (see Mercury `feat/campaign-detail-enabled`). See `docs/technical/campaigns.md` and the operator manual.
+- **Modo oscuro y modo sistema:** el botón de tema recorre claro, oscuro y sistema (icono sol, luna o monitor). En modo sistema Iris sigue `prefers-color-scheme` y se repinta si el sistema cambia; la elección se guarda en `app-theme` y se aplica antes de pintar para evitar el parpadeo. Sin elección guardada, Iris sigue al sistema.
+- **Marca de Iris:** logo de ojo y globo de mensaje con un aro de radar (`AppLogoComponent`), en la barra lateral, login, registro y showcase, con favicon e icono de Apple nuevos y anillos de iris en el fondo de las pantallas de acceso.
 - **User registration:** `/register` and `/verify-email` pages, with a six-digit code by e-mail, resend and password strength. The BFF orchestrates backbone and Mercury (`/auth/register`, `/auth/verify-email`, `/auth/resend-verification`).
 - **Real monitoring data:** `GET /monitoring/overview` aggregates Mercury's campaigns and progress and the health of Mercury and backbone. The dashboard refreshes every 30 seconds while the tab is visible, and shows loading, empty and error states.
 - `Dockerfile`, `docker-compose.yml` and `k8s/iris.yaml`. See `docs/technical/deployment.md`.
@@ -43,6 +59,9 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 
 ### Changed
 
+- `packageManager` pasa a `pnpm@12.15.0`: con 12.11.2 fijado, el pnpm 12.15.0 que lanza corepack abortaba `pnpm dev` con `ERR_PNPM_BAD_PM_VERSION`.
+- Redundant scripts removed: `server`, `watch:ssr`, `dev:integrated:unix`, `dev:integrated:win`, `scripts/start-dev.sh`, `scripts/serve-integrated.sh` and `scripts/build-test.sh`. Use `pnpm dev` or `pnpm start:bff`.
+- **Settings from `local.env` or Vault:** the BFF reads `secrets/local.env`, then `config/local.env` and, with `VAULT_ENABLED=true`, Vault, which fills only what is still empty. Local runs and Docker use the same files, as Mercury and ZeroBound do, and Kubernetes builds `iris-secrets` from `secrets/local.env`. `default.env`, `.env.docker` and `.env.secrets` are gone; `.env` is only for Compose substitutions. `docker-compose.yml` now sets the port, the service URLs and the internal CA. `pnpm start:bff` loads both files in `package.json` and `pnpm dev` runs `ng serve` and the BFF together.
 - `authGuard` protege el dashboard con la sesión real y se agrega `guestGuard` para `/login`. (F2-05)
 - Todos los entornos consumen la API a través del BFF con URL relativa; se agregaron configuraciones de build para dev, qa y cloud. (F1-05)
 - `build:ssr` compila el target de servidor con el mismo `ENVM` (antes siempre con `production`). (F1-05)
@@ -57,6 +76,9 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 
 ### Fixed
 
+- `BACKBONE_TLS_INSECURE` ahora cubre todas las llamadas a backbone y mercury (proxy, monitoreo y registro), como ya decía la documentación.
+- El registro deshabilitado ya no responde 503 en silencio: el BFF nombra las variables que faltan al arrancar y en cada intento.
+- Mensajes y etiquetas ilegibles: los errores de formulario y las alertas usaban `text-destructive-foreground` sobre fondo claro (casi blanco sobre blanco), y varios colores no alcanzaban 4.5:1 en algún tema. Los tokens de `src/styles.css` cumplen ahora WCAG AA como texto y como relleno en ambos temas.
 - `create-user` and `verify-code` pointed to Mercury routes that do not exist; registration now goes through backbone.
 - `animate-fade-in` was used but never defined, so those animations did not run.
 - El renderizado en servidor ya no falla al leer la configuración de API guardada en el navegador. (F0-04)

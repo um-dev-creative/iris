@@ -43,8 +43,12 @@ Thumbs.db
 
 # Secrets and TLS material (MER-14)
 *.env
+.env.*
 !*.env.example
+# Non-secret settings, versioned on purpose; secrets live in secrets/*.env
+!config/*.env
 ssl/*.key
+ssl/localhost.crt
 ssl/*.pem
 *.key
 *.log

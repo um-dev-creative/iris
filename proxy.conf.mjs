@@ -1,8 +1,8 @@
 // Proxy de `ng serve` (:4200) hacia el BFF local, para que el navegador use URLs relativas sin CORS.
-// El destino sale de IRIS_BFF_URL (http o https); por defecto el BFF de `pnpm server` en :4000.
-const target = process.env.IRIS_BFF_URL || 'http://localhost:4000';
+// El destino sale de IRIS_BFF_URL ; por defecto el BFF de `pnpm start:bff`, en https://localhost:4000.
+const target = process.env.IRIS_BFF_URL || 'https://localhost:4000';
 
-// Solo desarrollo: el BFF puede servirse con un certificado autofirmado (SSL_CERT_PATH/SSL_KEY_PATH).
+// Solo desarrollo: el BFF usa el certificado autofirmado de scripts/dev-cert.mjs.
 const secure = false;
 
 const route = { target, secure, changeOrigin: false, logLevel: 'warn' };

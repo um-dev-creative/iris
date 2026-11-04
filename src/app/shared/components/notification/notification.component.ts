@@ -27,7 +27,7 @@ import {
                 <lucide-icon [img]="CircleX" [size]="20" strokeWidth="1.5" class="text-destructive" />
               }
               @case ('warning') {
-                <lucide-icon [img]="TriangleAlert" [size]="20" strokeWidth="1.5" class="text-warning-foreground dark:text-warning" />
+                <lucide-icon [img]="TriangleAlert" [size]="20" strokeWidth="1.5" class="text-warning" />
               }
               @default {
                 <lucide-icon [img]="Info" [size]="20" strokeWidth="1.5" class="text-primary" />
