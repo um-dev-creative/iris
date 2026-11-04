@@ -5,14 +5,20 @@
   <title>Iris Dashboard</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" href="favicon.ico" sizes="48x48">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
 
   <!-- Anti-FOUC: aplicar tema antes de que Angular hidrate -->
   <script>
     (function() {
-      const theme = localStorage.getItem('app-theme') || 'light';
-      if (theme === 'dark') {
+      var stored = null;
+      try { stored = localStorage.getItem('app-theme'); } catch (e) {}
+      var dark = stored === 'dark' ||
+        ((stored !== 'light') && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      if (dark) {
         document.documentElement.classList.add('dark');
+        document.documentElement.style.colorScheme = 'dark';
       }
       document.documentElement.classList.add('theme-transition');
     })();

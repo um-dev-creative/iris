@@ -42,7 +42,7 @@ export const VERIFY_MESSAGES = {
 
           <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="space-y-4">
             @if (errorMessage(); as message) {
-              <div role="alert" class="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive-foreground">
+              <div role="alert" class="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 <lucide-icon [img]="TriangleAlert" [size]="16" strokeWidth="1.5" class="mt-0.5 flex-shrink-0" />
                 <span>{{ message }}</span>
               </div>
@@ -61,7 +61,7 @@ export const VERIFY_MESSAGES = {
             <div class="space-y-1.5">
               <label for="verify-code" class="block text-sm font-medium">Código</label>
               <input id="verify-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" formControlName="code" [attr.aria-invalid]="invalidCode()" [class]="inputClass + ' text-center text-lg tracking-[0.5em] font-mono'" />
-              @if (invalidCode()) { <p class="text-xs text-destructive-foreground">Son 6 dígitos.</p> }
+              @if (invalidCode()) { <p class="text-xs text-destructive">Son 6 dígitos.</p> }
             </div>
 
             <app-button type="submit" size="lg" [fullWidth]="true" [disabled]="submitting()">

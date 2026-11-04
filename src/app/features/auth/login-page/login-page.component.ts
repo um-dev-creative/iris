@@ -5,7 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { Eye, EyeOff, LoaderCircle, LucideAngularModule, TriangleAlert } from 'lucide-angular';
 import { AuthService } from '../../../core/services';
 import { ROUTE_PATHS, routeUrl } from '../../../core/routes';
-import { AppButtonComponent } from '../../../shared/components';
+import { AppButtonComponent, AppLogoComponent } from '../../../shared/components';
 import { ThemeToggleComponent } from '../../../shared/components/theme-toggle/theme-toggle.component';
 
 /** Mensajes para la persona; ninguno revela si el usuario existe. */
@@ -29,21 +29,26 @@ export function safeReturnUrl(value: string | null | undefined): string {
   selector: 'app-login-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink, LucideAngularModule, AppButtonComponent, ThemeToggleComponent],
+  imports: [ReactiveFormsModule, RouterLink, LucideAngularModule, AppButtonComponent, AppLogoComponent, ThemeToggleComponent],
   template: `
     <main class="iris-aurora relative min-h-screen flex items-center justify-center bg-background px-4 py-8">
       <div class="absolute top-4 right-4"><app-theme-toggle /></div>
 
       <section class="w-full max-w-sm iris-glass animate-pop text-card-foreground border border-border rounded-2xl shadow-lg p-6 sm:p-8">
         <header class="flex flex-col items-center gap-3 mb-6 text-center">
-          <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center font-bold text-primary-foreground" aria-hidden="true">IR</div>
+          <div class="flex flex-col items-center gap-2">
+            <div class="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center text-primary-foreground shadow-md">
+              <app-logo [size]="42" [animated]="true" />
+            </div>
+            <span class="text-sm font-semibold tracking-[0.3em] uppercase pl-[0.3em]">Iris</span>
+          </div>
           <h1 class="text-xl font-semibold tracking-tight">Iniciar sesión</h1>
           <p class="text-sm text-muted-foreground">Accede al panel de monitoreo de Iris</p>
         </header>
 
         <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="space-y-4">
           @if (errorMessage(); as message) {
-            <div role="alert" class="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive-foreground">
+            <div role="alert" class="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               <lucide-icon [img]="TriangleAlert" [size]="16" strokeWidth="1.5" class="mt-0.5 flex-shrink-0" />
               <span>{{ message }}</span>
             </div>
@@ -64,7 +69,7 @@ export function safeReturnUrl(value: string | null | undefined): string {
               class="w-full px-3 py-2 text-sm border border-input rounded-lg bg-background text-foreground focus:border-ring focus:ring-1 focus:ring-ring outline-none transition-colors aria-[invalid=true]:border-destructive"
             />
             @if (invalid('email')) {
-              <p id="login-email-error" class="text-xs text-destructive-foreground">Ingresa tu usuario o correo.</p>
+              <p id="login-email-error" class="text-xs text-destructive">Ingresa tu usuario o correo.</p>
             }
           </div>
 
@@ -92,7 +97,7 @@ export function safeReturnUrl(value: string | null | undefined): string {
               </button>
             </div>
             @if (invalid('password')) {
-              <p id="login-password-error" class="text-xs text-destructive-foreground">Ingresa tu contraseña.</p>
+              <p id="login-password-error" class="text-xs text-destructive">Ingresa tu contraseña.</p>
             }
           </div>
 

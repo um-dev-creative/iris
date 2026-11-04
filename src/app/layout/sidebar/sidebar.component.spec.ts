@@ -2,14 +2,15 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { SidebarComponent } from './sidebar.component';
 import { DashboardStore } from '../../core/services';
+import { provideAppConfig } from '../../core/config';
 import { fakeAuth } from '../../core/testing/auth.testing';
 
 function setWidth(width: number) {
   vi.stubGlobal('innerWidth', width);
 }
 
-function render() {
-  TestBed.configureTestingModule({ providers: [provideRouter([]), fakeAuth().provider] });
+function render(env: Parameters<typeof provideAppConfig>[0] = { production: false }) {
+  TestBed.configureTestingModule({ providers: [provideRouter([]), fakeAuth().provider, provideAppConfig(env)] });
   const fixture = TestBed.createComponent(SidebarComponent);
   fixture.detectChanges();
   return { fixture, el: fixture.nativeElement as HTMLElement, store: TestBed.inject(DashboardStore) };
@@ -29,6 +30,13 @@ describe('SidebarComponent', () => {
     ['Inicio', 'Campañas', 'Ajustes', 'Clientes de login', 'Showcase'].forEach((label) => expect(el.textContent).toContain(label));
     expect(el.querySelectorAll('nav a')).toHaveLength(5);
     expect(el.querySelector('aside')!.className).toContain('w-64');
+  });
+
+  it('en producción no muestra el enlace al showcase', () => {
+    const { el } = render({ production: true });
+
+    expect(el.textContent).not.toContain('Showcase');
+    expect(el.querySelectorAll('nav a')).toHaveLength(4);
   });
 
   it('los enlaces apuntan a las rutas del dashboard', () => {

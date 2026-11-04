@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Iris">
+  <rect width="32" height="32" rx="7" fill="#0054ae"/>
+  <g transform="translate(2 2) scale(0.875)" fill="none" stroke="#fff" stroke-linejoin="round">
+    <path stroke-width="2.6" d="M2.5 14.5C6.5 8 11 5.5 16 5.5s9.5 2.5 13.5 9c-4 6.5-8.5 9-13.5 9-1.9 0-3.7-.4-5.4-1.1L5.5 27l.8-6.6c-1.4-1.5-2.6-3.5-3.8-5.9Z"/>
+    <circle cx="16" cy="14.5" r="4.6" stroke-width="2.3" stroke-dasharray="21.5 7.4" transform="rotate(-20 16 14.5)"/>
+    <circle cx="16" cy="14.5" r="1.7" fill="#fff" stroke="none"/>
+  </g>
+</svg>
