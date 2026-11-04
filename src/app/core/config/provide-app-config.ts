@@ -7,7 +7,10 @@ export type AppEnvironment = Partial<Omit<AppConfig, 'features'>> & { features?:
 
 /** Mezcla un entorno sobre los valores por defecto. */
 export function buildAppConfig(env: AppEnvironment): AppConfig {
-  return { ...DEFAULT_APP_CONFIG, ...env, features: { ...DEFAULT_APP_CONFIG.features, ...env.features } };
+  const production = env.production ?? DEFAULT_APP_CONFIG.production;
+  // the showcase is a development aid: it follows the environment unless the environment says otherwise
+  const features = { ...DEFAULT_APP_CONFIG.features, showcase: !production, ...env.features };
+  return { ...DEFAULT_APP_CONFIG, ...env, features };
 }
 
 /**

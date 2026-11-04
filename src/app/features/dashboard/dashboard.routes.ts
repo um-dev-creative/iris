@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { ROUTE_PATHS } from '../../core/routes';
+import { showcaseGuard } from '../../core/guards';
 
 export const DASHBOARD_ROUTES: Routes = [
   {
@@ -32,6 +33,7 @@ export const DASHBOARD_ROUTES: Routes = [
   },
   {
     path: ROUTE_PATHS.SHOWCASE,
+    canMatch: [showcaseGuard],
     loadComponent: () =>
       import('./pages/showcase-page/showcase-page.component').then(
         (m) => m.ShowcasePageComponent

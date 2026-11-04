@@ -81,10 +81,23 @@ describe('GET /monitoring/overview', () => {
     assert.equal(data.totals.total, 20);
   });
 
-  it('una sesión rechazada por mercury responde 401', async () => {
+  it('una sesión que mercury y backbone rechazan responde 401', async () => {
+    Object.assign(bff.state, { sessionActive: false });
     bff.state.monitoring.status = 401;
 
     assert.equal((await overview()).status, 401);
+    bff.state.sessionActive = true;
+  });
+
+  it('una sesión que backbone acepta pero mercury rechaza no cierra la sesión: informa que no hay datos', async () => {
+    bff.state.monitoring.status = 401;
+
+    const res = await overview();
+    const data = await body(res);
+
+    assert.equal(res.status, 200);
+    assert.equal(data.campaignsAvailable, false);
+    assert.deepEqual(data.campaigns, []);
   });
 
   it('si mercury falla informa que no hay datos, sin inventarlos', async () => {

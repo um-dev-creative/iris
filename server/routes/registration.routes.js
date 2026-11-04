@@ -6,16 +6,10 @@ const rateLimit = require('express-rate-limit');
 const logger = require('../config/logger');
 const backbone = require('../shared/backbone');
 const mercury = require('../shared/mercury');
-const {
-  BACKBONE_APPLICATION_ID,
-  MERCURY_LOGIN_ALIAS,
-  RATE_LIMIT_WINDOW_MS,
-  REGISTRATION_MAIL_FROM,
-  REGISTRATION_RATE_LIMIT_MAX,
-  REGISTRATION_ROLE_ID,
-  REGISTRATION_TEMPLATE_EN,
-  REGISTRATION_TEMPLATE_ES,
-} = require('../config/constants');
+const { missingForRegistration } = require('../config/settings-check');
+const settings = require('../config/constants');
+
+const { RATE_LIMIT_WINDOW_MS, REGISTRATION_RATE_LIMIT_MAX, REGISTRATION_ROLE_ID, REGISTRATION_TEMPLATE_EN, REGISTRATION_TEMPLATE_ES } = settings;
 
 const CODE_MINUTES = 15;
 const RESEND_SLOT_SECONDS = 60;
@@ -42,8 +36,7 @@ function isEmail(value) {
 }
 
 /** Sign-up stays off until every value it needs exists: a half-configured flow would create users nobody can activate. */
-const configured = () =>
-  Boolean(BACKBONE_APPLICATION_ID && REGISTRATION_ROLE_ID && REGISTRATION_TEMPLATE_ES && REGISTRATION_MAIL_FROM && MERCURY_LOGIN_ALIAS);
+const missing = missingForRegistration(settings);
 
 const limited = () =>
   rateLimit({
@@ -56,7 +49,10 @@ const limited = () =>
 
 /** Answers 503 instead of a partial sign-up, and turns an unexpected failure into the same answer. */
 const guarded = (handler) => async (req, res) => {
-  if (!configured()) return res.status(503).json(UNAVAILABLE);
+  if (missing.length > 0) {
+    logger.error(`Registration is off, missing: ${missing.join(', ')}`);
+    return res.status(503).json(UNAVAILABLE);
+  }
   try {
     return await handler(req, res);
   } catch (err) {

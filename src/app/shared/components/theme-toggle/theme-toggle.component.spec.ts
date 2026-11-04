@@ -4,13 +4,13 @@ import { ThemeService } from '../../../core/services';
 
 describe('ThemeToggleComponent', () => {
   beforeEach(() => {
-    localStorage.clear();
+    localStorage.setItem('app-theme', 'light');
     document.documentElement.classList.remove('dark');
     vi.useFakeTimers();
   });
   afterEach(() => vi.useRealTimers());
 
-  it('alterna el tema, anima el icono 400 ms y vuelve a la transición normal', () => {
+  it('recorre claro, oscuro y sistema, anima el icono 400 ms y vuelve a la transición normal', () => {
     const fixture = TestBed.createComponent(ThemeToggleComponent);
     fixture.detectChanges();
     const theme = TestBed.inject(ThemeService);
@@ -19,9 +19,13 @@ describe('ThemeToggleComponent', () => {
     (fixture.nativeElement.querySelector('button') as HTMLButtonElement).click();
     fixture.detectChanges();
 
+    expect(theme.preference()).toBe('dark');
     expect(theme.currentTheme()).toBe('dark');
     expect(fixture.componentInstance.isDark()).toBe(true);
     expect(fixture.componentInstance.iconClass).toBe('animate-spin');
+
+    (fixture.nativeElement.querySelector('button') as HTMLButtonElement).click();
+    expect(theme.preference()).toBe('system');
 
     vi.advanceTimersByTime(400);
     expect(fixture.componentInstance.isAnimating()).toBe(false);
@@ -32,6 +36,6 @@ describe('ThemeToggleComponent', () => {
     const fixture = TestBed.createComponent(ThemeToggleComponent);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('button').getAttribute('aria-label')).toBe('Toggle theme');
+    expect(fixture.nativeElement.querySelector('button').getAttribute('aria-label')).toBe('Tema claro. Pulsa para cambiar');
   });
 });

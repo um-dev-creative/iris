@@ -16,17 +16,17 @@ Dashboard de monitoreo construido con **Angular 22**, **Tailwind CSS 4** y **Luc
 git clone https://github.com/um-dev-creative/iris.git
 cd iris
 pnpm install                      # también activa el hook pre-commit (.githooks)
-cp default.env.example default.env   # opcional: todas las variables tienen valor por defecto local
-pnpm start                        # frontend: http://localhost:4200 (proxy a /mrc, /bkd y /health hacia el BFF en :4000)
+cp secrets/local.env.example secrets/local.env   # opcional: todas las variables tienen valor por defecto local
+pnpm dev                          # frontend en https://localhost:4200 y BFF en :4000, con config/local.env y secrets/local.env
 ```
 
 Para ejecutar el stack completo (app + BFF con proxies a Mercury y Backbone):
 
 ```bash
-ENVM=development pnpm serve:integrated   # http://localhost:4000
+ENVM=development pnpm serve:integrated   # https://localhost:4000
 ```
 
-Las variables de entorno están documentadas en [`default.env.example`](default.env.example) y en [DEVELOPMENT_SETUP.md](DEVELOPMENT_SETUP.md). `NODE_ENV=production` exige `BACKBONE_APPLICATION_ID`, `BACKBONE_CLIENT_ID` y `BACKBONE_CLIENT_SECRET`.
+Las variables de entorno están documentadas en [`config/local.env`](config/local.env) y [`secrets/local.env.example`](secrets/local.env.example) y su ubicación en cada forma de ejecución, en [entornos](docs/technical/environments.md#dónde-van-las-variables). `NODE_ENV=production` exige `BACKBONE_APPLICATION_ID`, `BACKBONE_CLIENT_ID` y `BACKBONE_CLIENT_SECRET`.
 
 ## Scripts
 
@@ -36,8 +36,8 @@ Las variables de entorno están documentadas en [`default.env.example`](default.
 | `pnpm build:dev` | Build de desarrollo |
 | `pnpm build` / `pnpm build:ssr` | Build con `ENVM` (`development`, `dev`, `qa`, `dev-cloud`, `qa-cloud`, `production`; SSR en el segundo). Ver [entornos](docs/technical/environments.md) |
 | `pnpm serve:integrated` | Build SSR y `node server.js` (BFF + app) |
-| `pnpm dev:integrated:unix` | Watch del build y BFF |
-| `pnpm server` | Solo el BFF (`node server.js`) |
+| `pnpm dev` | `ng serve` y el BFF juntos, con `config/local.env` y `secrets/local.env` |
+| `pnpm start:bff` | Solo el BFF: carga `config/local.env` y `secrets/local.env`, y ejecuta `node server.js` |
 | `pnpm test` / `pnpm test:server` / `pnpm test:all` | Vitest frontend / BFF / ambos, con gate de cobertura 85 % |
 | `pnpm coverage:merge` | Une los `lcov.info` de ambos proyectos |
 
@@ -49,7 +49,7 @@ Cobertura mínima del **85 %** en frontend y backend ([política](docs/roadmap/C
 
 - Ramas por tarea y commits con [Conventional Commits](docs/technical/contributing.md) (`feat:`, `fix:`, `docs:`, `test:`, `ci:`, `chore:`…).
 - Cada PR usa la [plantilla](.github/pull_request_template.md): criterios de aceptación, cobertura ≥ 85 %, entrada en el [CHANGELOG](CHANGELOG.md), documentación y comunicación.
-- Nunca se commitean secretos: `default.env` está ignorado y el hook pre-commit ejecuta `gitleaks`.
+- Nunca se commitean secretos: `.env` y `secrets/*.env` están ignorados y el hook pre-commit ejecuta `gitleaks`.
 
 ## Documentación
 
