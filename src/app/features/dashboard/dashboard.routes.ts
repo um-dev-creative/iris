@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 import { ROUTE_PATHS } from '../../core/routes';
-import { showcaseGuard } from '../../core/guards';
+import { showcaseGuard, unsavedChangesGuard } from '../../core/guards';
 
 export const DASHBOARD_ROUTES: Routes = [
   {
@@ -23,6 +23,23 @@ export const DASHBOARD_ROUTES: Routes = [
       import('./pages/settings-page/settings-page.component').then(
         (m) => m.SettingsPageComponent
       ),
+  },
+  {
+    path: ROUTE_PATHS.TEMPLATES,
+    loadComponent: () =>
+      import('./pages/templates-page/templates-page.component').then((m) => m.TemplatesPageComponent),
+  },
+  {
+    path: `${ROUTE_PATHS.TEMPLATES}/${ROUTE_PATHS.NEW}`,
+    canDeactivate: [unsavedChangesGuard],
+    loadComponent: () =>
+      import('./pages/template-editor-page/template-editor-page.component').then((m) => m.TemplateEditorPageComponent),
+  },
+  {
+    path: `${ROUTE_PATHS.TEMPLATES}/:id`,
+    canDeactivate: [unsavedChangesGuard],
+    loadComponent: () =>
+      import('./pages/template-editor-page/template-editor-page.component').then((m) => m.TemplateEditorPageComponent),
   },
   {
     path: ROUTE_PATHS.CAMPAIGNS,
