@@ -1,7 +1,7 @@
 # Análisis: editor de plantillas y gestión de campañas
 
-> Estado: **propuesta para aprobar** · Fecha: 2026-11-04 · Repos: `iris` (UI + BFF) y `mercury` (backend)
-> Nada de esto está implementado. Al final, la sección 9 lista las decisiones que hay que confirmar antes de empezar.
+> Estado: **implementado** (2026-11-04) · Repos: `iris` (UI + BFF) y `mercury` (backend)
+> Las propuestas de la sección 9 se aprobaron. La sección 11 resume qué se construyó, dónde se desvió del plan y qué falta verificar.
 
 ## 1. Objetivo
 
@@ -196,3 +196,44 @@ Total orientativo: **~30 días-persona**. Las fases 1 y 2 no dependen entre sí 
 ## 10. Siguiente paso
 
 Si estás de acuerdo con las propuestas de la sección 9, se empieza por la **fase 1** (campañas en Iris, sin tocar Mercury) y por la **fase 2** (endurecer FreeMarker en Mercury), que no dependen de ninguna decisión abierta. Las historias del backlog (`docs/roadmap/F6-…`) y las tareas de YouTrack se generan a partir de la tabla de la sección 7 cuando se apruebe.
+
+## 11. Resultado de la implementación
+
+| Fase | Resultado | Dónde |
+|---|---|---|
+| 1. Campañas en Iris | Hecha | Iris `docs/technical/campaigns.md`; Mercury expone `enabled` en el detalle de la campaña |
+| 2. Endurecer FreeMarker | Hecha | Mercury `docs/security/template-security.md` |
+| 3. Listas de referencia | Hecha | Mercury `docs/template-management-api.md`; selector de plantilla en el formulario de campañas |
+| 4. `TemplateStorage` + cargador | Hecha | Mercury `docs/architecture/template-storage.md` |
+| 5. API de contenido | Hecha, con Markdown como fuente (`.md`) | Mercury `docs/template-management-api.md` |
+| 6. Editor en Iris | Hecho | Iris `docs/technical/templates.md` |
+| 7. Almacén en la nube | Hecho para S3 y compatibles (MinIO); sin verificar contra un servicio real | Mercury `docs/architecture/template-storage.md` |
+| 8. Versiones | Hechas: historial, comparar, restaurar, original conservado | Mercury `V2032__template_versions.sql`; Iris `docs/technical/templates.md` |
+| 9. Cierre | Documentación enlazada y revisión de seguridad (abajo) | — |
+
+### Diferencias con el plan
+
+- **Parámetros detectados:** no hay un endpoint aparte (`/templates/{id}/parameters`); vienen en la respuesta del contenido y de la vista previa.
+- **Editor de código:** `<textarea>` con vista previa y salto a la línea del error; CodeMirror 6 queda como mejora.
+- **Plantillas del sistema:** en lugar de solo lectura total, se abren bloqueadas y se pueden cambiar tras una confirmación explícita (`confirmSystem=true`), con el original conservado como versión `BASELINE`.
+- **Campañas:** solo el creador las gestiona (decisión 9.4); la lista trae únicamente las de la propia persona. Un permiso `CAMPAIGN_MANAGE` queda para una segunda entrega.
+- **Escritura:** crear, editar, pausar o eliminar campañas, y guardar o previsualizar plantillas, necesitan `mercury:message:write` en `BACKBONE_CLIENT_SCOPES`, registrado antes en el cliente M2M de Backbone. No viene activado: pedir un scope no registrado haría que Backbone rechace el token y falle el inicio de sesión.
+
+### Revisión de seguridad
+
+| Riesgo | Control |
+|---|---|
+| Ejecución de código por FreeMarker | `ALLOWS_NOTHING_RESOLVER` y `?api` apagado, también en la vista previa y la validación; pruebas con `Execute` y `ObjectConstructor` |
+| Salida del directorio o del bucket | Nombre de archivo en lista blanca (`TemplateNames`), comprobado en Mercury y otra vez en el BFF |
+| Vista previa que consume el servidor | Límite de caracteres y de tiempo de escritura. **Riesgo residual:** un bucle que no escribe nada no se interrumpe; está acotado por el permiso `TEMPLATE_MANAGE` |
+| HTML activo en la vista previa | `iframe sandbox=""` con CSP restrictiva; Markdown con HTML crudo escapado y enlaces `javascript:` descartados |
+| Pisar el trabajo de otra persona | `ETag` / `If-Match` (412) en el guardado y en la restauración |
+| Cambiar la aplicación desde el navegador | El BFF fija `applicationId` y descarta campos y consultas no permitidos |
+| Cambiar una plantilla de la que dependen otros servicios | Confirmación explícita y original restaurable |
+
+### Pendiente de verificar fuera de este entorno
+
+- `S3TemplateStorageIT` contra un MinIO o un bucket reales (no se pudo levantar un contenedor en esta sesión).
+- La imagen nativa de GraalVM con `commonmark` y el SDK de AWS.
+- Aplicar `V2032__template_versions.sql` en la base de Mercury de QA.
+- Registrar `mercury:message:write` en el cliente M2M de Backbone y agregarlo a `BACKBONE_CLIENT_SCOPES`.

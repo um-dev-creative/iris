@@ -27,7 +27,7 @@ The repo declares `packageManager: pnpm` (`pnpm-lock.yaml`); use pnpm and don't 
 Two cooperating halves:
 
 **Frontend (`src/app`)**
-- `src/main.ts` bootstraps `AppComponent`. Routing is two-level and lazy: `app.routes.ts` (`/dashboard`, guarded by `authGuard`) and `features/dashboard/dashboard.routes.ts` (`home`, `data`, `settings`, `login-clients`, `showcase`). Keep new routes aligned with this split.
+- `src/main.ts` bootstraps `AppComponent`. Routing is two-level and lazy: `app.routes.ts` (`/dashboard`, guarded by `authGuard`) and `features/dashboard/dashboard.routes.ts` (`home`, `data`, `campaigns`, `templates`, `settings`, `login-clients`, `showcase`). Keep new routes aligned with this split.
 - `core/` holds cross-cutting services, guards, interceptors and models. `features/dashboard/` holds pages and their feature services. `layout/` is the shell: sidebar and navbar, with pages rendered in its `router-outlet`. `shared/` holds reusable UI.
 - Barrels are used heavily (`core/services/index.ts`, `shared/components/index.ts`). Import through them, and export new shared components through the barrel.
 - State is signal-first: `DashboardStore` is the UI state; `ThemeService` toggles `html.dark` and persists `app-theme`; `ApiService` holds the runtime API base config persisted as `api_config` in `localStorage`.
@@ -40,7 +40,7 @@ Two cooperating halves:
 - `server/` is plain CommonJS: `config/` (constants, logger, settings-check), `shared/` (proxy, backbone client, session cookies, csrf, trace, upload), `routes/`, `test/`.
 - Auth is cookie-based and stateless: login goes to backbone as the Iris application client (M2M token, cached and renewed), the session and refresh JWTs live in httpOnly cookies `iris_session` / `iris_refresh`, and the BFF forwards the JWT as the `session-token` header. `shared/proxy.js` renews it once on a 401. There is no Redis; Vault is optional and only read at startup.
 - Every API call under `/mrc/api/v1` and `/bkd/api/v1` needs the `x-iris-csrf: 1` header unless it is a GET; an unknown API path is a 404 JSON, never the SPA.
-- Routes: `/mrc/api/v1/auth/*` (login `access-token`, `logout`, legacy `session-end`, `me`, and public `register` / `verify-email` / `resend-verification`), `/mrc/api/v1/general/*` → mercury `MERCURY_API_PREFIX`, `/mrc/api/v1/d-image/users/profile` (multer → mercury), `/bkd/api/v1/*` → backbone `BACKBONE_API_PREFIX`, `/health`.
+- Routes: `/mrc/api/v1/campaigns/*` and `/mrc/api/v1/templates/*` (add the application client's Bearer that Mercury requires and fix the application; see `docs/technical/campaigns.md` and `templates.md`), `/mrc/api/v1/auth/*` (login `access-token`, `logout`, legacy `session-end`, `me`, and public `register` / `verify-email` / `resend-verification`), `/mrc/api/v1/general/*` → mercury `MERCURY_API_PREFIX`, `/mrc/api/v1/d-image/users/profile` (multer → mercury), `/bkd/api/v1/*` → backbone `BACKBONE_API_PREFIX`, `/health`.
 - The server serves `dist/dashboard/browser` (prefers `index.csr.html`) with a client-side fallback; it does not render SSR at runtime.
 
 ## Gotchas
