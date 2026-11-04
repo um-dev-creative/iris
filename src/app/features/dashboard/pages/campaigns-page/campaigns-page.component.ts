@@ -213,8 +213,8 @@ export class CampaignsPageComponent implements OnInit {
   readonly busyId = signal<string | null>(null);
   readonly progress = signal<Record<string, CampaignProgress>>({});
 
-  readonly statuses = computed(() => [...new Set(this.all().map((c) => c.status))].sort());
-  readonly channels = computed(() => [...new Set(this.all().map((c) => c.channelType))].sort());
+  readonly statuses = computed(() => [...new Set(this.all().map((c) => c.status))].sort((a, b) => a.localeCompare(b)));
+  readonly channels = computed(() => [...new Set(this.all().map((c) => c.channelType))].sort((a, b) => a.localeCompare(b)));
 
   readonly filtered = computed(() => {
     const term = this.search().trim().toLowerCase();

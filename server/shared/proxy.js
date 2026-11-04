@@ -41,6 +41,24 @@ function isSafePath(path) {
   return !decoded.split('/').some((segment) => segment === '..' || segment === '.');
 }
 
+/**
+ * The upstream URL for `path`, or null if it would leave the service: the address is parsed and must keep the origin and the
+ * path prefix of the upstream, whatever the path says.
+ */
+function targetUrl(base, prefix, path) {
+  let root;
+  let target;
+  try {
+    root = new URL(`${base}${prefix}`);
+    target = new URL(`${root.href.replace(/\/$/, '')}${path}`);
+  } catch {
+    return null;
+  }
+  const rootPath = root.pathname.replace(/\/$/, '');
+  const inside = target.pathname === rootPath || target.pathname.startsWith(`${rootPath}/`);
+  return target.origin === root.origin && inside ? target.href : null;
+}
+
 /** The trace id of the request, when tracing is on (it is validated hex by the trace middleware). */
 const traceOf = (req) => (req.trace ? { traceId: req.trace.traceId } : {});
 
@@ -107,7 +125,8 @@ async function renewSession(req, res) {
 async function proxyToApi(req, res, upstream, path, options = {}) {
   const { base, prefix } = UPSTREAMS[upstream];
   if (!isSafePath(path)) return res.status(400).json({ error: 'Invalid path' });
-  const url = `${base}${prefix}${path}`;
+  const url = targetUrl(base, prefix, path);
+  if (url === null) return res.status(400).json({ error: 'Invalid path' });
   let token = req.cookies?.[SESSION_COOKIE];
   if (!token && !options.public) return res.status(401).json({ error: 'Not authenticated' });
 
@@ -137,4 +156,4 @@ const passThrough = (upstream, options) => (req, res) =>
 /** Router-level handler for a route that maps to one fixed upstream path. */
 const fixedPath = (upstream, path, options) => (req, res) => proxyToApi(req, res, upstream, path, options);
 
-module.exports = { proxyToApi, passThrough, fixedPath };
+module.exports = { proxyToApi, passThrough, fixedPath, targetUrl };

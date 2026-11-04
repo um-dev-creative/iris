@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, ElementRef, HostListener, NgZone, O
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AlertTriangle, ArrowLeft, Eye, History, LucideAngularModule, Lock, RotateCcw, Save } from 'lucide-angular';
 import { AppBadgeComponent, AppButtonComponent, AppCardComponent } from '../../../../shared/components';
@@ -165,7 +164,7 @@ const STARTER: Record<EditorFormat, string> = {
           <app-card title="Vista previa" subtitle="Así se verá el mensaje con los parámetros de ejemplo" class="block">
             <div class="relative">
               @if (previewing()) { <span class="absolute right-2 top-2 text-xs text-muted-foreground" data-testid="previewing">Actualizando…</span> }
-              <iframe title="Vista previa de la plantilla" sandbox="" class="h-80 w-full rounded-lg border border-border bg-white" [srcdoc]="previewHtml()" data-testid="preview"></iframe>
+              <iframe #previewFrame title="Vista previa de la plantilla" sandbox="" class="h-80 w-full rounded-lg border border-border bg-white" data-testid="preview"></iframe>
             </div>
           </app-card>
           <app-card title="Parámetros de ejemplo" subtitle="Una línea clave=valor por parámetro; solo para la vista previa" class="block">
@@ -241,7 +240,7 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
   private readonly references = inject(ReferenceDataService);
   private readonly notifications = inject(NotificationService);
   private readonly router = inject(Router);
-  private readonly sanitizer = inject(DomSanitizer);
+  private readonly frame = viewChild<ElementRef<HTMLIFrameElement>>('previewFrame');
   private readonly zone = inject(NgZone);
   private readonly id: string | null = inject(ActivatedRoute).snapshot.paramMap.get('id') ?? null;
   private readonly editor = viewChild<ElementRef<HTMLTextAreaElement>>('editor');
@@ -281,7 +280,8 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
   readonly conflict = signal(false);
   readonly problems = signal<TemplateProblem[]>([]);
   readonly previewing = signal(false);
-  readonly previewHtml = signal<SafeHtml>('');
+  /** The document shown in the preview iframe; it is written to the frame as `srcdoc`, which the empty `sandbox` keeps inert. */
+  readonly previewDoc = signal('');
 
   readonly historyOpen = signal(false);
   readonly historyLoading = signal(false);
@@ -307,6 +307,12 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
   });
 
   constructor() {
+    // the preview goes straight into the sandboxed frame: Angular's sanitizer would strip the styles an e-mail needs
+    effect(() => {
+      const frame = this.frame()?.nativeElement;
+      if (frame) frame.srcdoc = this.previewDoc();
+    });
+
     // the preview follows what is typed, a moment after the last key
     effect((onCleanup) => {
       const name = this.previewName();
@@ -562,7 +568,7 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
       const result = await this.templates.preview(name, content, parseParams(paramsText).params);
       this.detected.set(result.parameters);
       this.problems.set(result.problems);
-      this.previewHtml.set(this.sanitizer.bypassSecurityTrustHtml(result.ok ? previewDocument(result.output) : ''));
+      this.previewDoc.set(result.ok ? previewDocument(result.output) : '');
       this.paramsText.update((current) => withDetectedParams(current, result.parameters));
     } catch (error) {
       this.problems.set([{ line: 0, column: 0, message: this.failure(error) }]);

@@ -493,6 +493,35 @@ describe('TemplateEditorPageComponent (vista previa)', () => {
     expect(fake.service.preview).toHaveBeenLastCalledWith('vista-previa.html', 'hola 2', { name: '' });
   });
 
+  it('el resultado de la vista previa se escribe en el iframe como srcdoc, sin scripts', async () => {
+    vi.useFakeTimers();
+    const { fixture, component, el, fake } = await render('a');
+    fake.service.preview.mockResolvedValue(previewOf({ output: '<h1 style="color:red">Hola Ana</h1>' }));
+
+    component.content.set('# Hola');
+    fixture.detectChanges();
+    await vi.advanceTimersByTimeAsync(600);
+    fixture.detectChanges();
+
+    const frame = el.querySelector('iframe[data-testid="preview"]') as HTMLIFrameElement;
+    expect(frame.srcdoc).toContain('<h1 style="color:red">Hola Ana</h1>');
+    expect(frame.srcdoc).toContain("default-src 'none'");
+    expect(frame.getAttribute('sandbox')).toBe('');
+  });
+
+  it('con problemas la vista previa queda en blanco', async () => {
+    vi.useFakeTimers();
+    const { fixture, component, el, fake } = await render('a');
+    fake.service.preview.mockResolvedValue(previewOf({ ok: false, output: '', problems: [{ line: 1, column: 1, message: 'mal' }] }));
+
+    component.content.set('<#if');
+    fixture.detectChanges();
+    await vi.advanceTimersByTimeAsync(600);
+    fixture.detectChanges();
+
+    expect((el.querySelector('iframe[data-testid="preview"]') as HTMLIFrameElement).srcdoc).toBe('');
+  });
+
   it('el iframe de la vista previa no tiene permisos (sandbox vacío)', async () => {
     const { el } = await render('a');
 
