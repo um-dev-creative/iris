@@ -9,6 +9,10 @@ export const ROUTE_PATHS = {
   SETTINGS: 'settings',
   SHOWCASE: 'showcase',
   LOGIN_CLIENTS: 'login-clients',
+  /** Gestión de campañas: lista, `campaigns/new`, `campaigns/:id` y `campaigns/:id/edit`. */
+  CAMPAIGNS: 'campaigns',
+  NEW: 'new',
+  EDIT: 'edit',
   /** Página pública de acceso, fuera del layout del dashboard. */
   LOGIN: 'login',
   /** Alta pública de una cuenta y confirmación de su correo. */

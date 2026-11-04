@@ -9,6 +9,7 @@ Las rutas viven en `src/app/core/routes/route-paths.ts` (`ROUTE_PATHS`, segmento
 | `ROOT` | `''` | Redirige a `DASHBOARD` |
 | `DASHBOARD` | `dashboard` | Padre con `LayoutComponent` y `authGuard`; carga `DASHBOARD_ROUTES` |
 | `DATA` / `SETTINGS` / `LOGIN_CLIENTS` / `SHOWCASE` | `data` / `settings` / `login-clients` / `showcase` | Páginas hijas de `DASHBOARD` |
+| `CAMPAIGNS` / `NEW` / `EDIT` | `campaigns` / `new` / `edit` | Gestión de campañas: `campaigns`, `campaigns/new`, `campaigns/:id`, `campaigns/:id/edit` (ver [campaigns.md](campaigns.md)) |
 | `LOGIN` | `login` | Reservada para F2; sin ruta registrada todavía |
 | `WILDCARD` | `**` | Redirige a `DASHBOARD` |
 
