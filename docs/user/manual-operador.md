@@ -32,7 +32,7 @@ La tendencia compara con la lectura anterior, por eso no aparece en la primera.
 En **Campañas** busca por nombre y filtra por canal y estado. Una campaña está **En curso** si le quedan mensajes por enviar, **Entregada** si terminó con entregas y **Fallida** si terminó sin ninguna.
 
 ## 6. Estado de servicios
-Iris comprueba Mercury y Backbone en cada actualización y muestra la latencia medida. *Operational*: responde bien. *Degraded*: responde, pero tarda más de un segundo. *Down*: no responde o informa un fallo.
+Iris comprueba Mercury y Backbone en cada actualización y muestra la latencia medida. *Operational*: responde bien. *Degraded*: responde, pero tarda más de un segundo. *Down*: no responde o informa un fallo. Si ves *Down* en Backbone con una latencia baja (decenas de ms) mientras funciona, el sondeo está apuntando a una ruta protegida: Iris debe usar `BACKBONE_HEALTH_PATH=/actuator/health/readiness`, la sonda pública de backbone-rest.
 
 ## 7. Actualización automática
 Los datos se actualizan cada 30 segundos mientras la pestaña está visible. El botón de actualizar lo hace al momento.

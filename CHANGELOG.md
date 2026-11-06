@@ -14,6 +14,7 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 
 ### Fixed
 
+- El panel de monitoreo ya no muestra Backbone como «Down» cuando está arriba: sondeaba `/actuator/health`, que backbone-rest protege con sesión (401), y ahora usa la sonda pública `/actuator/health/readiness` (`BACKBONE_HEALTH_PATH`).
 - El dashboard ya no te devuelve al login cuando Mercury rechaza una sesión que Backbone da por activa (p. ej. Mercury con otro `APP_TOKEN_SECRET`): el panel carga sin campañas y el BFF avisa en el log. Un 401 solo cierra la sesión si Backbone también la rechaza.
 - Sign-up asks backbone for the `users:manage` scope (`BACKBONE_CLIENT_SCOPES`), which `UserAdminGuard` requires to check e-mails and create and activate users; the docs state that the M2M client must belong to `BACKBONE_APPLICATION_ID`.
 

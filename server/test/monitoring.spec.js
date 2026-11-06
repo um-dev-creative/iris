@@ -118,6 +118,12 @@ describe('GET /monitoring/overview', () => {
     assert.equal(typeof services[0].latencyMs, 'number');
   });
 
+  it('sondea la sonda pública de backbone-rest, no /actuator/health (que exige sesión)', async () => {
+    const { services } = await body(await overview());
+
+    assert.equal(services.find((s) => s.name === 'Backbone').status, 'operational');
+  });
+
   it('un servicio caído o que no responde UP aparece como caído', async () => {
     Object.assign(bff.state, { mercuryHealth: 503, backboneHealthBody: 'DOWN' });
 
