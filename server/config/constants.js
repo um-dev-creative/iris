@@ -40,7 +40,7 @@ module.exports = {
   MONITORED_APPLICATION_ID: process.env['MONITORED_APPLICATION_ID'] || process.env['BACKBONE_APPLICATION_ID'] || '',
   MONITORING_MAX_CAMPAIGNS: Number.parseInt(process.env['MONITORING_MAX_CAMPAIGNS'] || '50', 10),
   MERCURY_HEALTH_PATH: process.env['MERCURY_HEALTH_PATH'] || '/mercury/actuator/health',
-  BACKBONE_HEALTH_PATH: process.env['BACKBONE_HEALTH_PATH'] || '/backbone/actuator/health',
+  BACKBONE_HEALTH_PATH: process.env['BACKBONE_HEALTH_PATH'] || '/backbone/actuator/health/readiness',
   REGISTRATION_RATE_LIMIT_MAX: Number.parseInt(process.env['REGISTRATION_RATE_LIMIT_MAX'] || '5', 10),
   // Iris as a Mercury login client (M2M): sends the verification code and checks it
   MERCURY_LOGIN_ALIAS: process.env['MERCURY_LOGIN_ALIAS'] || '',

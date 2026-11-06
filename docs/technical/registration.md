@@ -43,6 +43,15 @@ sequenceDiagram
 
 `GET /mrc/api/v1/monitoring/overview` agrega lo que ya expone Mercury: lista las campañas de `MONITORED_APPLICATION_ID`, pide el progreso de las `MONITORING_MAX_CAMPAIGNS` más recientes y sondea la salud de Mercury y backbone.
 
+La sonda de backbone es `BACKBONE_HEALTH_PATH`, por defecto `/backbone/actuator/health/readiness`: backbone-rest solo deja pública `/actuator/health/liveness` y `/readiness`; el agregado `/actuator/health` exige sesión y responde 401, que el panel interpreta como «Down» aunque el servicio funcione.
+
+```mermaid
+flowchart LR
+  I[Iris BFF] -->|GET readiness, sin credenciales| B[backbone-rest]
+  B -->|200 status UP| I
+  I -.->|GET /actuator/health| X[401 → Down]
+```
+
 Mercury exige dos credenciales en `/campaigns`: el `Bearer` del cliente M2M, con el scope `mercury:message:read`, y el `session-token` del usuario. Por eso `BACKBONE_CLIENT_SCOPES` debe incluir ese scope.
 
 Mercury no tiene un registro por mensaje, así que el dashboard muestra campañas, no mensajes individuales. Si Mercury falla, la respuesta lleva `campaignsAvailable: false` y la interfaz lo indica: nunca muestra cifras inventadas.

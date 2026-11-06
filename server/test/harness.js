@@ -104,7 +104,9 @@ async function start({ env = {}, appOptions } = {}) {
     state.apiCalls.push({ service: 'backbone', method: req.method, url: req.originalUrl, token: req.headers['session-token'] });
     res.status(200).json({ service: 'backbone' });
   });
-  backbone.get('/backbone/actuator/health', (_req, res) => res.status(state.backboneHealth ?? 200).json({ status: state.backboneHealthBody ?? 'UP' }));
+  // like backbone-rest: only the liveness/readiness probes are public; the aggregated /actuator/health needs a session
+  backbone.get('/backbone/actuator/health/readiness', (_req, res) => res.status(state.backboneHealth ?? 200).json({ status: state.backboneHealthBody ?? 'UP' }));
+  backbone.get('/backbone/actuator/health', (_req, res) => res.status(401).json({ error: 'unauthorized' }));
   const backboneServer = await listen(http.createServer(backbone));
 
   const mercury = express();
