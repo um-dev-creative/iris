@@ -132,6 +132,25 @@ describe('GET /monitoring/overview', () => {
     assert.deepEqual(services.map((s) => s.status), ['down', 'down']);
   });
 
+  it('el log dice por qué un servicio aparece caído, sin datos de la respuesta más que el estado', async () => {
+    const warn = vi.spyOn(require('../config/logger'), 'warn').mockImplementation(() => undefined);
+    Object.assign(bff.state, { backboneHealth: 401 });
+
+    await overview();
+
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Monitoring: the Backbone health probe /backbone/actuator/health/readiness answered 401'));
+    warn.mockRestore();
+  });
+
+  it('un servicio que responde UP no deja avisos', async () => {
+    const warn = vi.spyOn(require('../config/logger'), 'warn').mockImplementation(() => undefined);
+
+    await overview();
+
+    expect(warn.mock.calls.filter(([m]) => String(m).includes('health probe'))).toEqual([]);
+    warn.mockRestore();
+  });
+
   it('nunca guarda la respuesta en caché', async () => {
     assert.equal((await overview()).headers.get('cache-control'), 'no-store');
   });

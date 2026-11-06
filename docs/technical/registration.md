@@ -43,7 +43,7 @@ sequenceDiagram
 
 `GET /mrc/api/v1/monitoring/overview` agrega lo que ya expone Mercury: lista las campañas de `MONITORED_APPLICATION_ID`, pide el progreso de las `MONITORING_MAX_CAMPAIGNS` más recientes y sondea la salud de Mercury y backbone.
 
-La sonda de backbone es `BACKBONE_HEALTH_PATH`, por defecto `/backbone/actuator/health/readiness`: backbone-rest solo deja pública `/actuator/health/liveness` y `/readiness`; el agregado `/actuator/health` exige sesión y responde 401, que el panel interpreta como «Down» aunque el servicio funcione.
+La sonda de backbone es `BACKBONE_HEALTH_PATH`, por defecto `/backbone/actuator/health/readiness`: backbone-rest solo deja pública `/actuator/health/liveness` y `/readiness`; el agregado `/actuator/health` exige sesión y responde 401, que el panel interpreta como «Down» aunque el servicio funcione. Si un servicio aparece «Down», el log del BFF lo explica: `Monitoring: the Backbone health probe /backbone/actuator/health/readiness answered 401` (ruta equivocada) o `failed: ECONNREFUSED` (sin conexión).
 
 ```mermaid
 flowchart LR

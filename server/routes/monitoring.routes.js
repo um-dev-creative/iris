@@ -27,14 +27,22 @@ const fromMercury = (path, bearer, sessionToken) =>
     ...upstreamTls,
   });
 
+/** Strips control characters so an upstream value cannot forge log lines. */
+const clean = (value) => String(value).replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, 80);
+
 async function probe(name, url) {
   const started = Date.now();
   try {
     const r = await axios.get(url, { timeout: PROBE_TIMEOUT_MS, validateStatus: () => true, ...upstreamTls });
     const latencyMs = Date.now() - started;
-    if (r.status !== 200 || r.data?.status !== 'UP') return { name, status: 'down', latencyMs };
+    if (r.status !== 200 || r.data?.status !== 'UP') {
+      // say why it is Down: a 401/403/404 is a wrong path (BACKBONE_HEALTH_PATH / MERCURY_HEALTH_PATH), not an outage
+      logger.warn(`Monitoring: the ${name} health probe ${new URL(url).pathname} answered ${r.status}${r.data?.status ? ` with status ${clean(r.data.status)}` : ''}`);
+      return { name, status: 'down', latencyMs };
+    }
     return { name, status: latencyMs > SLOW_MS ? 'degraded' : 'operational', latencyMs };
-  } catch {
+  } catch (err) {
+    logger.warn(`Monitoring: the ${name} health probe ${new URL(url).pathname} failed: ${clean(err.code ?? err.message)}`);
     return { name, status: 'down', latencyMs: Date.now() - started };
   }
 }
