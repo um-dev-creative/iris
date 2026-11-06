@@ -36,6 +36,7 @@ export const searchOf = (items: TemplateSummary[], extra: Partial<TemplateSearch
 /** Sustituto de `TemplatesService` para las pruebas de páginas. */
 export function fakeTemplates(items: TemplateSummary[] = []) {
   const service = {
+    applications: vi.fn().mockResolvedValue([]),
     search: vi.fn().mockResolvedValue(searchOf(items)),
     get: vi.fn().mockResolvedValue(items[0] ?? summary('a')),
     create: vi.fn().mockResolvedValue(summary('new')),

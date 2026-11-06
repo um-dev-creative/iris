@@ -2,8 +2,8 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } 
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
-import { ChevronLeft, ChevronRight, FileText, LucideAngularModule, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-angular';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ArrowLeft, ChevronLeft, ChevronRight, FileText, LucideAngularModule, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-angular';
 import { AppBadgeComponent, AppButtonComponent, AppCardComponent } from '../../../../shared/components';
 import { NotificationService } from '../../../../core/services';
 import { ReferenceItem, TemplateSearchResult, TemplateSummary } from '../../../../core/models';
@@ -22,9 +22,14 @@ const base = routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.TEMPLATES);
   imports: [FormsModule, DatePipe, RouterLink, LucideAngularModule, AppCardComponent, AppButtonComponent, AppBadgeComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    @if (applicationId) {
+      <a [routerLink]="applicationsUrl" class="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground" data-testid="back-to-applications">
+        <lucide-icon [img]="ArrowLeft" [size]="14" strokeWidth="2" /> Aplicaciones
+      </a>
+    }
     <div class="mb-6 flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h2 class="text-2xl font-bold text-foreground">Plantillas</h2>
+        <h2 class="text-2xl font-bold text-foreground">Plantillas@if (applicationName(); as name) { <span class="text-muted-foreground font-normal"> · {{ name }}</span> }</h2>
         <p class="text-sm text-muted-foreground mt-1">Escribe y edita el contenido de los mensajes en HTML o Markdown, con vista previa.</p>
       </div>
       <div class="flex gap-2">
@@ -148,16 +153,22 @@ export class TemplatesPageComponent implements OnInit {
   private readonly templates = inject(TemplatesService);
   private readonly references = inject(ReferenceDataService);
   private readonly notifications = inject(NotificationService);
+  /** La aplicación cuyas plantillas se gestionan (de la URL); sin ella, la que el BFF tiene configurada. */
+  readonly applicationId: string | null = inject(ActivatedRoute).snapshot.paramMap.get('applicationId') ?? null;
+  readonly applicationName = signal<string | null>(null);
 
   readonly Plus = Plus;
   readonly RefreshCw = RefreshCw;
   readonly Pencil = Pencil;
   readonly Trash2 = Trash2;
   readonly FileText = FileText;
+  readonly ArrowLeft = ArrowLeft;
   readonly ChevronLeft = ChevronLeft;
   readonly ChevronRight = ChevronRight;
 
-  readonly newUrl = `${base}/${ROUTE_PATHS.NEW}`;
+  readonly applicationsUrl = base;
+  private readonly appBase = this.applicationId ? `${base}/${this.applicationId}` : base;
+  readonly newUrl = `${this.appBase}/${ROUTE_PATHS.NEW}`;
   readonly search = signal('');
   readonly typeId = signal('');
   readonly severityId = signal('');
@@ -184,9 +195,10 @@ export class TemplatesPageComponent implements OnInit {
     this.references.templateTypes().then((list) => this.types.set(list), () => undefined);
     this.references.severityTypes().then((list) => this.severities.set(list), () => undefined);
     void this.reload();
+    this.nameApplication();
   }
 
-  readonly editUrl = (id: string) => `${base}/${id}`;
+  readonly editUrl = (id: string) => `${this.appBase}/${id}`;
   readonly updated = (template: TemplateSummary) => toDate(template.updatedAt ?? template.createdAt);
 
   onSearch(value: string): void {
@@ -216,6 +228,7 @@ export class TemplatesPageComponent implements OnInit {
     try {
       this.result.set(
         await this.templates.search({
+          ...(this.applicationId ? { applicationId: this.applicationId } : {}),
           q: this.search().trim(),
           templateTypeId: this.typeId(),
           severityTypeId: this.severityId(),
@@ -248,6 +261,15 @@ export class TemplatesPageComponent implements OnInit {
     } finally {
       this.busy.set(false);
     }
+  }
+
+  /** Para el encabezado; si no se puede leer la lista, solo falta el nombre. */
+  private nameApplication(): void {
+    if (!this.applicationId) return;
+    this.templates.applications().then(
+      (list) => this.applicationName.set(list.find((application) => application.id === this.applicationId)?.name ?? null),
+      () => undefined,
+    );
   }
 
   private restart(): void {

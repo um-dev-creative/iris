@@ -171,4 +171,47 @@ describe('TemplatesService', () => {
 
     expect((await done).output).toContain('Ana');
   });
+
+  describe('por aplicación', () => {
+    const APP = '8249aa97-23fa-47cd-9c6d-4685f0c03cc3';
+
+    it('applications lista las aplicaciones', async () => {
+      const { service, http } = setup();
+
+      const done = service.applications();
+      http.expectOne(`${URL}/applications`).flush([{ id: APP, name: 'Iris' }]);
+
+      expect(await done).toEqual([{ id: APP, name: 'Iris' }]);
+    });
+
+    it('search con aplicación usa su ruta y no la envía como parámetro', async () => {
+      const { service, http } = setup();
+
+      const done = service.search({ applicationId: APP, q: 'hola', page: 0 });
+      const req = http.expectOne((r) => r.url === `${URL}/applications/${APP}`);
+      expect(req.request.params.get('q')).toBe('hola');
+      expect(req.request.params.has('applicationId')).toBe(false);
+      req.flush({ items: [], page: 0, size: 10, totalElements: 0, totalPages: 1 });
+      await done;
+    });
+
+    it('create con aplicación hace POST a su ruta', async () => {
+      const { service, http } = setup();
+
+      const done = service.create({ description: 'd', location: 'a.md', fileFormat: 'MD', templateTypeId: 't', severityTypeId: 's' }, APP);
+      const req = http.expectOne(`${URL}/applications/${APP}`);
+      expect(req.request.method).toBe('POST');
+      req.flush({ id: 'n' });
+      await done;
+    });
+
+    it('preview con aplicación usa la ruta de la aplicación', async () => {
+      const { service, http } = setup();
+
+      const done = service.preview('a.md', 'x', {}, APP);
+      http.expectOne(`${URL}/applications/${APP}/preview`).flush({ ok: true, format: 'MARKDOWN', output: '', problems: [], parameters: [] });
+      await done;
+    });
+  });
 });
+

@@ -34,7 +34,7 @@ import {
   withFormat,
 } from '../../utils/template-input';
 
-const listUrl = routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.TEMPLATES);
+const templatesUrl = routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.TEMPLATES);
 const PREVIEW_DELAY_MS = 500;
 const STARTER: Record<EditorFormat, string> = {
   MD: '# Hola ${name}\n\nEscribe aquí el mensaje. Usa **negritas**, listas y [enlaces](https://example.com).\n',
@@ -42,7 +42,7 @@ const STARTER: Record<EditorFormat, string> = {
 };
 
 /**
- * Crear (`templates/new`) o editar (`templates/:id`) una plantilla: metadatos, contenido en HTML o Markdown con vista previa, y
+ * Crear (`templates/:applicationId/new`) o editar (`templates/:applicationId/:id`) una plantilla: metadatos, contenido en HTML o Markdown con vista previa, y
  * guardado con bloqueo optimista (Mercury responde 412 si alguien guardó antes). Las plantillas del sistema se abren de solo lectura.
  */
 @Component({
@@ -51,9 +51,15 @@ const STARTER: Record<EditorFormat, string> = {
   imports: [FormsModule, DatePipe, RouterLink, LucideAngularModule, AppCardComponent, AppButtonComponent, AppBadgeComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <a [routerLink]="listUrl" class="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-      <lucide-icon [img]="ArrowLeft" [size]="14" strokeWidth="2" /> Plantillas
-    </a>
+    <nav class="mb-4 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground" aria-label="Ubicación" data-testid="breadcrumb">
+      <a [routerLink]="listUrl" class="inline-flex items-center gap-1.5 hover:text-foreground">
+        <lucide-icon [img]="ArrowLeft" [size]="14" strokeWidth="2" /> {{ applicationId ? 'Aplicaciones' : 'Plantillas' }}
+      </a>
+      @if (applicationId) {
+        <span aria-hidden="true">/</span>
+        <a [routerLink]="applicationUrl" class="hover:text-foreground" data-testid="back-to-application">{{ applicationName() ?? 'Plantillas' }}</a>
+      }
+    </nav>
 
     @if (loadError(); as why) {
       <p role="alert" class="text-sm text-foreground" data-testid="load-failed">
@@ -242,7 +248,11 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
   private readonly router = inject(Router);
   private readonly frame = viewChild<ElementRef<HTMLIFrameElement>>('previewFrame');
   private readonly zone = inject(NgZone);
-  private readonly id: string | null = inject(ActivatedRoute).snapshot.paramMap.get('id') ?? null;
+  private readonly route = inject(ActivatedRoute).snapshot.paramMap;
+  private readonly id: string | null = this.route.get('id') ?? null;
+  /** La aplicación de la URL; sin ella (rutas antiguas), la que el BFF tiene configurada. */
+  readonly applicationId: string | null = this.route.get('applicationId') ?? null;
+  readonly applicationName = signal<string | null>(null);
   private readonly editor = viewChild<ElementRef<HTMLTextAreaElement>>('editor');
 
   readonly ArrowLeft = ArrowLeft;
@@ -252,7 +262,9 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
   readonly RotateCcw = RotateCcw;
   readonly Eye = Eye;
   readonly AlertTriangle = AlertTriangle;
-  readonly listUrl = listUrl;
+  /** Al salir del editor: la lista de aplicaciones si hay una aplicación en la URL, y desde ahí sus plantillas. */
+  readonly listUrl = templatesUrl;
+  readonly applicationUrl = this.applicationId ? `${templatesUrl}/${this.applicationId}` : templatesUrl;
   readonly descriptionMax = TEMPLATE_DESCRIPTION_MAX;
   readonly maxBytes = TEMPLATE_CONTENT_MAX_BYTES;
 
@@ -328,6 +340,7 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
   async ngOnInit(): Promise<void> {
     this.references.templateTypes().then((list) => this.types.set(list), () => undefined);
     this.references.severityTypes().then((list) => this.severities.set(list), () => undefined);
+    this.nameApplication();
     if (this.id === null) {
       this.content.set(STARTER[this.format()]);
       this.saved.set({ description: '', typeId: '', severityId: '', content: '' });
@@ -335,6 +348,15 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
       return;
     }
     await this.load(this.id);
+  }
+
+  /** Para la ruta de migas; si no se puede leer la lista, solo falta el nombre. */
+  private nameApplication(): void {
+    if (!this.applicationId) return;
+    this.templates.applications().then(
+      (list) => this.applicationName.set(list.find((application) => application.id === this.applicationId)?.name ?? null),
+      () => undefined,
+    );
   }
 
   /** Vuelve a leer la plantilla del servidor, descartando lo escrito. */
@@ -493,7 +515,7 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
         fileFormat: this.format(),
         templateTypeId: this.typeId(),
         severityTypeId: this.severityId(),
-      });
+      }, this.applicationId ?? undefined);
     } catch (error) {
       this.notifications.error('No se pudo crear la plantilla', this.failure(error));
       return;
@@ -507,7 +529,7 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
       this.notifications.warning('Plantilla creada sin contenido', `${this.failure(error)} Ábrela para guardar el contenido.`);
     }
     this.saved.set({ ...this.saved(), content: this.content(), description: this.description(), typeId: this.typeId(), severityId: this.severityId() });
-    await this.router.navigateByUrl(`${listUrl}/${created.id}`, { replaceUrl: true });
+    await this.router.navigateByUrl(`${this.applicationUrl}/${created.id}`, { replaceUrl: true });
   }
 
   private async update(): Promise<void> {
@@ -565,7 +587,7 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
   private async runPreview(name: string, content: string, paramsText: string): Promise<void> {
     untracked(() => this.previewing.set(true));
     try {
-      const result = await this.templates.preview(name, content, parseParams(paramsText).params);
+      const result = await this.templates.preview(name, content, parseParams(paramsText).params, this.applicationId ?? undefined);
       this.detected.set(result.parameters);
       this.problems.set(result.problems);
       this.previewDoc.set(result.ok ? previewDocument(result.output) : '');

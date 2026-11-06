@@ -62,7 +62,7 @@ function targetUrl(base, prefix, path) {
 /** The trace id of the request, when tracing is on (it is validated hex by the trace middleware). */
 const traceOf = (req) => (req.trace ? { traceId: req.trace.traceId } : {});
 
-const forward = (req, url, token, { body, headers = {}, query } = {}) =>
+const forward = (req, url, token, { body, headers = {}, query, bearer } = {}) =>
   axios({
     ...upstreamTls,
     method: req.method,
@@ -72,6 +72,8 @@ const forward = (req, url, token, { body, headers = {}, query } = {}) =>
       // a prepared body (multipart) brings its own Content-Type
       ...(body === undefined ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { [SESSION_TOKEN_HEADER]: token } : {}),
+      // backbone's resources (everything but session, profile image...) read the session JWT only from Authorization: Bearer
+      ...(bearer && token ? { Authorization: `Bearer ${token}` } : {}),
       ...(req.get('if-match') ? { 'If-Match': req.get('if-match') } : {}),
       ...(req.get('if-none-match') ? { 'If-None-Match': req.get('if-none-match') } : {}),
       ...(req.get('idempotency-key') ? { 'Idempotency-Key': req.get('idempotency-key') } : {}),
@@ -119,6 +121,7 @@ async function renewSession(req, res) {
  * @param {*} [options.body]          a prepared body (e.g. FormData) instead of `req.body`
  * @param {object} [options.headers]  extra upstream headers
  * @param {object} [options.query]    the query string to send instead of the request's
+ * @param {boolean} [options.bearer]  also send the session as `Authorization: Bearer` (backbone's resources require it); follows a renewed session
  *
  * With a session, a 401 silently renews it through backbone once and retries.
  */

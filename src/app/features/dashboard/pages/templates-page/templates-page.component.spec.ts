@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, provideRouter } from '@angular/router';
 import { TemplatesPageComponent } from './templates-page.component';
 import { NotificationService } from '../../../../core/services';
 import { fakeReferences, httpError } from '../../testing/campaigns.testing';
@@ -210,3 +210,61 @@ describe('TemplatesPageComponent', () => {
     expect(component.page()).toBe(0);
   });
 });
+
+describe('TemplatesPageComponent (por aplicación)', () => {
+  const APP = '8249aa97-23fa-47cd-9c6d-4685f0c03cc3';
+
+  async function renderFor(applications = [{ id: APP, name: 'Iris' }]) {
+    const fake = fakeTemplates([summary('a')]);
+    fake.service.applications.mockResolvedValue(applications);
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]), fake.provider, fakeReferences().provider,
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: new Map([['applicationId', APP]]) } } },
+      ],
+    });
+    const fixture = TestBed.createComponent(TemplatesPageComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return { fixture, el: fixture.nativeElement as HTMLElement, fake };
+  }
+
+  it('lista las plantillas de la aplicación de la URL', async () => {
+    const { fake } = await renderFor();
+
+    expect(fake.service.search).toHaveBeenCalledWith(expect.objectContaining({ applicationId: APP, page: 0 }));
+  });
+
+  it('muestra el nombre de la aplicación y un enlace para volver a elegir otra', async () => {
+    const { el } = await renderFor();
+
+    expect(el.querySelector('h2')?.textContent).toContain('Iris');
+    expect(el.querySelector('[data-testid="back-to-applications"]')?.getAttribute('href')).toBe('/dashboard/templates');
+  });
+
+  it('los enlaces de crear y editar conservan la aplicación', async () => {
+    const { el } = await renderFor();
+
+    expect(el.querySelector('[data-testid="new-template"]')?.getAttribute('href')).toBe(`/dashboard/templates/${APP}/new`);
+    expect(el.querySelector('[data-testid="template-row"] a')?.getAttribute('href')).toBe(`/dashboard/templates/${APP}/a`);
+  });
+
+  it('si no se puede leer el nombre de la aplicación, la lista sigue funcionando', async () => {
+    const fake = fakeTemplates([summary('a')]);
+    fake.service.applications.mockRejectedValue(httpError(403));
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]), fake.provider, fakeReferences().provider,
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: new Map([['applicationId', APP]]) } } },
+      ],
+    });
+    const fixture = TestBed.createComponent(TemplatesPageComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).querySelectorAll('[data-testid="template-row"]')).toHaveLength(1);
+  });
+});
+

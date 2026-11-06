@@ -41,7 +41,18 @@ export interface TemplateSearchResult {
   totalPages: number;
 }
 
+/** Una aplicación de Backbone cuyas plantillas se pueden gestionar (`GET /applications`). */
+export interface ApplicationSummary {
+  id: string;
+  name: string;
+  codeName?: string | null;
+  description?: string | null;
+  active?: boolean | null;
+}
+
 export interface TemplateSearchParams {
+  /** La aplicación de la que se listan; sin ella, la aplicación que el BFF tiene configurada. */
+  applicationId?: string;
   q?: string;
   templateTypeId?: string;
   severityTypeId?: string;

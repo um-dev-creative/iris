@@ -14,4 +14,12 @@ describe('templates sin aplicación configurada', () => {
     assert.equal(res.status, 503);
     assert.equal(bff.state.apiCalls.length, 0);
   });
+
+  it('las rutas por aplicación no necesitan la aplicación del BFF: la aplicación viene en la URL', async () => {
+    const app = '8249aa97-23fa-47cd-9c6d-4685f0c03cc3';
+    const cookie = `iris_session=${tokens.GOOD}`;
+
+    assert.equal((await bff.call(`/mrc/api/v1/templates/applications/${app}`, { cookie })).status, 200);
+    assert.equal((await bff.call('/mrc/api/v1/templates/applications', { cookie })).status, 200);
+  });
 });

@@ -101,10 +101,14 @@ async function start({ env = {}, appOptions } = {}) {
   backbone.get(`${root}/session/validate`, (_req, res) => res.status(200).json(state.sessionActive ?? true));
   // anything else under /backbone/api/v1 is a resource of the backbone API, guarded by the session token
   backbone.use(root, (req, res) => {
-    state.apiCalls.push({ service: 'backbone', method: req.method, url: req.originalUrl, token: req.headers['session-token'] });
+    state.apiCalls.push({ service: 'backbone', method: req.method, url: req.originalUrl, token: req.headers['session-token'], authorization: req.headers.authorization });
+    // like backbone-rest: its resources authenticate only the Authorization: Bearer session, never session-token
+    if (req.path.startsWith('/applications') && !String(req.headers.authorization ?? '').startsWith('Bearer ')) return res.status(401).json({ error: 'unauthorized' });
     res.status(200).json({ service: 'backbone' });
   });
-  backbone.get('/backbone/actuator/health', (_req, res) => res.status(state.backboneHealth ?? 200).json({ status: state.backboneHealthBody ?? 'UP' }));
+  // like backbone-rest: only the liveness/readiness probes are public; the aggregated /actuator/health needs a session
+  backbone.get('/backbone/actuator/health/readiness', (_req, res) => res.status(state.backboneHealth ?? 200).json({ status: state.backboneHealthBody ?? 'UP' }));
+  backbone.get('/backbone/actuator/health', (_req, res) => res.status(401).json({ error: 'unauthorized' }));
   const backboneServer = await listen(http.createServer(backbone));
 
   const mercury = express();
