@@ -18,6 +18,7 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 
 ### Fixed
 
+- Entrar en **Plantillas** ya no devuelve al login: la lista de aplicaciones (`GET /templates/applications`) se pedía a Backbone con el encabezado `session-token`, pero los recursos de backbone-rest solo leen la sesión de `Authorization: Bearer`, así que respondía 401 y el navegador cerraba la sesión. El BFF envía ahora la sesión también como `Bearer` (opción `bearer` de `proxyToApi`, que sigue a una sesión renovada).
 - El panel de monitoreo ya no muestra Backbone como «Down» cuando está arriba: sondeaba `/actuator/health`, que backbone-rest protege con sesión (401), y ahora usa la sonda pública `/actuator/health/readiness` (`BACKBONE_HEALTH_PATH`).
 - El dashboard ya no te devuelve al login cuando Mercury rechaza una sesión que Backbone da por activa (p. ej. Mercury con otro `APP_TOKEN_SECRET`): el panel carga sin campañas y el BFF avisa en el log. Un 401 solo cierra la sesión si Backbone también la rechaza.
 - Sign-up asks backbone for the `users:manage` scope (`BACKBONE_CLIENT_SCOPES`), which `UserAdminGuard` requires to check e-mails and create and activate users; the docs state that the M2M client must belong to `BACKBONE_APPLICATION_ID`.

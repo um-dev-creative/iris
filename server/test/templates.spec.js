@@ -66,6 +66,8 @@ describe('templates (listas de referencia)', () => {
       assert.equal(last().service, 'backbone');
       assert.equal(last().url, '/backbone/api/v1/applications');
       assert.equal(last().token, tokens.GOOD);
+      // backbone-rest authenticates a resource only with Authorization: Bearer <session>; session-token alone is a 401
+      assert.equal(last().authorization, `Bearer ${tokens.GOOD}`);
     });
 
     it('las aplicaciones exigen sesión', async () => {

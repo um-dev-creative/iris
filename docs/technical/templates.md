@@ -29,7 +29,7 @@ sequenceDiagram
 
 | Método y ruta | Mercury | Notas |
 |---|---|---|
-| `GET /templates/applications` | `GET /applications` de **Backbone** | Las aplicaciones entre las que se elige. Lleva la sesión de la persona. |
+| `GET /templates/applications` | `GET /applications` de **Backbone** | Las aplicaciones entre las que se elige. Lleva la sesión de la persona como `Authorization: Bearer` **y** `session-token`: los recursos de backbone-rest autentican solo el `Bearer`; sin él responde 401 y el navegador cierra la sesión. |
 | `GET /templates/applications/:applicationId` | `GET /templates` | La aplicación sale de la URL (UUID) y se ignora la del navegador. Solo `q`, `templateTypeId`, `severityTypeId`, `active`, `page`, `size`, `sort`. Mercury comprueba `TEMPLATE_MANAGE` para esa aplicación (403 si no). No necesita `MONITORED_APPLICATION_ID`. |
 | `POST /templates/applications/:applicationId` | `POST /templates` | Igual que `POST /templates`, con la aplicación de la URL. |
 | `POST /templates/applications/:applicationId/preview` | `POST /templates/preview` | Igual que `/preview`, con la aplicación de la URL. |
