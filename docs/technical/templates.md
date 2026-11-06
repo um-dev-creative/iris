@@ -29,7 +29,11 @@ sequenceDiagram
 
 | Método y ruta | Mercury | Notas |
 |---|---|---|
-| `GET /templates` | `GET /templates` | Solo `q`, `templateTypeId`, `severityTypeId`, `active`, `page`, `size`, `sort`; la aplicación la pone el BFF. |
+| `GET /templates/applications` | `GET /applications` de **Backbone** | Las aplicaciones entre las que se elige. Lleva la sesión de la persona. |
+| `GET /templates/applications/:applicationId` | `GET /templates` | La aplicación sale de la URL (UUID) y se ignora la del navegador. Solo `q`, `templateTypeId`, `severityTypeId`, `active`, `page`, `size`, `sort`. Mercury comprueba `TEMPLATE_MANAGE` para esa aplicación (403 si no). No necesita `MONITORED_APPLICATION_ID`. |
+| `POST /templates/applications/:applicationId` | `POST /templates` | Igual que `POST /templates`, con la aplicación de la URL. |
+| `POST /templates/applications/:applicationId/preview` | `POST /templates/preview` | Igual que `/preview`, con la aplicación de la URL. |
+| `GET /templates` | `GET /templates` | Ruta anterior, con la aplicación del BFF (`MONITORED_APPLICATION_ID`). Solo `q`, `templateTypeId`, `severityTypeId`, `active`, `page`, `size`, `sort`; la aplicación la pone el BFF. |
 | `POST /templates` | `POST /templates` | Solo `description`, `location`, `fileFormat`, `templateTypeId`, `severityTypeId`. `location` debe ser un nombre de archivo (`.ftl`, `.ftlh`, `.md`, `.html`); si no, 400 sin llamar a Mercury. |
 | `GET/PUT/DELETE /templates/:id` | igual | `:id` debe ser UUID. DELETE desactiva (borrado lógico). |
 | `GET /templates/:id/content` | igual | Devuelve el contenido y su `etag`. |
@@ -41,12 +45,29 @@ sequenceDiagram
 
 Escribir (`PUT`, `POST /preview`, `DELETE`) necesita `mercury:message:write` en `BACKBONE_CLIENT_SCOPES`, registrado antes en el cliente M2M de Backbone; la persona, además, el permiso `TEMPLATE_MANAGE` en la aplicación.
 
+## Navegación por aplicación
+
+Cada aplicación tiene sus propias plantillas (en Mercury, su carpeta del almacenamiento: `<prefijo>/<aplicación>/<archivo>`). Iris lo refleja en tres niveles, cada uno con su ruta:
+
+```mermaid
+flowchart LR
+  A["/dashboard/templates<br/>Aplicaciones"] -->|elige una| L["/dashboard/templates/:applicationId<br/>Plantillas de la aplicación"]
+  L -->|Editar / Nueva plantilla| E["/dashboard/templates/:applicationId/:id<br/>/dashboard/templates/:applicationId/new<br/>Editor"]
+  E -->|migas: aplicación| L
+  E -->|migas: Aplicaciones| A
+```
+
+- La lista de aplicaciones sale de Backbone (`GET /applications`), solo las activas, por nombre. Elegir una que la persona no puede gestionar muestra el aviso «No tienes permiso para administrar las plantillas» (Mercury responde 403).
+- La aplicación viaja en la URL, nunca en el cuerpo: el BFF la valida como UUID y la pone en la llamada a Mercury. El editor la usa para crear, previsualizar y volver a la lista.
+- `location` sigue siendo solo el nombre del archivo: Mercury añade la carpeta de la aplicación al leer y al guardar (`docs/tec/en/11-template-application-folders.md` en Mercury).
+
 ## Frontend
 
 | Pieza | Ruta o archivo |
 |---|---|
-| Lista con búsqueda, filtros y paginación en el servidor | `/dashboard/templates` · `templates-page` |
-| Crear y editar | `/dashboard/templates/new`, `/dashboard/templates/:id` · `template-editor-page` |
+| Elegir la aplicación | `/dashboard/templates` · `template-applications-page` |
+| Lista de la aplicación, con búsqueda, filtros y paginación en el servidor | `/dashboard/templates/:applicationId` · `templates-page` |
+| Crear y editar | `/dashboard/templates/:applicationId/new`, `/dashboard/templates/:applicationId/:id` · `template-editor-page` |
 | Llamadas al BFF | `TemplatesService`, `ReferenceDataService` |
 | Nombre de archivo, líneas, parámetros, documento de la vista previa | `features/dashboard/utils/template-input.ts` |
 | Diferencia entre dos textos | `features/dashboard/utils/text-diff.ts` |

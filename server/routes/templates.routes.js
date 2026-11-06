@@ -35,10 +35,31 @@ async function toMercury(req, res, path, { query, body } = {}) {
   return proxyToApi(req, res, 'mercury', path, { headers, ...(query ? { query } : {}), ...(body === undefined ? {} : { body }) });
 }
 
+const badLocation = (body) => body?.location !== undefined && !FILE_NAME.test(String(body.location));
+const rejectLocation = (res) => res.status(400).json({ error: 'location must be a file name ending in .ftl, .ftlh, .md or .html', field: 'location' });
+
 router.use((_req, res, next) => {
   res.set('Cache-Control', 'no-store');
   next();
 });
+
+router.param('applicationId', (_req, res, next, applicationId) => (UUID.test(applicationId) ? next() : res.status(400).json({ error: 'Invalid application id' })));
+
+// The applications of Backbone, so the person picks the one whose templates they manage. Mercury still decides, per application,
+// whether the person may manage it (TEMPLATE_MANAGE): an application they cannot manage answers 403 when it is opened.
+router.get('/applications', (req, res) => proxyToApi(req, res, 'backbone', '/applications', { query: {} }));
+
+// The application comes from the URL (validated as a UUID), not from the body or the query. Mercury authorizes it for the person.
+router.get('/applications/:applicationId', (req, res) =>
+  toMercury(req, res, '/templates', { query: { ...pick(req.query, SEARCH_FIELDS), applicationId: req.params.applicationId } }),
+);
+router.post('/applications/:applicationId', (req, res) => {
+  if (badLocation(req.body)) return rejectLocation(res);
+  return toMercury(req, res, '/templates', { query: {}, body: { ...pick(req.body, CREATE_FIELDS), applicationId: req.params.applicationId } });
+});
+router.post('/applications/:applicationId/preview', (req, res) =>
+  toMercury(req, res, '/templates/preview', { query: {}, body: { ...pick(req.body, PREVIEW_FIELDS), applicationId: req.params.applicationId } }),
+);
 
 // the application is the BFF's: without it the lists would have no scope
 router.use((_req, res, next) => {
@@ -50,8 +71,6 @@ router.use((_req, res, next) => {
 router.param('version', (_req, res, next, version) => (VERSION.test(version) ? next() : res.status(400).json({ error: 'Invalid version' })));
 router.param('id', (_req, res, next, id) => (UUID.test(id) ? next() : res.status(400).json({ error: 'Invalid template id' })));
 
-const badLocation = (body) => body?.location !== undefined && !FILE_NAME.test(String(body.location));
-const rejectLocation = (res) => res.status(400).json({ error: 'location must be a file name ending in .ftl, .ftlh, .md or .html', field: 'location' });
 
 // reference lists (literal paths first, so they are never read as an id)
 router.get('/types', (req, res) => toMercury(req, res, '/templates/types', { query: {} }));

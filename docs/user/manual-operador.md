@@ -108,6 +108,8 @@ flowchart LR
 
 En **Plantillas** (menú lateral) escribes y editas el texto de los mensajes que envía Mercury, en **Markdown** o en **HTML**, y ves cómo quedará antes de guardar.
 
+Cada aplicación (Iris, ZeroBound, SmartKin, LatinHub…) tiene sus propias plantillas. Primero **eliges la aplicación**, después ves **sus plantillas** y de ahí abres el **editor**; en la parte de arriba del editor y de la lista, la ruta de migas (**Aplicaciones / nombre de la aplicación**) te permite volver un paso. Si eliges una aplicación que tu cuenta no puede gestionar, Iris te lo dice (necesitas el permiso `TEMPLATE_MANAGE` en esa aplicación).
+
 ```mermaid
 flowchart LR
     A["Nueva plantilla"] --> B["Escribir el contenido"]

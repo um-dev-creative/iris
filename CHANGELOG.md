@@ -8,6 +8,10 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 
 ## [Unreleased]
 
+### Added
+
+- Plantillas por aplicación: en **Plantillas** se elige primero la aplicación (`/dashboard/templates`), luego se ven sus plantillas (`/dashboard/templates/:applicationId`) y de ahí se abre el editor (`/dashboard/templates/:applicationId/:id` y `/new`), con ruta de migas para volver. El BFF añade `GET /templates/applications` (aplicaciones de Backbone) y las rutas `/templates/applications/:applicationId` (lista, crear y vista previa), que toman la aplicación de la URL y no necesitan `MONITORED_APPLICATION_ID`. Mercury guarda cada aplicación en su carpeta (`lth/mercury/templates/<aplicación>/`), así que lo que se edita aquí es el mismo archivo que usa para enviar.
+
 ### Changed
 
 - El showcase de componentes (enlace del menú y ruta `/dashboard/showcase`) solo existe fuera de producción: `features.showcase` sigue a `production` salvo que el entorno lo defina, y en producción la ruta redirige al dashboard.

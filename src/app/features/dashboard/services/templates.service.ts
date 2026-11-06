@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { API_BASE_URL } from '../../../core/config';
 import {
+  ApplicationSummary,
   TemplateContent,
   TemplateInput,
   TemplatePreviewResult,
@@ -21,20 +22,27 @@ export class TemplatesService {
   private readonly http = inject(HttpClient);
   private readonly url = `${inject(API_BASE_URL)}/templates`;
 
+  /** Las aplicaciones de Backbone; cada una tiene sus propias plantillas (su carpeta en Mercury). */
+  applications(): Promise<ApplicationSummary[]> {
+    return firstValueFrom(this.http.get<ApplicationSummary[]>(`${this.url}/applications`));
+  }
+
+  /** Lista las plantillas de `filters.applicationId`; sin ella, las de la aplicación que el BFF tiene configurada. */
   search(filters: TemplateSearchParams = {}): Promise<TemplateSearchResult> {
+    const { applicationId, ...rest } = filters;
     let params = new HttpParams();
-    for (const [key, value] of Object.entries(filters)) {
+    for (const [key, value] of Object.entries(rest)) {
       if (value !== undefined && value !== '') params = params.set(key, String(value));
     }
-    return firstValueFrom(this.http.get<TemplateSearchResult>(this.url, { params }));
+    return firstValueFrom(this.http.get<TemplateSearchResult>(this.scope(applicationId), { params }));
   }
 
   get(id: string): Promise<TemplateSummary> {
     return firstValueFrom(this.http.get<TemplateSummary>(this.item(id)));
   }
 
-  create(input: TemplateInput): Promise<TemplateSummary> {
-    return firstValueFrom(this.http.post<TemplateSummary>(this.url, input));
+  create(input: TemplateInput, applicationId?: string): Promise<TemplateSummary> {
+    return firstValueFrom(this.http.post<TemplateSummary>(this.scope(applicationId), input));
   }
 
   update(id: string, input: Partial<TemplateInput>): Promise<TemplateSummary> {
@@ -79,8 +87,13 @@ export class TemplatesService {
   }
 
   /** Renderiza contenido sin guardar, con parámetros de ejemplo. No envía ni guarda nada. */
-  preview(name: string, content: string, params: Record<string, string>): Promise<TemplatePreviewResult> {
-    return firstValueFrom(this.http.post<TemplatePreviewResult>(`${this.url}/preview`, { name, content, params }));
+  preview(name: string, content: string, params: Record<string, string>, applicationId?: string): Promise<TemplatePreviewResult> {
+    return firstValueFrom(this.http.post<TemplatePreviewResult>(`${this.scope(applicationId)}/preview`, { name, content, params }));
+  }
+
+  /** La raíz de las rutas que dependen de la aplicación: `/templates/applications/{id}`, o `/templates` sin aplicación. */
+  private scope(applicationId?: string): string {
+    return applicationId ? `${this.url}/applications/${encodeURIComponent(applicationId)}` : this.url;
   }
 
   private item(id: string): string {

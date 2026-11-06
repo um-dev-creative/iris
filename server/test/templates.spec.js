@@ -56,6 +56,66 @@ describe('templates (listas de referencia)', () => {
     assert.equal(bff.state.apiCalls.length, 0);
   });
 
+  describe('por aplicación', () => {
+    const APP = '8249aa97-23fa-47cd-9c6d-4685f0c03cc3';
+
+    it('lista las aplicaciones de Backbone con la sesión de la persona', async () => {
+      const res = await bff.call(`${api}/applications`, { cookie: SESSION });
+
+      assert.equal(res.status, 200);
+      assert.equal(last().service, 'backbone');
+      assert.equal(last().url, '/backbone/api/v1/applications');
+      assert.equal(last().token, tokens.GOOD);
+    });
+
+    it('las aplicaciones exigen sesión', async () => {
+      assert.equal((await bff.call(`${api}/applications`)).status, 401);
+    });
+
+    it('busca las plantillas de la aplicación de la URL, no la del BFF ni la del navegador', async () => {
+      await bff.call(`${api}/applications/${APP}?q=welcome&page=1&applicationId=other&evil=1`, { cookie: SESSION });
+
+      const url = new URL(last().url, 'http://x');
+      assert.equal(url.pathname, '/mercury/api/v1/templates');
+      assert.deepEqual(url.searchParams.getAll('applicationId'), [APP]);
+      assert.equal(url.searchParams.get('q'), 'welcome');
+      assert.equal(url.searchParams.get('evil'), null);
+      assert.match(last().authorization, /^Bearer m2m-/);
+      assert.equal(last().token, tokens.GOOD);
+    });
+
+    it('crea en la aplicación de la URL y descarta campos ajenos', async () => {
+      bff.state.apiStatus = 201;
+      await bff.call(`${api}/applications/${APP}`, {
+        method: 'POST', cookie: SESSION,
+        body: { description: 'Bienvenida', location: 'bienvenida.md', fileFormat: 'MD', templateTypeId: 't', severityTypeId: 's', applicationId: 'other', active: false },
+      });
+
+      assert.equal(last().method, 'POST');
+      assert.equal(last().body.applicationId, APP);
+      assert.equal(last().body.active, undefined);
+    });
+
+    it('rechaza una ubicación que no es un archivo al crear', async () => {
+      const res = await bff.call(`${api}/applications/${APP}`, { method: 'POST', cookie: SESSION, body: { description: 'x', location: 'a/b.ftl' } });
+
+      assert.equal(res.status, 400);
+      assert.equal(bff.state.apiCalls.length, 0);
+    });
+
+    it('la vista previa va con la aplicación de la URL', async () => {
+      await bff.call(`${api}/applications/${APP}/preview`, { method: 'POST', cookie: SESSION, body: { name: 'a.md', content: 'x', params: {}, applicationId: 'other' } });
+
+      assert.equal(last().url, '/mercury/api/v1/templates/preview');
+      assert.equal(last().body.applicationId, APP);
+    });
+
+    it('rechaza una aplicación que no es UUID sin llamar a nadie', async () => {
+      assert.equal((await bff.call(`${api}/applications/not-a-uuid`, { cookie: SESSION })).status, 400);
+      assert.equal(bff.state.apiCalls.length, 0);
+    });
+  });
+
   describe('plantillas', () => {
     const ID = '00000000-0000-0000-0000-0000000000b1';
 

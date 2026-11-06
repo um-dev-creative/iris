@@ -6,13 +6,15 @@ import { fakeReferences, httpError } from '../../testing/campaigns.testing';
 import { contentOf, fakeTemplates, previewOf, summary, versionOf } from '../../testing/templates.testing';
 import { HttpErrorResponse } from '@angular/common/http';
 
+const APP = '8249aa97-23fa-47cd-9c6d-4685f0c03cc3';
+
 async function render(id: string | null = null, setup?: (fake: ReturnType<typeof fakeTemplates>) => void) {
   const fake = fakeTemplates([summary('a')]);
   setup?.(fake);
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]), fake.provider, fakeReferences().provider,
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: new Map(id ? [['id', id]] : []) } } },
+      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: new Map<string, string>([['applicationId', APP], ...(id ? [['id', id] as [string, string]] : [])]) } } },
     ],
   });
   const notifications = TestBed.inject(NotificationService);
@@ -106,10 +108,10 @@ describe('TemplateEditorPageComponent (crear)', () => {
 
     expect(fake.service.create).toHaveBeenCalledWith({
       description: 'Aviso', location: 'aviso.md', fileFormat: 'MD', templateTypeId: 't1', severityTypeId: 's1',
-    });
+    }, APP);
     expect(fake.service.saveContent).toHaveBeenCalledWith('new', 'Hola ${name}', null);
     expect(notifications.success).toHaveBeenCalled();
-    expect(navigate).toHaveBeenCalledWith('/dashboard/templates/new', { replaceUrl: true });
+    expect(navigate).toHaveBeenCalledWith(`/dashboard/templates/${APP}/new`, { replaceUrl: true });
   });
 
   it('si crear falla se queda y explica por qué', async () => {
@@ -192,7 +194,7 @@ describe('TemplateEditorPageComponent (campos)', () => {
     (el.querySelector('[data-testid="save"] button') as HTMLButtonElement).click();
     await fixture.whenStable();
 
-    expect(fake.service.create).toHaveBeenCalledWith(expect.objectContaining({ description: 'Aviso', location: 'aviso.md' }));
+    expect(fake.service.create).toHaveBeenCalledWith(expect.objectContaining({ description: 'Aviso', location: 'aviso.md' }), APP);
     expect(component.saving()).toBe(false);
   });
 
@@ -416,7 +418,7 @@ describe('TemplateEditorPageComponent (vista previa)', () => {
     fixture.detectChanges();
 
     expect(fake.service.preview).toHaveBeenCalledTimes(1);
-    expect(fake.service.preview).toHaveBeenCalledWith('plantilla-a.md', '# Hola ${name}!', { name: 'Ana' });
+    expect(fake.service.preview).toHaveBeenCalledWith('plantilla-a.md', '# Hola ${name}!', { name: 'Ana' }, APP);
     expect(component.problems()).toEqual([]);
   });
 
@@ -485,12 +487,12 @@ describe('TemplateEditorPageComponent (vista previa)', () => {
     fixture.detectChanges();
     await vi.advanceTimersByTimeAsync(600);
 
-    expect(fake.service.preview).toHaveBeenLastCalledWith('vista-previa.md', 'hola', {});
+    expect(fake.service.preview).toHaveBeenLastCalledWith('vista-previa.md', 'hola', {}, APP);
     component.onFormat('HTML');
     component.content.set('hola 2');
     fixture.detectChanges();
     await vi.advanceTimersByTimeAsync(600);
-    expect(fake.service.preview).toHaveBeenLastCalledWith('vista-previa.html', 'hola 2', { name: '' });
+    expect(fake.service.preview).toHaveBeenLastCalledWith('vista-previa.html', 'hola 2', { name: '' }, APP);
   });
 
   it('el resultado de la vista previa se escribe en el iframe como srcdoc, sin scripts', async () => {
@@ -706,5 +708,25 @@ describe('TemplateEditorPageComponent (historial)', () => {
     expect(component.reasonLabel('BASELINE')).toBe('Original');
     expect(component.marker({ kind: 'add', text: '' })).toBe('+');
     expect(component.lineClass({ kind: 'del', text: '' })).toContain('destructive');
+  });
+
+  describe('por aplicación', () => {
+    it('la ruta de migas lleva a las aplicaciones y a la lista de la aplicación, con su nombre', async () => {
+      const { el } = await render('a', (fake) => fake.service.applications.mockResolvedValue([
+        { id: 'otra', name: 'Otra' }, { id: APP, name: 'Iris', codeName: 'iris' },
+      ]));
+
+      const links = Array.from(el.querySelectorAll('[data-testid="breadcrumb"] a')) as HTMLAnchorElement[];
+      expect(links[0].getAttribute('href')).toBe('/dashboard/templates');
+      expect(links[0].textContent).toContain('Aplicaciones');
+      expect(links[1].getAttribute('href')).toBe(`/dashboard/templates/${APP}`);
+      expect(links[1].textContent).toContain('Iris');
+    });
+
+    it('si no se puede leer la lista de aplicaciones, la miga sigue llevando a la lista', async () => {
+      const { el } = await render('a', (fake) => fake.service.applications.mockRejectedValue(httpError(403)));
+
+      expect(el.querySelector('[data-testid="back-to-application"]')?.textContent).toContain('Plantillas');
+    });
   });
 });

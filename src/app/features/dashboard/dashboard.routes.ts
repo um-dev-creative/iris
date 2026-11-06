@@ -24,19 +24,25 @@ export const DASHBOARD_ROUTES: Routes = [
         (m) => m.SettingsPageComponent
       ),
   },
+  // plantillas por aplicación: aplicaciones → sus plantillas → el editor
   {
     path: ROUTE_PATHS.TEMPLATES,
+    loadComponent: () =>
+      import('./pages/template-applications-page/template-applications-page.component').then((m) => m.TemplateApplicationsPageComponent),
+  },
+  {
+    path: `${ROUTE_PATHS.TEMPLATES}/:applicationId`,
     loadComponent: () =>
       import('./pages/templates-page/templates-page.component').then((m) => m.TemplatesPageComponent),
   },
   {
-    path: `${ROUTE_PATHS.TEMPLATES}/${ROUTE_PATHS.NEW}`,
+    path: `${ROUTE_PATHS.TEMPLATES}/:applicationId/${ROUTE_PATHS.NEW}`,
     canDeactivate: [unsavedChangesGuard],
     loadComponent: () =>
       import('./pages/template-editor-page/template-editor-page.component').then((m) => m.TemplateEditorPageComponent),
   },
   {
-    path: `${ROUTE_PATHS.TEMPLATES}/:id`,
+    path: `${ROUTE_PATHS.TEMPLATES}/:applicationId/:id`,
     canDeactivate: [unsavedChangesGuard],
     loadComponent: () =>
       import('./pages/template-editor-page/template-editor-page.component').then((m) => m.TemplateEditorPageComponent),
