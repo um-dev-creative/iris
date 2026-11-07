@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { LucideAngularModule, PanelLeftClose, PanelLeftOpen, LayoutDashboard, FileText, Megaphone, Table2, Settings, Palette, KeyRound, LucideIconData } from 'lucide-angular';
+import { LucideAngularModule, PanelLeftClose, PanelLeftOpen, LayoutDashboard, FileText, Megaphone, Table2, Settings, Palette, KeyRound, Users, LucideIconData } from 'lucide-angular';
 import { APP_CONFIG } from '../../core/config';
 import { DashboardStore } from '../../core/services';
 import { ROUTE_PATHS, routeUrl } from '../../core/routes';
@@ -124,6 +124,11 @@ export class SidebarComponent {
       label: 'Clientes de login',
       icon: KeyRound,
       route: routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.LOGIN_CLIENTS),
+    },
+    {
+      label: 'Usuarios',
+      icon: Users,
+      route: routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.USERS),
     },
     {
       label: 'Showcase',
