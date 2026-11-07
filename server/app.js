@@ -25,6 +25,7 @@ const mediaRoutes = require('./routes/media.routes');
 const monitoringRoutes = require('./routes/monitoring.routes');
 const campaignsRoutes = require('./routes/campaigns.routes');
 const templatesRoutes = require('./routes/templates.routes');
+const adminRoutes = require('./routes/admin.routes');
 const backboneRoutes = require('./routes/backbone.routes');
 
 const API_PREFIXES = ['/mrc/api/v1', '/bkd/api/v1'];
@@ -57,6 +58,7 @@ function createApp({ distPath = path.join(__dirname, '../dist/dashboard/browser'
   app.use('/mrc/api/v1/templates', templatesRoutes);
   app.use('/mrc/api/v1/general', mercuryRoutes);
   app.use('/mrc/api/v1/d-image', mediaRoutes);
+  app.use('/bkd/api/v1/admin', adminRoutes);
   app.use('/bkd/api/v1', backboneRoutes);
 
   // an unknown API path is a 404, not the SPA's index.html (which would answer 200 to a typo'd endpoint)

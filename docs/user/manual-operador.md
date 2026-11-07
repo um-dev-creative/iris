@@ -153,3 +153,20 @@ Cada vez que guardas, Iris conserva esa versión (las últimas 50). En una plant
 | «No tienes permiso para administrar las plantillas» | Tu cuenta no tiene el permiso de plantillas. | Avisa al administrador. |
 | «No tienes permiso para cambiar esta plantilla, o es una plantilla del sistema y falta confirmarlo» | No tienes el permiso, o intentaste cambiar una plantilla del sistema sin marcar la casilla de confirmación. | Marca la casilla (plantillas del sistema) o pide el permiso al administrador. |
 | «La gestión de plantillas no está configurada» | Falta configurar la aplicación en Iris. | Avisa al administrador. |
+
+## Usuarios y accesos
+
+En **Usuarios** eliges una aplicación y ves sus usuarios. Desde ahí puedes:
+
+- **Dar acceso a otra aplicación:** pulsa *Accesos* en el usuario, elige la aplicación y el rol (solo salen los roles de esa aplicación) y pulsa *Dar acceso*. Si ya tenía un rol allí, se cambia. Puedes dar acceso a todas las aplicaciones que quieras.
+- **Quitar un acceso:** *Quitar* junto a la aplicación. La aplicación principal del usuario no se puede quitar.
+- **Crear un usuario:** *Nuevo usuario*, con sus datos y su rol en la aplicación elegida.
+
+Quién ve qué en **Plantillas**: un administrador de la plataforma ve todas las aplicaciones; un administrador de plantillas solo las aplicaciones donde tiene un rol con `TEMPLATE_MANAGE`.
+
+```mermaid
+flowchart LR
+  A[Ana: plantillas de SmartKind y LatinHub] --> S[Plantillas muestra solo esas dos]
+  L[Luis: administrador de la plataforma] --> T[Plantillas muestra todas]
+```
+

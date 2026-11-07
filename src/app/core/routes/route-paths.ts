@@ -9,6 +9,8 @@ export const ROUTE_PATHS = {
   SETTINGS: 'settings',
   SHOWCASE: 'showcase',
   LOGIN_CLIENTS: 'login-clients',
+  /** Usuarios y su acceso a las aplicaciones. */
+  USERS: 'users',
   /** Plantillas por aplicación: `templates`, `templates/:applicationId`, `templates/:applicationId/new` y `templates/:applicationId/:id`. */
   TEMPLATES: 'templates',
   /** Gestión de campañas: lista, `campaigns/new`, `campaigns/:id` y `campaigns/:id/edit`. */

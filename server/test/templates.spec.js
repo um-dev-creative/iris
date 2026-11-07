@@ -59,15 +59,14 @@ describe('templates (listas de referencia)', () => {
   describe('por aplicación', () => {
     const APP = '8249aa97-23fa-47cd-9c6d-4685f0c03cc3';
 
-    it('lista las aplicaciones de Backbone con la sesión de la persona', async () => {
+    it('lista las aplicaciones que la persona puede gestionar, según Mercury, con el Bearer de la aplicación y la sesión', async () => {
       const res = await bff.call(`${api}/applications`, { cookie: SESSION });
 
       assert.equal(res.status, 200);
-      assert.equal(last().service, 'backbone');
-      assert.equal(last().url, '/backbone/api/v1/applications');
+      assert.equal(last().service, 'mercury');
+      assert.equal(last().url, '/mercury/api/v1/templates/applications');
       assert.equal(last().token, tokens.GOOD);
-      // backbone-rest authenticates a resource only with Authorization: Bearer <session>; session-token alone is a 401
-      assert.equal(last().authorization, `Bearer ${tokens.GOOD}`);
+      assert.match(last().authorization, /^Bearer m2m-/);
     });
 
     it('las aplicaciones exigen sesión', async () => {

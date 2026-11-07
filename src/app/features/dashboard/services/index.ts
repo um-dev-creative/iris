@@ -3,3 +3,4 @@ export { LoginClientsService } from './login-clients.service';
 export * from './campaigns.service';
 export * from './reference-data.service';
 export * from './templates.service';
+export * from './user-access.service';

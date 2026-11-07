@@ -75,6 +75,10 @@ export const DASHBOARD_ROUTES: Routes = [
       ),
   },
   {
+    path: ROUTE_PATHS.USERS,
+    loadComponent: () => import('./pages/users-page/users-page.component').then((m) => m.UsersPageComponent),
+  },
+  {
     path: ROUTE_PATHS.SHOWCASE,
     canMatch: [showcaseGuard],
     loadComponent: () =>
