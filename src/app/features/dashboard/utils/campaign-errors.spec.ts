@@ -22,4 +22,13 @@ describe('campaign-errors', () => {
   it('nombra la acción', () => {
     expect(actionErrorMessage(new Error('x'), 'pausar')).toContain('pausar');
   });
+
+  it('un 409 muestra el motivo que dio el servicio', () => {
+    const error = new HttpErrorResponse({ status: 409, error: { message: 'Campaign name already exists' } });
+    expect(actionErrorMessage(error, 'crear')).toBe('Campaign name already exists');
+  });
+
+  it('un 409 sin motivo dice que ya existe', () => {
+    expect(actionErrorMessage(http(409), 'crear')).toMatch(/ya existe una igual/);
+  });
 });

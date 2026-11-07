@@ -135,6 +135,18 @@ describe('LoginClientsPageComponent', () => {
       expect(el.querySelector('[data-testid="secret-panel"]')).toBeNull();
     });
 
+    it('un 409 con motivo del servicio lo muestra tal cual', async () => {
+      const { c, http } = await render([]);
+      c.openForm();
+      c.alias.set('zerobound');
+
+      const done = c.submitForm();
+      http.expectOne(URL).flush({ message: 'Login client already exists: zerobound' }, { status: 409, statusText: 'Conflict' });
+      await done;
+
+      expect(c.formError()).toBe('Login client already exists: zerobound');
+    });
+
     it.each([
       [409, 'Ya existe'],
       [403, 'permiso'],
@@ -146,7 +158,7 @@ describe('LoginClientsPageComponent', () => {
       c.alias.set('zerobound');
 
       const done = c.submitForm();
-      http.expectOne(URL).flush({ message: 'x' }, { status, statusText: 'err' });
+      http.expectOne(URL).flush(status === 409 ? null : { message: 'x' }, { status, statusText: 'err' });
       await done;
 
       expect(c.formError()).toContain(text);

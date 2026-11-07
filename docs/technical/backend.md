@@ -35,6 +35,25 @@ La sesión no se guarda en el servidor (no hay Redis): vive en dos cookies que e
 - **Confinamiento de destinos** (`upstream-confinement.spec.js`): sustituye a la antigua lista blanca de dominios; intentos como `@evil.test`, `//evil.test` o `http://evil.test` en la ruta siguen yendo al host y prefijo configurados.
 - Casos de error: Backbone o Mercury caídos (502 con `traceId`), cliente M2M rechazado (502), cuenta bloqueada (429), cookies caducadas o renovación rechazada.
 
+## Motivo de un rechazo (409 «ya existe»)
+
+Mercury dice por qué rechaza una llamada en el cuerpo (`{ message }`); Backbone, con el cuerpo vacío, en la cabecera `Message-header` o `Warning` (`User previously exist.`, `E-mail previously exist.`, `Role name previously exist.`). `server/shared/proxy.js` devuelve esas dos cabeceras al navegador (`MESSAGE_HEADERS`): solo texto imprimible de hasta 300 caracteres, cualquier otra cosa se descarta; `server/app.js` las expone por CORS. En el frontend, `serviceMessage()` (`core/utils/service-message.ts`) lee el motivo del cuerpo (`message`, `error`) o de esas cabeceras, y `httpErrorInterceptor` muestra el 409 como «Ya existe» con ese motivo. Los formularios de campañas, plantillas y clientes de login lo muestran también; sin motivo queda un texto fijo.
+
+```mermaid
+sequenceDiagram
+    participant U as Persona
+    participant F as Iris (Angular)
+    participant B as BFF
+    participant S as Backbone / Mercury
+    U->>F: Crea algo que ya existe
+    F->>B: POST (cookie + CSRF)
+    B->>S: POST (session-token)
+    S-->>B: 409 + Message-header / Warning / cuerpo {message}
+    B-->>F: 409 + mismas cabeceras (proxy.js)
+    F->>F: serviceMessage(error)
+    F-->>U: Aviso «Ya existe» con el motivo del servicio
+```
+
 ## Clientes de login de Mercury
 
 `/mrc/api/v1/general/login-clients[/**]` no tiene código propio: lo atiende el proxy genérico de Mercury (`passThrough('mercury')`) hacia `{MERCURY_BASE_URL}{MERCURY_API_PREFIX}/login-clients`,

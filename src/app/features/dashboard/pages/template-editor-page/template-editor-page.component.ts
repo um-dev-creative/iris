@@ -33,6 +33,7 @@ import {
   withDetectedParams,
   withFormat,
 } from '../../utils/template-input';
+import { serviceMessage } from '../../../../core/utils/service-message';
 
 const templatesUrl = routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.TEMPLATES);
 const PREVIEW_DELAY_MS = 500;
@@ -609,6 +610,8 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
     switch (status) {
       case 403:
         return 'No tienes permiso para cambiar esta plantilla, o es una plantilla del sistema y falta confirmarlo.';
+      case 409:
+        return serviceMessage(error) ?? 'Ya existe una plantilla igual.';
       case 412:
         return 'Alguien guardó la plantilla antes que tú.';
       case 413:

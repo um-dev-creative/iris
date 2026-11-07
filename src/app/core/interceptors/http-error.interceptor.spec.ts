@@ -39,6 +39,23 @@ describe('httpErrorInterceptor', () => {
     expect(notifications.toasts()).toHaveLength(0);
   });
 
+  it('un 409 avisa "Ya existe" con el motivo que dio el servicio, sin reintentar', () => {
+    let error: unknown;
+    http.post('/x', {}).subscribe({ error: (e) => (error = e) });
+    controller.expectOne('/x').flush(null, { status: 409, statusText: 'Conflict', headers: { 'Message-header': 'E-mail previously exist.' } });
+
+    expect(error).toBeTruthy();
+    expect(notifications.toasts().at(-1)).toMatchObject({ title: 'Ya existe', message: 'E-mail previously exist.' });
+  });
+
+  it('un 409 sin motivo avisa con un texto genérico', () => {
+    http.post('/x', {}).subscribe({ error: () => undefined });
+    controller.expectOne('/x').flush(null, { status: 409, statusText: 'Conflict' });
+
+    expect(notifications.toasts().at(-1)?.title).toBe('Ya existe');
+    expect(notifications.toasts().at(-1)?.message).toContain('Ya existe');
+  });
+
   it.each([
     [401, 'No autorizado'],
     [403, 'Acceso denegado'],

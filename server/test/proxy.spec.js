@@ -186,3 +186,25 @@ test('login clients: without the CSRF header a mutation never reaches mercury', 
   assert.equal(res.status, 403);
   assert.equal(bff.state.apiCalls.length, 0);
 });
+
+test('the reason backbone gives in a header (Warning, Message-header) reaches the browser', async () => {
+  bff.state.apiStatus = 409;
+  bff.state.apiHeaders = { Warning: 'User previously exist.', 'Message-header': 'E-mail previously exist.' };
+
+  const res = await bff.call('/mrc/api/v1/general/users', { method: 'POST', body: { alias: 'x' }, cookie: GOOD });
+
+  assert.equal(res.status, 409);
+  assert.equal(res.headers.get('warning'), 'User previously exist.');
+  assert.equal(res.headers.get('message-header'), 'E-mail previously exist.');
+});
+
+test('a message header with anything but plain printable text, or too long, is dropped', async () => {
+  bff.state.apiStatus = 409;
+  bff.state.apiHeaders = { Warning: 'x'.repeat(301), 'Message-header': '' };
+
+  const res = await bff.call('/mrc/api/v1/general/users', { method: 'POST', body: { alias: 'x' }, cookie: GOOD });
+
+  assert.equal(res.status, 409);
+  assert.equal(res.headers.get('warning'), null);
+  assert.equal(res.headers.get('message-header'), null);
+});

@@ -40,6 +40,9 @@ Los datos se actualizan cada 30 segundos mientras la pestaña está visible. El 
 ## 8. Qué hacer si no cargan los datos
 Un aviso indica el problema. Si dice que no se pudieron actualizar, Iris reintenta sola y conserva la última lectura. Si dice que Mercury no entregó las campañas, revisa el estado de los servicios en la misma página.
 
+## 8 ter. Cuando algo no se crea porque ya existe
+Si intentas crear algo que ya existe (un usuario, un correo, un rol, un cliente de login, una plantilla), Iris muestra un aviso **«Ya existe»** con el motivo que da el servicio, por ejemplo «User previously exist.» o «E-mail previously exist.». Cambia el nombre, el alias o el correo y vuelve a intentarlo. Si el aviso no da motivo, es que el servicio no lo informó: revisa que no exista ya en la lista.
+
 ## 8 bis. Clientes de login (administración)
 
 **Dashboard → Login clients.** Aquí se gestionan los servicios backend (smartkin-backend, zerobound-rest…) que pueden pedir un token a Mercury. El **alias es el nombre del servicio**, no el de una persona.
