@@ -45,10 +45,9 @@ router.use((_req, res, next) => {
 
 router.param('applicationId', (_req, res, next, applicationId) => (UUID.test(applicationId) ? next() : res.status(400).json({ error: 'Invalid application id' })));
 
-// The applications of Backbone, so the person picks the one whose templates they manage. Backbone reads the session of a resource
-// only from `Authorization: Bearer`, not from `session-token`: without it the answer is 401 and the browser would sign the person out. Mercury still decides, per application,
-// whether the person may manage it (TEMPLATE_MANAGE): an application they cannot manage answers 403 when it is opened.
-router.get('/applications', (req, res) => proxyToApi(req, res, 'backbone', '/applications', { query: {}, bearer: true }));
+// The applications whose templates the person may manage: Mercury answers with every application to a platform administrator and
+// with the ones where they hold TEMPLATE_MANAGE otherwise, so the selector never offers an application that would answer 403.
+router.get('/applications', (req, res) => toMercury(req, res, '/templates/applications', { query: {} }));
 
 // The application comes from the URL (validated as a UUID), not from the body or the query. Mercury authorizes it for the person.
 router.get('/applications/:applicationId', (req, res) =>

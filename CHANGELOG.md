@@ -9,10 +9,11 @@ Cada entrada termina con el ID de la tarea del backlog (`docs/roadmap/`). Seccio
 ## [Unreleased]
 
 ### Added
-
+- **Sección «Usuarios»: dar y quitar el acceso de una persona a una o varias aplicaciones, y crear usuarios.** Se elige la aplicación, se ven sus usuarios y de cada uno a qué aplicaciones entra y con qué rol. Es la base para tener administradores de plantillas de una o varias aplicaciones y administradores de la plataforma (`PLATFORM_ADMIN`). El BFF añade `/bkd/api/v1/admin/*` (sesión como `Authorization: Bearer`, ids UUID, campos permitidos al crear). Ver `docs/technical/access-administration.md` y `docs/user/manual-operador.md`.
 - Plantillas por aplicación: en **Plantillas** se elige primero la aplicación (`/dashboard/templates`), luego se ven sus plantillas (`/dashboard/templates/:applicationId`) y de ahí se abre el editor (`/dashboard/templates/:applicationId/:id` y `/new`), con ruta de migas para volver. El BFF añade `GET /templates/applications` (aplicaciones de Backbone) y las rutas `/templates/applications/:applicationId` (lista, crear y vista previa), que toman la aplicación de la URL y no necesitan `MONITORED_APPLICATION_ID`. Mercury guarda cada aplicación en su carpeta (`lth/mercury/templates/<aplicación>/`), así que lo que se edita aquí es el mismo archivo que usa para enviar.
 
 ### Changed
+- **El selector de aplicaciones de Plantillas muestra solo las que la persona puede gestionar.** Lee `GET /mrc/api/v1/templates/applications` de Mercury (todas para un administrador de la plataforma; las que tienen `TEMPLATE_MANAGE` para el resto) en vez de todas las de Backbone.
 
 - El showcase de componentes (enlace del menú y ruta `/dashboard/showcase`) solo existe fuera de producción: `features.showcase` sigue a `production` salvo que el entorno lo defina, y en producción la ruta redirige al dashboard.
 
