@@ -13,6 +13,7 @@ import {
   LoginClientSecret,
 } from '../../../../core/models';
 import { LoginClientsService } from '../../services';
+import { serviceMessage } from '../../../../core/utils/service-message';
 
 type PendingKind = 'rotate' | 'delete' | 'toggle';
 type LoadError = 'forbidden' | 'failed';
@@ -350,7 +351,7 @@ function validate(alias: string, description: string, password: string): string 
 }
 
 function createErrorMessage(error: unknown): string {
-  if (isStatus(error, 409)) return 'Ya existe un cliente con ese alias.';
+  if (isStatus(error, 409)) return serviceMessage(error) ?? 'Ya existe un cliente con ese alias.';
   if (isStatus(error, 403)) return 'No tienes permiso para administrar los clientes de login.';
   if (isStatus(error, 400)) return 'Mercury rechazó los datos: revisa el alias y la contraseña.';
   return 'No se pudo crear el cliente. Intenta de nuevo.';

@@ -1,4 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { serviceMessage } from '../../../core/utils/service-message';
 
 export type CampaignAction = 'cargar' | 'crear' | 'editar' | 'pausar' | 'reanudar' | 'eliminar';
 
@@ -23,6 +24,8 @@ export function actionErrorMessage(error: unknown, action: CampaignAction): stri
       return `No puedes ${action} esta campaña: solo quien la creó puede hacerlo, y la aplicación necesita permiso de escritura en Mercury.`;
     case 404:
       return 'La campaña ya no existe. Actualiza la lista.';
+    case 409:
+      return serviceMessage(error) ?? `No se pudo ${action} la campaña porque ya existe una igual.`;
     case 503:
       return 'La gestión de campañas no está configurada en este entorno.';
     default:

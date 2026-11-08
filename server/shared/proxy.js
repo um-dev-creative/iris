@@ -14,6 +14,10 @@ const SESSION_TOKEN_HEADER = 'session-token';
 
 // What the upstream tells about a response (content type, versions, totals, downloads) and the browser must see.
 const PASSED_BACK_HEADERS = ['content-type', 'etag', 'x-total-count', 'link', 'content-disposition', 'idempotent-replayed'];
+// backbone says why it refused ("User previously exist.", "E-mail previously exist.") in these headers, with an empty body: without them the
+// person only sees that the call failed. Only plain printable text of a sensible length goes through (a header cannot carry anything else).
+const MESSAGE_HEADERS = ['warning', 'message-header'];
+const MESSAGE_PATTERN = /^[\x20-\x7e]{1,300}$/;
 
 /** The two upstream services the BFF fronts. */
 const UPSTREAMS = {
@@ -94,6 +98,10 @@ const forward = (req, url, token, { body, headers = {}, query, bearer } = {}) =>
 function sendUpstream(res, response) {
   for (const name of PASSED_BACK_HEADERS) {
     if (response.headers?.[name]) res.set(name, response.headers[name]);
+  }
+  for (const name of MESSAGE_HEADERS) {
+    const value = response.headers?.[name];
+    if (typeof value === 'string' && MESSAGE_PATTERN.test(value)) res.set(name, value);
   }
   const data = response.data;
   if (response.status === 204 || !data || data.length === 0) return res.status(response.status).end();

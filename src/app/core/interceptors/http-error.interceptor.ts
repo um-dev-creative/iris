@@ -3,6 +3,7 @@ import { inject } from '@angular/core';
 import { catchError, retry, throwError, timer } from 'rxjs';
 import { isBffUrl } from '../config';
 import { NotificationService } from '../services/notification.service';
+import { serviceMessage } from '../utils/service-message';
 
 export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
   const notificationService = inject(NotificationService);
@@ -37,6 +38,10 @@ export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
         case 404:
           title = 'No encontrado';
           message = 'El recurso solicitado no fue encontrado.';
+          break;
+        case 409:
+          title = 'Ya existe';
+          message = serviceMessage(error) ?? 'Ya existe un registro igual, o la acción choca con uno existente.';
           break;
         case 500:
           title = 'Error del servidor';
