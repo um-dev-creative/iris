@@ -8,7 +8,7 @@ Las rutas viven en `src/app/core/routes/route-paths.ts` (`ROUTE_PATHS`, segmento
 |---|---|---|
 | `ROOT` | `''` | Redirige a `DASHBOARD` |
 | `DASHBOARD` | `dashboard` | Padre con `LayoutComponent` y `authGuard`; carga `DASHBOARD_ROUTES` |
-| `DATA` / `SETTINGS` / `LOGIN_CLIENTS` / `SHOWCASE` | `data` / `settings` / `login-clients` / `showcase` | Páginas hijas de `DASHBOARD` |
+| `DATA` / `SETTINGS` / `APPLICATIONS` / `LOGIN_CLIENTS` / `SHOWCASE` | `data` / `settings` / `applications` / `login-clients` / `showcase` | Páginas hijas de `DASHBOARD` |
 | `LOGIN` | `login` | Reservada para F2; sin ruta registrada todavía |
 | `WILDCARD` | `**` | Redirige a `DASHBOARD` |
 
@@ -111,3 +111,42 @@ a través de `/mrc/api/v1/general/login-clients` (el BFF reenvía la sesión de 
 - Un 403 de Mercury (falta `LOGIN_CLIENT_MANAGE`) se muestra como estado de la página, sin redirigir al login: no es una sesión caducada.
 - Los errores de formulario (409 alias repetido, 400 datos inválidos) se muestran dentro del formulario; el interceptor global sigue avisando con su toast genérico.
 - Las reglas de alias y contraseña (`LOGIN_CLIENT_*_PATTERN`, `core/models/login-client.model.ts`) reflejan las de Mercury y avisan antes de enviar.
+
+## Aplicaciones y plantillas (`/dashboard/applications`)
+
+`ApplicationsPageComponent` administra las aplicaciones que usan Mercury y sus plantillas, a través de `/mrc/api/v1/general/templates/*`
+(el BFF reenvía la sesión de la persona sin tocar la petición; ver `docs/technical/backend.md`). `TemplatesService` expone las
+aplicaciones como signal y el resto como promesas. Mercury decide los permisos con Backbone: `403` en la lista significa que la persona
+no administra ninguna aplicación.
+
+```mermaid
+sequenceDiagram
+  participant U as Persona
+  participant I as Iris (SPA)
+  participant B as BFF
+  participant M as Mercury
+  participant K as backbone-rest
+  U->>I: abre Aplicaciones y plantillas
+  I->>B: GET /general/templates/applications
+  B->>M: GET /api/v1/templates/applications (session-token)
+  M->>K: GET /api/v1/applications + permissions/check
+  K-->>M: aplicaciones y permisos
+  M-->>I: aplicaciones que puede gestionar
+  U->>I: elige una, edita una plantilla
+  I->>B: GET /general/templates/{id}/content
+  B->>M: GET .../content (ETag)
+  U->>I: Guardar
+  I->>B: PUT .../content (If-Match: "etag")
+  M-->>I: 200 nuevo ETag, 412 si cambió, 422 con línea y columna
+```
+
+| Acción | Endpoint de Mercury | Notas |
+|---|---|---|
+| Listar aplicaciones | `GET /templates/applications` | `403` si no administra ninguna |
+| Carpeta | `GET`/`PUT /templates/applications/{id}/folder` | `409` si otra aplicación la usa; no mueve archivos |
+| Buscar / crear | `GET`/`POST /templates` | `applicationId` obligatorio al buscar |
+| Tipos y severidades | `GET /templates/types`, `/severities` | Se cargan al abrir el formulario |
+| Contenido | `GET`/`PUT /templates/{id}/content` | `If-Match` con el etag leído, o `If-None-Match: *` si el archivo no existe |
+| Vista previa | `POST /templates/preview` | No guarda |
+
+Las plantillas del sistema (`system: true`) piden `confirm()` y se guardan con `?confirmSystem=true`.

@@ -51,6 +51,19 @@ Un aviso indica el problema. Si dice que no se pudieron actualizar, Iris reinten
 - **Eliminar:** borra el registro. Si el alias sigue en la configuración estática de Mercury podrá iniciar sesión por ahí.
 - Cada acción pide confirmación. Si ves «No tienes permiso…», falta el permiso `LOGIN_CLIENT_MANAGE` en Backbone para tu usuario en la aplicación de Iris (y que Mercury tenga `LOGIN_CLIENTS_ADMIN_APPLICATION_ID`).
 
+## 8 ter. Aplicaciones y plantillas
+
+**Dashboard → Aplicaciones y plantillas.** Aquí se gestionan las aplicaciones que envían mensajes (correo, SMS, Telegram…) con Mercury y el texto de cada mensaje. Solo ves las aplicaciones que administras.
+
+1. **Elige una aplicación** de la lista. Verás su carpeta y sus plantillas.
+2. **Carpeta:** es donde se guardan sus archivos. Puedes ponerle un nombre más claro con «Cambiar nombre»; no mueve los archivos que ya existan, y no puede coincidir con la carpeta de otra aplicación. Mientras diga «Sin registrar», se creará sola con la primera plantilla.
+3. **Nueva plantilla:** descripción, nombre del archivo (por ejemplo `welcome_es.ftl`), formato, tipo y severidad. Se crea vacía y se abre para escribir su contenido.
+4. **Editar:** escribe el contenido y pulsa **Guardar**. Los parámetros que usa la plantilla aparecen debajo (por ejemplo `${nombre}`). Si otra persona la cambió mientras la editabas, Iris avisa y debes abrirla de nuevo. Si hay un error de sintaxis, se muestra con su línea y no se guarda.
+5. **Vista previa:** muestra cómo quedaría el mensaje sin guardarlo.
+6. **Plantillas del sistema** (las de verificación y avisos de ZeroBound, SmartKind, Iris…) se usan en mensajes reales: al guardarlas se pide confirmación.
+
+Si ves «No administras ninguna aplicación», pide a un administrador de la plataforma que te asigne el permiso de plantillas en la aplicación (en Backbone, rol con `TEMPLATE_MANAGE`). Para dar de alta una aplicación nueva hace falta un administrador de la plataforma en Backbone (`/api/v1/applications`); en cuanto exista y tengas el permiso, aparece aquí.
+
 ## 9. Preferencias
 _Pendiente — F5-04._ Tema claro u oscuro.
 
