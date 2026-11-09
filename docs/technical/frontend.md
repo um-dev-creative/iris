@@ -150,3 +150,14 @@ sequenceDiagram
 | Vista previa | `POST /templates/preview` | No guarda |
 
 Las plantillas del sistema (`system: true`) piden `confirm()` y se guardan con `?confirmSystem=true`.
+
+### Alta de una aplicación nueva
+
+Iris no crea aplicaciones: son de backbone-rest y se administran en Stratum.
+
+```mermaid
+flowchart LR
+  A[Stratum: crear la aplicación] --> B[Stratum: dar a la persona un rol con TEMPLATE_MANAGE en ella]
+  B --> C[Iris: la aplicación aparece en GET /general/templates/applications]
+  C --> D[Iris: primera plantilla → Mercury registra la carpeta]
+```

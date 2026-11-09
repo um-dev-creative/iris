@@ -62,7 +62,7 @@ Un aviso indica el problema. Si dice que no se pudieron actualizar, Iris reinten
 5. **Vista previa:** muestra cómo quedaría el mensaje sin guardarlo.
 6. **Plantillas del sistema** (las de verificación y avisos de ZeroBound, SmartKind, Iris…) se usan en mensajes reales: al guardarlas se pide confirmación.
 
-Si ves «No administras ninguna aplicación», pide a un administrador de la plataforma que te asigne el permiso de plantillas en la aplicación (en Backbone, rol con `TEMPLATE_MANAGE`). Para dar de alta una aplicación nueva hace falta un administrador de la plataforma en Backbone (`/api/v1/applications`); en cuanto exista y tengas el permiso, aparece aquí.
+Si ves «No administras ninguna aplicación», pide a un administrador de la plataforma que te asigne el permiso de plantillas en la aplicación (en Backbone, rol con `TEMPLATE_MANAGE`). **Cómo se anexa una aplicación nueva:** 1) un administrador de la plataforma la crea en **Stratum** (Aplicaciones), 2) le da a la persona que la administrará un rol con `TEMPLATE_MANAGE` y `TEMPLATE_READ` en esa aplicación (Stratum → Usuarios, acceso a aplicaciones) y 3) esa persona la ve aquí, crea su primera plantilla y Mercury registra su carpeta sola.
 
 ## 9. Preferencias
 _Pendiente — F5-04._ Tema claro u oscuro.
