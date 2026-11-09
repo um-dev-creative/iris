@@ -31,6 +31,13 @@ export const DASHBOARD_ROUTES: Routes = [
       ),
   },
   {
+    path: ROUTE_PATHS.APPLICATIONS,
+    loadComponent: () =>
+      import('./pages/applications-page/applications-page.component').then(
+        (m) => m.ApplicationsPageComponent
+      ),
+  },
+  {
     path: ROUTE_PATHS.SHOWCASE,
     loadComponent: () =>
       import('./pages/showcase-page/showcase-page.component').then(

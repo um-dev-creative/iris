@@ -9,6 +9,8 @@ export const ROUTE_PATHS = {
   SETTINGS: 'settings',
   SHOWCASE: 'showcase',
   LOGIN_CLIENTS: 'login-clients',
+  /** Aplicaciones que usan Mercury y sus plantillas de mensajería. */
+  APPLICATIONS: 'applications',
   /** Página pública de acceso, fuera del layout del dashboard. */
   LOGIN: 'login',
   /** Alta pública de una cuenta y confirmación de su correo. */
