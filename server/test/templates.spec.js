@@ -97,6 +97,19 @@ describe('templates (listas de referencia)', () => {
       assert.equal(last().body.active, undefined);
     });
 
+    it('deja pasar el asunto del correo al crear y al editar', async () => {
+      bff.state.apiStatus = 201;
+      await bff.call(`${api}/applications/${APP}`, {
+        method: 'POST', cookie: SESSION,
+        body: { description: 'Bienvenida', location: 'bienvenida.md', fileFormat: 'MD', templateTypeId: 't', severityTypeId: 's', subject: 'Hola ${name}' },
+      });
+      assert.equal(last().body.subject, 'Hola ${name}');
+
+      bff.state.apiStatus = 200;
+      await bff.call(`${api}/${'11111111-1111-4111-8111-111111111111'}`, { method: 'PUT', cookie: SESSION, body: { subject: '' } });
+      assert.equal(last().body.subject, '');
+    });
+
     it('rechaza una ubicación que no es un archivo al crear', async () => {
       const res = await bff.call(`${api}/applications/${APP}`, { method: 'POST', cookie: SESSION, body: { description: 'x', location: 'a/b.ftl' } });
 

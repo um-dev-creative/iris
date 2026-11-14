@@ -76,6 +76,7 @@ flowchart LR
 ### Cómo funciona el editor
 
 - **Crear:** la descripción propone el nombre del archivo (`Código de verificación` → `codigo-de-verificacion.md`) hasta que la persona lo cambia; cambiar el formato cambia la extensión. Se hace `POST /templates` y luego `PUT .../content` con `If-None-Match: *`. Si lo segundo falla, la plantilla ya existe: se avisa y se abre para terminar.
+- **Asunto del correo:** el formulario tiene el campo **Asunto del correo** (opcional, hasta 500 caracteres; puede usar datos del mensaje como `${vc}`). Es el `subject` de la plantilla en Mercury (una por idioma): al crear se envía si se escribió, al editar solo si cambió, y vaciarlo lo quita. Mercury lo usa para los correos de la plantilla; así las aplicaciones (p. ej. ZeroBound) no lo llevan en su código. El BFF deja pasar `subject` en crear y editar.
 - **Editar:** se guardan por separado los metadatos (si cambiaron) y el contenido (si cambió). El contenido se guarda con `If-Match` con la huella leída; la respuesta trae la nueva.
 - **Conflictos:** un 412 muestra un aviso con **Recargar**, que descarta lo escrito y trae la versión de la otra persona.
 - **Errores de sintaxis:** un 422 (al guardar) o `problems` de la vista previa (al escribir) se listan con línea y columna; **Ir a la línea** selecciona esa línea en el cuadro de texto.
