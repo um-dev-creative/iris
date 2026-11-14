@@ -27,6 +27,8 @@ export interface TemplateSummary {
   templateTypeName?: string | null;
   severityTypeId: string;
   severityTypeName?: string | null;
+  /** Asunto del correo de esta versión de la plantilla; puede llevar `${datos}` del mensaje. `null` si no define ninguno. */
+  subject?: string | null;
   applicationId?: string;
   active?: boolean;
   createdAt?: string | null;
@@ -69,6 +71,8 @@ export interface TemplateInput {
   fileFormat: string;
   templateTypeId: string;
   severityTypeId: string;
+  /** Asunto del correo (opcional, hasta 500 caracteres). Al editar, vacío lo quita. */
+  subject?: string;
 }
 
 /** Formato del archivo: `MARKDOWN` si termina en `.md`, `FREEMARKER` en los demás casos. */
@@ -112,6 +116,7 @@ export interface TemplateProblemsBody {
 }
 
 export const TEMPLATE_DESCRIPTION_MAX = 200;
+export const TEMPLATE_SUBJECT_MAX = 500;
 export const TEMPLATE_CONTENT_MAX_BYTES = 262_144;
 
 /** Una versión guardada del contenido de una plantilla. */

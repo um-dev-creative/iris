@@ -114,6 +114,18 @@ describe('TemplateEditorPageComponent (crear)', () => {
     expect(navigate).toHaveBeenCalledWith(`/dashboard/templates/${APP}/new`, { replaceUrl: true });
   });
 
+  it('el asunto se envía al crear solo si se escribió', async () => {
+    const { component, fake } = await render();
+    component.onDescription('Aviso');
+    component.typeId.set('t1');
+    component.severityId.set('s1');
+    component.subject.set('  Tu código es ${vc} ');
+
+    await component.save();
+
+    expect(fake.service.create).toHaveBeenCalledWith(expect.objectContaining({ subject: 'Tu código es ${vc}' }), APP);
+  });
+
   it('si crear falla se queda y explica por qué', async () => {
     const { component, fake, navigate, notifications } = await render();
     fake.service.create.mockRejectedValue(httpError(403));
@@ -249,6 +261,21 @@ describe('TemplateEditorPageComponent (editar)', () => {
     component.content.set('otra vez');
     await component.save();
     expect(fake.service.saveContent).toHaveBeenLastCalledWith('a', 'otra vez', 'etag-2', false);
+  });
+
+  it('cambiar el asunto lo guarda con los metadatos; vaciarlo lo quita', async () => {
+    const { component, fake } = await render('a');
+    expect(component.subject()).toBe('');
+
+    component.subject.set('Hola ${name}');
+    expect(component.dirty()).toBe(true);
+    await component.save();
+    expect(fake.service.update).toHaveBeenLastCalledWith('a', expect.objectContaining({ subject: 'Hola ${name}' }));
+    expect(component.dirty()).toBe(false);
+
+    component.subject.set('');
+    await component.save();
+    expect(fake.service.update).toHaveBeenLastCalledWith('a', expect.objectContaining({ subject: '' }));
   });
 
   it('si solo cambian los metadatos no toca el contenido', async () => {

@@ -11,6 +11,7 @@ import {
   ReferenceItem,
   TEMPLATE_CONTENT_MAX_BYTES,
   TEMPLATE_DESCRIPTION_MAX,
+  TEMPLATE_SUBJECT_MAX,
   TemplateContent,
   TemplateProblem,
   TemplateProblemsBody,
@@ -109,6 +110,13 @@ const STARTER: Record<EditorFormat, string> = {
             <label for="te-description" class="block text-sm font-medium text-foreground mb-1.5">Descripción</label>
             <input id="te-description" type="text" autocomplete="off" [maxlength]="descriptionMax" [ngModel]="description()" (ngModelChange)="onDescription($event)" [disabled]="locked()"
               class="w-full px-4 py-2.5 border border-input rounded-lg text-sm bg-background text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring disabled:opacity-60" />
+          </div>
+          <div class="sm:col-span-2">
+            <label for="te-subject" class="block text-sm font-medium text-foreground mb-1.5">Asunto del correo</label>
+            <input id="te-subject" type="text" autocomplete="off" [maxlength]="subjectMax" [ngModel]="subject()" (ngModelChange)="subject.set($event)" [disabled]="locked()"
+              placeholder="Opcional. Puedes usar datos del mensaje, por ejemplo: Tu código es \${vc}"
+              class="w-full px-4 py-2.5 border border-input rounded-lg text-sm bg-background text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring disabled:opacity-60" />
+            <p class="mt-1 text-xs text-muted-foreground">Es el asunto de los correos que usan esta plantilla (cada idioma es una plantilla). Los datos van entre llaves con signo de pesos; si falta uno, el envío se rechaza.</p>
           </div>
           <div>
             <label for="te-type" class="block text-sm font-medium text-foreground mb-1.5">Tipo</label>
@@ -267,6 +275,7 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
   readonly listUrl = templatesUrl;
   readonly applicationUrl = this.applicationId ? `${templatesUrl}/${this.applicationId}` : templatesUrl;
   readonly descriptionMax = TEMPLATE_DESCRIPTION_MAX;
+  readonly subjectMax = TEMPLATE_SUBJECT_MAX;
   readonly maxBytes = TEMPLATE_CONTENT_MAX_BYTES;
 
   readonly creating = signal(this.id === null);
@@ -276,6 +285,7 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
   readonly severities = signal<ReferenceItem[]>([]);
 
   readonly description = signal('');
+  readonly subject = signal('');
   readonly typeId = signal('');
   readonly severityId = signal('');
   readonly format = signal<EditorFormat>('MD');
@@ -306,7 +316,7 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
 
   private etag: string | null = null;
   private fileNameTouched = false;
-  private saved = signal({ description: '', typeId: '', severityId: '', content: '' });
+  private saved = signal({ description: '', subject: '', typeId: '', severityId: '', content: '' });
 
   readonly bytes = computed(() => new TextEncoder().encode(this.content()).length);
   readonly dirty = computed(() => {
@@ -314,6 +324,7 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
     return (
       this.content() !== saved.content ||
       this.description() !== saved.description ||
+      this.subject() !== saved.subject ||
       this.typeId() !== saved.typeId ||
       this.severityId() !== saved.severityId
     );
@@ -344,7 +355,7 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
     this.nameApplication();
     if (this.id === null) {
       this.content.set(STARTER[this.format()]);
-      this.saved.set({ description: '', typeId: '', severityId: '', content: '' });
+      this.saved.set({ description: '', subject: '', typeId: '', severityId: '', content: '' });
       this.ready.set(true);
       return;
     }
@@ -516,6 +527,7 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
         fileFormat: this.format(),
         templateTypeId: this.typeId(),
         severityTypeId: this.severityId(),
+        ...(this.subject().trim() === '' ? {} : { subject: this.subject().trim() }),
       }, this.applicationId ?? undefined);
     } catch (error) {
       this.notifications.error('No se pudo crear la plantilla', this.failure(error));
@@ -529,7 +541,7 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
       this.problemsFrom(error);
       this.notifications.warning('Plantilla creada sin contenido', `${this.failure(error)} Ábrela para guardar el contenido.`);
     }
-    this.saved.set({ ...this.saved(), content: this.content(), description: this.description(), typeId: this.typeId(), severityId: this.severityId() });
+    this.saved.set({ ...this.saved(), content: this.content(), description: this.description(), subject: this.subject(), typeId: this.typeId(), severityId: this.severityId() });
     await this.router.navigateByUrl(`${this.applicationUrl}/${created.id}`, { replaceUrl: true });
   }
 
@@ -537,9 +549,15 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
     const id = this.id as string;
     const before = this.saved();
     try {
-      if (this.description() !== before.description || this.typeId() !== before.typeId || this.severityId() !== before.severityId) {
-        await this.templates.update(id, { description: this.description().trim(), templateTypeId: this.typeId(), severityTypeId: this.severityId() });
-        this.saved.update((s) => ({ ...s, description: this.description(), typeId: this.typeId(), severityId: this.severityId() }));
+      if (this.description() !== before.description || this.subject() !== before.subject || this.typeId() !== before.typeId || this.severityId() !== before.severityId) {
+        await this.templates.update(id, {
+          description: this.description().trim(),
+          templateTypeId: this.typeId(),
+          severityTypeId: this.severityId(),
+          // vacío lo quita en Mercury; solo se envía si cambió, para no tocar el de una plantilla que no se editó aquí
+          ...(this.subject() !== before.subject ? { subject: this.subject().trim() } : {}),
+        });
+        this.saved.update((s) => ({ ...s, description: this.description(), subject: this.subject(), typeId: this.typeId(), severityId: this.severityId() }));
       }
       if (this.content() !== before.content) {
         const saved = await this.templates.saveContent(id, this.content(), this.exists() ? this.etag : null, this.system() && this.confirmSystem());
@@ -559,13 +577,14 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
     try {
       const [summary, content] = await Promise.all([this.templates.get(id), this.templates.content(id)]);
       this.description.set(summary.description);
+      this.subject.set(summary.subject ?? '');
       this.typeId.set(summary.templateTypeId);
       this.severityId.set(summary.severityTypeId);
       this.fileName.set(content.name);
       this.format.set(formatOfFile(content.name));
       this.applyContent(content);
       this.content.set(content.content);
-      this.saved.set({ description: summary.description, typeId: summary.templateTypeId, severityId: summary.severityTypeId, content: content.content });
+      this.saved.set({ description: summary.description, subject: summary.subject ?? '', typeId: summary.templateTypeId, severityId: summary.severityTypeId, content: content.content });
       this.paramsText.set(withDetectedParams('', content.parameters));
       this.ready.set(true);
     } catch (error) {

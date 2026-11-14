@@ -11,7 +11,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const FILE_NAME = /^(?=.{1,128}$)[A-Za-z0-9][A-Za-z0-9_-]*(\.[A-Za-z0-9_-]+)*\.(ftl|ftlh|md|html)$/;
 
 /** What the browser may set. The application is never one of them: the BFF puts its own. */
-const CREATE_FIELDS = ['description', 'location', 'fileFormat', 'templateTypeId', 'severityTypeId'];
+const CREATE_FIELDS = ['description', 'location', 'fileFormat', 'templateTypeId', 'severityTypeId', 'subject'];
 const UPDATE_FIELDS = CREATE_FIELDS;
 const SEARCH_FIELDS = ['q', 'templateTypeId', 'severityTypeId', 'active', 'page', 'size', 'sort'];
 const PREVIEW_FIELDS = ['name', 'content', 'params'];
