@@ -20,6 +20,7 @@ import {
   Send,
   TriangleAlert,
 } from 'lucide-angular';
+import { RouterLink } from '@angular/router';
 import { SparklineComponent } from '../../components/sparkline/sparkline.component';
 import { ServiceStatusCardComponent } from '../../components/service-status-card/service-status-card.component';
 import { MonitoringDataService } from '../../services/monitoring-data.service';
@@ -30,6 +31,7 @@ import { MonitoringKpi } from '../../models/monitoring.model';
   standalone: true,
   imports: [
     LucideAngularModule,
+    RouterLink,
     SparklineComponent,
     ServiceStatusCardComponent,
   ],

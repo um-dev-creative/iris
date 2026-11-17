@@ -1,0 +1,66 @@
+# Monitoreo de envíos
+
+La sección **Monitoreo** (`/dashboard/monitoring`) muestra, casi en tiempo real, cómo van los envíos de la aplicación (correo, Telegram, SMS, WhatsApp, Push y códigos de verificación) y si los servicios que los hacen posibles están arriba. Iris no calcula nada: dibuja lo que Mercury responde en `/api/v1/monitoring/*` (ver `docs/tec/en/24-monitoring-api.md` y `25-monitoring-health-and-stream.md` en el repositorio de Mercury).
+
+```mermaid
+sequenceDiagram
+    participant N as Navegador
+    participant B as BFF de Iris
+    participant K as Backbone
+    participant M as Mercury
+    N->>B: GET /mrc/api/v1/monitoring/summary (cookie de sesión)
+    B->>K: token M2M de la aplicación (en caché)
+    B->>M: GET /monitoring/applications/{aplicación}/summary (Bearer + session-token)
+    M-->>B: JSON
+    B-->>N: la misma respuesta
+    N->>B: GET /mrc/api/v1/monitoring/stream (EventSource)
+    B->>M: GET /monitoring/applications/{aplicación}/stream
+    M-->>B: eventos summary y health cada 10 s
+    B-->>N: los mismos eventos, sin buffer ni compresión
+```
+
+## Rutas del BFF
+
+`server/routes/monitoring-live.routes.js`. Todas son `GET`, necesitan la cookie de sesión y llevan `Cache-Control: no-store`.
+
+| Ruta | Mercury | Parámetros admitidos |
+|---|---|---|
+| `/monitoring/summary` | `/monitoring/applications/{app}/summary` | `range` |
+| `/monitoring/series` | `.../series` | `range`, `channel`, `kind` |
+| `/monitoring/failures` | `.../failures` | `range` |
+| `/monitoring/verification-codes` | `.../verification-codes` | `range` |
+| `/monitoring/messages` | `.../messages` | `channel`, `status`, `kind`, `templateDefinedId`, `from`, `to`, `page`, `size` |
+| `/monitoring/health` | `/monitoring/health` | — |
+| `/monitoring/outages` | `/monitoring/health/outages` | `range` |
+| `/monitoring/stream` | `.../stream` (SSE) | `range` |
+
+- **La aplicación la fija el BFF** (`MONITORED_APPLICATION_ID`, o `BACKBONE_APPLICATION_ID`): un `applicationId` del navegador se ignora. Sin ella, las vistas de la aplicación y el stream responden `503`. `health` y `outages` no son de una aplicación.
+- **Solo pasan los parámetros de la tabla.** Cada valor debe ser corto y de caracteres simples; `range` es `1h`, `24h`, `7d` o `30d`; `templateDefinedId` un UUID; `page` y `size` enteros. Cualquier otra cosa es `400` y no se llama a Mercury.
+- **Credenciales:** `Authorization: Bearer` del cliente de la aplicación (necesita `mercury:message:read` en `BACKBONE_CLIENT_SCOPES`, ya presente para campañas) y `session-token` de la persona. Las vistas JSON usan `proxyToApi`, que renueva la sesión una vez ante un `401`. Si Backbone rechaza al cliente de la aplicación, `502`.
+- **El stream** (`GET /monitoring/stream`) abre la conexión con Mercury, la pasa tal cual al navegador (`text/event-stream`, `Cache-Control: no-store, no-transform`, `X-Accel-Buffering: no`) y la cierra cuando el navegador se va. Un rechazo de Mercury llega como JSON con su estado (`400`, `401`, `403`, `429`; cualquier otro, `502`) para que la página siga con sondeo. `compression()` no comprime `text/event-stream`: el buffer de la compresión retendría los eventos. Detrás de nginx hace falta `proxy_buffering off` para esta ruta (o el encabezado `X-Accel-Buffering`, que ya se envía).
+
+## La página
+
+`features/dashboard/pages/monitoring-page` y `services/monitoring-live.service.ts` (uno por página: se crea al entrar y se destruye al salir).
+
+```mermaid
+flowchart LR
+    F[Filtros: periodo, canal, tipo, estado, barra, servicio] --> S[Serie]
+    F --> M[Tabla de mensajes]
+    R[Resumen y canales] -->|clic en un canal| F
+    K[Causas de fallo] -->|clic en una causa| F
+    G[Gráfica] -->|clic en una barra| F
+    H[Servicios] -->|clic en un servicio| O[Historial de caídas]
+```
+
+- **Enlazadas:** elegir un canal, un tipo, «Enviados/Fallidos», una barra de la gráfica o una causa de fallo filtra las demás vistas y la tabla; elegirlo otra vez lo quita, y los chips de «Filtros activos» también. Elegir un servicio filtra el historial de caídas. Cambiar el periodo quita la barra elegida (ya no existe en la serie nueva). La tabla de mensajes cubre el periodo elegido, o el intervalo de la barra.
+- **En vivo:** `EventSource` (con cookies) recibe `summary` y `health` cada 10 s. El resto (serie, fallos, códigos, caídas, mensajes) se consulta cada 30 s, y no se consulta con la pestaña oculta. Si el stream es rechazado, o `EventSource` no existe, se consulta todo cada 15 s y se reintenta el stream cada minuto. Mercury cierra el stream a los 15 min y el navegador reconecta solo (eso vuelve a validar la sesión).
+- **Honestidad:** sin datos no hay cifras (marcadores de carga); sin envíos no hay tasa («Sin datos»); un canal sin proveedor (SMS, WhatsApp, Push) se muestra «En cola, sin proveedor»; si una consulta falla aparece el aviso «los datos pueden estar desactualizados» y el indicador pasa a «Sin conexión». El estado de un servicio siempre lleva texto además del color.
+- **Fechas:** Mercury las envía en UTC sin zona; la página las lee como UTC y las muestra así (`Fecha (UTC)`).
+- **Gráfica:** SVG propio (`time-series-chart`, `success-ring`), sin librería: barras apiladas enviados/fallidos, cada barra es un botón con texto accesible. Se eligió SVG propio por el tamaño del paquete y porque solo hacen falta estos dos gráficos.
+- **El inicio** (`/dashboard/home`) conserva sus tarjetas de campañas y enlaza a esta sección.
+
+## Pruebas
+
+- BFF: `server/test/monitoring-live*.spec.js` (rutas, parámetros, aplicación fija, credenciales, stream real con eventos escritos después de abrirlo, cierre en ambos sentidos, rechazos, Mercury caído, cliente rechazado, sin aplicación). El doble de Mercury del `harness.js` tiene `state.live`.
+- Frontend: specs de `monitoring-live.service`, `monitoring-page`, `time-series-chart`, `success-ring` y `utils/monitoring-live`; `FakeEventSource` en `monitoring-live.testing.ts`.

@@ -6,6 +6,8 @@ export const ROUTE_PATHS = {
   ROOT: '',
   DASHBOARD: 'dashboard',
   DATA: 'data',
+  /** Monitoreo de envíos: resumen, serie, fallos, códigos, salud de los servicios y mensajes. */
+  MONITORING: 'monitoring',
   SETTINGS: 'settings',
   SHOWCASE: 'showcase',
   LOGIN_CLIENTS: 'login-clients',

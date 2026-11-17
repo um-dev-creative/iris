@@ -1,0 +1,4 @@
+.kpi { display: flex; flex-direction: column; gap: 0.25rem; padding: 1rem; border-radius: 0.75rem; border: 1px solid var(--border); background: var(--card); color: var(--card-foreground); }
+button.kpi { cursor: pointer; }
+button.kpi:hover { background: var(--muted); }
+.chip { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.25rem 0.625rem; border-radius: 9999px; border: 1px solid var(--border); background: var(--card); font-size: 0.8125rem; }

@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { LucideAngularModule, PanelLeftClose, PanelLeftOpen, LayoutDashboard, FileText, Megaphone, Table2, Settings, Palette, KeyRound, Users, LucideIconData } from 'lucide-angular';
+import { LucideAngularModule, PanelLeftClose, PanelLeftOpen, LayoutDashboard, Activity, FileText, Megaphone, Table2, Settings, Palette, KeyRound, Users, LucideIconData } from 'lucide-angular';
 import { APP_CONFIG } from '../../core/config';
 import { DashboardStore } from '../../core/services';
 import { ROUTE_PATHS, routeUrl } from '../../core/routes';
@@ -99,6 +99,11 @@ export class SidebarComponent {
       label: 'Inicio',
       icon: LayoutDashboard,
       route: dashboardUrl,
+    },
+    {
+      label: 'Monitoreo',
+      icon: Activity,
+      route: routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.MONITORING),
     },
     {
       label: 'Campañas',

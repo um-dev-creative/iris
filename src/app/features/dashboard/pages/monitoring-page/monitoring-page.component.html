@@ -1,0 +1,172 @@
+<div class="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
+  <div>
+    <h2 class="text-2xl font-bold text-foreground">Monitoreo de envíos</h2>
+    <p class="text-sm text-muted-foreground mt-1">Correo, Telegram, SMS, WhatsApp, Push y códigos de verificación de tu aplicación</p>
+  </div>
+  <div class="flex flex-wrap items-center gap-3">
+    <span class="inline-flex items-center gap-2 text-xs text-muted-foreground" role="status" data-testid="connection">
+      <span class="inline-block w-2 h-2 rounded-full" [class.bg-success]="live.connection() === 'live'" [class.bg-warning]="live.connection() === 'polling' || live.connection() === 'connecting'" [class.bg-destructive]="live.connection() === 'offline'"></span>
+      {{ connectionLabel() }}
+      @if (live.lastUpdate(); as updated) { · {{ updated | date: 'HH:mm:ss' }} }
+    </span>
+    <div class="inline-flex rounded-lg border border-border overflow-hidden" role="group" aria-label="Periodo">
+      @for (r of ranges; track r.value) {
+        <button type="button" class="px-3 py-1.5 text-sm transition-colors" [class.bg-primary]="live.range() === r.value" [class.text-primary-foreground]="live.range() === r.value"
+                [class.bg-card]="live.range() !== r.value" [attr.aria-pressed]="live.range() === r.value" (click)="setRange(r.value)">{{ r.label }}</button>
+      }
+    </div>
+    <button type="button" aria-label="Actualizar" class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-border bg-card text-muted-foreground hover:bg-muted" [class.animate-spin]="live.loading()" (click)="live.refreshAll()">
+      <lucide-icon [img]="RefreshIcon" [size]="16" strokeWidth="1.5" />
+    </button>
+  </div>
+</div>
+
+@if (live.stale()) {
+  <div role="alert" class="flex items-start gap-2 mb-4 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm" data-testid="stale">
+    <lucide-icon [img]="WarningIcon" [size]="16" strokeWidth="1.5" class="mt-0.5 flex-shrink-0" />
+    <span>No se pudieron actualizar los datos; lo que ves puede estar desactualizado. Se reintentará solo.</span>
+  </div>
+}
+
+@if (live.hasFilters()) {
+  <div class="flex flex-wrap items-center gap-2 mb-4" aria-label="Filtros activos">
+    @if (live.channel(); as c) { <button type="button" class="chip" (click)="live.toggleChannel(c)">Canal: {{ channelLabel(c) }} <lucide-icon [img]="CloseIcon" [size]="12" /></button> }
+    @if (live.kind(); as k) { <button type="button" class="chip" (click)="live.toggleKind(k)">Tipo: {{ kindLabel(k) }} <lucide-icon [img]="CloseIcon" [size]="12" /></button> }
+    @if (live.status(); as s) { <button type="button" class="chip" (click)="live.toggleStatus(s)">Estado: {{ s === 'FAILED' ? 'Fallidos' : 'Enviados' }} <lucide-icon [img]="CloseIcon" [size]="12" /></button> }
+    @if (live.bucket(); as b) { <button type="button" class="chip" (click)="live.toggleBucket(b)">Intervalo: {{ utc(b.bucket) | date: 'dd/MM HH:mm' : 'UTC' }} <lucide-icon [img]="CloseIcon" [size]="12" /></button> }
+    @if (live.service(); as svc) { <button type="button" class="chip" (click)="live.toggleService(svc)">Servicio: {{ svc }} <lucide-icon [img]="CloseIcon" [size]="12" /></button> }
+    <button type="button" class="text-sm text-primary underline" (click)="live.clearFilters()">Quitar filtros</button>
+  </div>
+}
+
+<!-- Resumen -->
+<section aria-label="Resumen" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+  @if (live.summary(); as s) {
+    <div class="md:col-span-1 bg-card rounded-xl border border-border p-5 flex items-center justify-center"><app-success-ring [rate]="s.totals.successRate" /></div>
+    <button type="button" class="kpi" (click)="live.toggleStatus('SENT')" [attr.aria-pressed]="live.status() === 'SENT'">
+      <span class="text-xs text-muted-foreground">Enviados</span><span class="text-2xl font-bold" data-testid="sent">{{ formatNumber(s.totals.sent) }}</span>
+    </button>
+    <button type="button" class="kpi" (click)="live.toggleStatus('FAILED')" [attr.aria-pressed]="live.status() === 'FAILED'">
+      <span class="text-xs text-muted-foreground">Fallidos</span><span class="text-2xl font-bold text-destructive" data-testid="failed">{{ formatNumber(s.totals.failed) }}</span>
+    </button>
+    <div class="kpi"><span class="text-xs text-muted-foreground">En cola</span><span class="text-2xl font-bold" data-testid="queued">{{ formatNumber(s.totals.queued) }}</span></div>
+  } @else {
+    @for (n of [1, 2, 3, 4]; track n) { <div class="h-28 rounded-xl border border-border bg-card animate-pulse" aria-hidden="true"></div> }
+  }
+</section>
+
+<!-- Canales y tipos -->
+@if (live.summary(); as s) {
+  <section aria-label="Canales" class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-3">
+    @for (c of s.channels; track c.channel) {
+      <button type="button" class="kpi text-left" [class.ring-2]="live.channel() === c.channel" [class.ring-primary]="live.channel() === c.channel" [attr.aria-pressed]="live.channel() === c.channel" (click)="live.toggleChannel(c.channel)">
+        <span class="text-sm font-medium">{{ channelLabel(c.channel) }}</span>
+        @if (c.providerConnected) {
+          <span class="text-xs text-muted-foreground">{{ formatNumber(c.sent) }} enviados · {{ formatNumber(c.failed) }} fallidos</span>
+          <span class="text-xs text-muted-foreground">{{ percent(c.successRate) }} · {{ formatNumber(c.queued) }} en cola</span>
+        } @else {
+          <span class="text-xs text-muted-foreground">En cola, sin proveedor: {{ formatNumber(c.queued) }}</span>
+        }
+      </button>
+    }
+  </section>
+  <section aria-label="Tipos" class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+    @for (k of s.kinds; track k.kind) {
+      <button type="button" class="kpi text-left" [class.ring-2]="live.kind() === k.kind" [class.ring-primary]="live.kind() === k.kind" [attr.aria-pressed]="live.kind() === k.kind" (click)="live.toggleKind(k.kind)">
+        <span class="text-sm font-medium">{{ kindLabel(k.kind) }}</span>
+        <span class="text-xs text-muted-foreground">{{ formatNumber(k.sent) }} enviados · {{ formatNumber(k.failed) }} fallidos · {{ percent(k.successRate) }}</span>
+      </button>
+    }
+  </section>
+}
+
+<!-- Serie -->
+<section aria-label="Envíos en el tiempo" class="bg-card rounded-xl border border-border p-5 mb-6">
+  <h3 class="text-sm font-semibold mb-3">Envíos en el tiempo <span class="font-normal text-muted-foreground">(elige una barra para ver sus mensajes)</span></h3>
+  <app-time-series-chart [points]="live.series()?.points ?? []" [unit]="live.series()?.unit ?? 'hour'" [selected]="selectedBucket()" (bucketSelected)="live.toggleBucket($event)" />
+</section>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <!-- Fallos -->
+  <section aria-label="Fallos" class="bg-card rounded-xl border border-border p-5">
+    <h3 class="text-sm font-semibold mb-3">Causas de fallo</h3>
+    @if (live.failures(); as f) {
+      @for (cause of f.causes; track cause.cause + cause.channel) {
+        <button type="button" class="w-full flex justify-between text-sm py-1.5 hover:bg-muted rounded px-2" (click)="live.drillIntoFailure(cause.channel)">
+          <span>{{ cause.cause }} <span class="text-muted-foreground">· {{ channelLabel(cause.channel) }}</span></span><span class="font-medium">{{ formatNumber(cause.total) }}</span>
+        </button>
+      } @empty { <p class="text-sm text-muted-foreground">Sin fallos en este periodo.</p> }
+      @if (f.stuck.length > 0) {
+        <h4 class="text-xs font-semibold mt-4 mb-1">Mensajes detenidos (más de {{ f.stuckAfterMinutes }} min)</h4>
+        @for (q of f.stuck; track q.channel) {
+          <p class="text-sm">{{ channelLabel(q.channel) }}: {{ formatNumber(q.waiting) }} en espera, el más antiguo hace {{ duration(q.oldestMinutes * 60) }}@if (!q.providerConnected) { (sin proveedor) }</p>
+        }
+      }
+    }
+  </section>
+
+  <!-- Códigos -->
+  <section aria-label="Códigos de verificación" class="bg-card rounded-xl border border-border p-5">
+    <h3 class="text-sm font-semibold mb-3">Códigos de verificación</h3>
+    @if (live.codes(); as c) {
+      <dl class="grid grid-cols-2 gap-2 text-sm">
+        <dt class="text-muted-foreground">Generados</dt><dd class="text-right font-medium" data-testid="codes-generated">{{ formatNumber(c.generated) }}</dd>
+        <dt class="text-muted-foreground">Confirmados</dt><dd class="text-right font-medium">{{ formatNumber(c.confirmed) }}</dd>
+        <dt class="text-muted-foreground">Vencidos</dt><dd class="text-right font-medium">{{ formatNumber(c.expired) }}</dd>
+        <dt class="text-muted-foreground">Pendientes</dt><dd class="text-right font-medium">{{ formatNumber(c.pending) }}</dd>
+        <dt class="text-muted-foreground">Envíos fallidos</dt><dd class="text-right font-medium">{{ formatNumber(c.failedSends) }}</dd>
+        <dt class="text-muted-foreground">Tasa de confirmación</dt><dd class="text-right font-medium">{{ percent(c.confirmationRate) }}</dd>
+      </dl>
+    }
+  </section>
+</div>
+
+<!-- Salud -->
+<section aria-label="Estado de los servicios" class="bg-card rounded-xl border border-border p-5 mb-6">
+  <h3 class="text-sm font-semibold mb-3">Estado de los servicios <span class="font-normal text-muted-foreground">· {{ overallLabel() }}</span></h3>
+  @if (live.health(); as h) {
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      @for (svc of h.services; track svc.service) {
+        <button type="button" class="kpi text-left" [class.ring-2]="live.service() === svc.service" [class.ring-primary]="live.service() === svc.service" [attr.aria-pressed]="live.service() === svc.service" (click)="live.toggleService(svc.service)">
+          <span class="flex items-center gap-2 text-sm font-medium"><span class="inline-block w-2.5 h-2.5 rounded-full" [class]="stateDot[svc.status]"></span>{{ svc.service }} · {{ stateLabels[svc.status] }}</span>
+          @if (svc.causeText) { <span class="text-xs text-muted-foreground">{{ svc.causeText }}</span> }
+          @if (svc.latencyMs !== null) { <span class="text-xs text-muted-foreground">{{ svc.latencyMs }} ms</span> }
+        </button>
+      }
+    </div>
+  }
+  <h4 class="text-xs font-semibold mt-5 mb-2">Historial de caídas</h4>
+  @for (o of live.visibleOutages(); track o.id) {
+    <p class="text-sm py-1 border-b border-border last:border-0">
+      <span class="font-medium">{{ o.service }}</span> · {{ stateLabels[o.status] }} · {{ utc(o.startedAt) | date: 'dd/MM HH:mm' : 'UTC' }}
+      @if (o.ongoing) { · en curso } @else { · duró {{ duration(o.durationSeconds) }} }
+      <span class="text-muted-foreground"> — {{ o.causeText }}</span>
+    </p>
+  } @empty { <p class="text-sm text-muted-foreground">Sin caídas en este periodo.</p> }
+</section>
+
+<!-- Mensajes -->
+<section aria-label="Mensajes" class="bg-card rounded-xl border border-border p-5">
+  <h3 class="text-sm font-semibold mb-3">Mensajes</h3>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead><tr class="text-left text-muted-foreground"><th class="py-2 pr-3">Fecha (UTC)</th><th class="pr-3">Canal</th><th class="pr-3">Tipo</th><th class="pr-3">Estado</th><th class="pr-3">Destinatario</th><th>Causa</th></tr></thead>
+      <tbody>
+        @for (m of live.messages()?.items ?? []; track m.id) {
+          <tr class="border-t border-border">
+            <td class="py-2 pr-3 whitespace-nowrap">{{ utc(m.occurredAt) | date: 'dd/MM HH:mm:ss' : 'UTC' }}</td>
+            <td class="pr-3">{{ channelLabel(m.channel) }}</td><td class="pr-3">{{ kindLabel(m.kind) }}</td>
+            <td class="pr-3">{{ m.status === 'SENT' ? 'Enviado' : 'Fallido' }}</td><td class="pr-3">{{ m.recipient ?? '—' }}</td><td>{{ m.errorCause ?? '—' }}</td>
+          </tr>
+        } @empty { <tr><td colspan="6" class="py-6 text-center text-muted-foreground">No hay mensajes con estos filtros.</td></tr> }
+      </tbody>
+    </table>
+  </div>
+  <div class="flex items-center justify-between mt-3 text-sm">
+    <span class="text-muted-foreground" data-testid="pages">{{ pages() }} · {{ formatNumber(live.messages()?.total ?? 0) }} mensajes</span>
+    <span class="flex gap-2">
+      <button type="button" class="px-3 py-1 rounded border border-border" [disabled]="live.page() === 0" (click)="live.goToPage(live.page() - 1)">Anterior</button>
+      <button type="button" class="px-3 py-1 rounded border border-border" [disabled]="live.page() + 1 >= live.totalPages()" (click)="live.goToPage(live.page() + 1)">Siguiente</button>
+    </span>
+  </div>
+</section>
