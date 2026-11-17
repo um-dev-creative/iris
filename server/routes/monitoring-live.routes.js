@@ -65,19 +65,93 @@ router.use((_req, res, next) => {
   next();
 });
 
-const applicationPath = (view) => `/monitoring/applications/${encodeURIComponent(MONITORED_APPLICATION_ID)}/${view}`;
+const applicationPath = (application, view) => `/monitoring/applications/${encodeURIComponent(application)}/${view}`;
+
+/**
+ * The applications the person may look at: the ones Mercury lists for them in `/templates/applications` (all of them for a platform
+ * administrator, the ones they manage for anybody else). It is asked once a minute per session, not once per request.
+ */
+const VISIBLE_TTL_MS = 60_000;
+const MAX_CACHED_SESSIONS = 500;
+const visibleCache = new Map();
+
+async function visibleApplications(sessionToken, bearer) {
+  const cached = visibleCache.get(sessionToken);
+  if (cached && Date.now() - cached.at < VISIBLE_TTL_MS) return cached;
+  const r = await axios.get(`${MERCURY_BASE_URL}${MERCURY_API_PREFIX}/templates/applications`, {
+    headers: { Accept: 'application/json', 'session-token': sessionToken, ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}) },
+    validateStatus: () => true,
+    ...upstreamTls,
+  });
+  const result = { status: r.status, at: Date.now(), list: [], ids: new Set() };
+  if (r.status === 200 && Array.isArray(r.data)) {
+    result.list = r.data.filter((a) => typeof a?.id === 'string' && UUID.test(a.id)).map((a) => ({ id: a.id.toLowerCase(), name: String(a.name ?? a.codeName ?? a.id).slice(0, 120) }));
+    result.ids = new Set(result.list.map((a) => a.id));
+    if (visibleCache.size >= MAX_CACHED_SESSIONS) visibleCache.clear();
+    visibleCache.set(sessionToken, result);
+  }
+  return result;
+}
+
+/**
+ * The application a monitoring request is about: the one the person chose (`applicationId`, which must be one they may look at) or, without
+ * one, the application of Iris itself. Answers the error and returns null when there is none.
+ */
+async function applicationOf(req, res, bearer) {
+  const requested = req.query.applicationId;
+  if (requested === undefined || requested === '') {
+    if (MONITORED_APPLICATION_ID) return MONITORED_APPLICATION_ID;
+    logger.error('Monitoring: MONITORED_APPLICATION_ID (or BACKBONE_APPLICATION_ID) is not set');
+    fail(res, 503, 'Monitoring is not available');
+    return null;
+  }
+  if (typeof requested !== 'string' || !UUID.test(requested)) {
+    fail(res, 400, 'Invalid applicationId');
+    return null;
+  }
+  if (requested.toLowerCase() === String(MONITORED_APPLICATION_ID).toLowerCase()) return MONITORED_APPLICATION_ID;
+  const sessionToken = req.cookies?.[SESSION_COOKIE];
+  if (!sessionToken) {
+    fail(res, 401, 'Not authenticated');
+    return null;
+  }
+  let visible;
+  try {
+    visible = await visibleApplications(sessionToken, bearer);
+  } catch (err) {
+    logger.error(`Monitoring: the applications of the person could not be read: ${err.code ?? err.message}`);
+    fail(res, 502, 'Backend unavailable');
+    return null;
+  }
+  if (visible.status === 401) {
+    fail(res, 401, 'Not authenticated');
+    return null;
+  }
+  if (visible.status !== 200) {
+    fail(res, 502, 'Backend unavailable');
+    return null;
+  }
+  if (!visible.ids.has(requested.toLowerCase())) {
+    logger.warn('Monitoring: a person asked for an application they may not look at');
+    fail(res, 403, 'Not allowed to look at that application');
+    return null;
+  }
+  return requested.toLowerCase();
+}
 
 /** A view of the application (needs MONITORED_APPLICATION_ID) or a global one (service health). */
 const view = (name, { scoped = true, upstream = name } = {}) => async (req, res) => {
-  if (scoped && !MONITORED_APPLICATION_ID) {
-    logger.error('Monitoring: MONITORED_APPLICATION_ID (or BACKBONE_APPLICATION_ID) is not set');
-    return fail(res, 503, 'Monitoring is not available');
-  }
   const { query, error } = cleanQuery(name, req.query);
   if (error) return fail(res, 400, error);
+  if (scoped && !MONITORED_APPLICATION_ID && !req.query.applicationId) return applicationOf(req, res, null);
   const bearer = await bearerOrFail(res, name);
   if (bearer === false) return undefined;
-  const path = scoped ? applicationPath(upstream) : `/monitoring/${upstream}`;
+  let application;
+  if (scoped) {
+    application = await applicationOf(req, res, bearer);
+    if (application === null) return undefined;
+  }
+  const path = scoped ? applicationPath(application, upstream) : `/monitoring/${upstream}`;
   return proxyToApi(req, res, 'mercury', path, { headers: bearer ? { Authorization: `Bearer ${bearer}` } : {}, query });
 };
 
@@ -89,6 +163,23 @@ router.get('/messages', view(MESSAGES_PATH));
 router.get('/messages/export', view('export', { upstream: 'messages/export' }));
 router.get('/alerts', view('alerts'));
 router.get('/alerts/rules', view('alerts-rules', { upstream: 'alerts/rules' }));
+/** The applications the page can switch between, and the one it starts with. */
+router.get('/applications', async (req, res) => {
+  const sessionToken = req.cookies?.[SESSION_COOKIE];
+  if (!sessionToken) return fail(res, 401, 'Not authenticated');
+  const bearer = await bearerOrFail(res, 'applications');
+  if (bearer === false) return undefined;
+  try {
+    const visible = await visibleApplications(sessionToken, bearer);
+    if (visible.status === 401) return fail(res, 401, 'Not authenticated');
+    const applications = visible.status === 200 ? visible.list : [];
+    return res.json({ defaultId: MONITORED_APPLICATION_ID ? MONITORED_APPLICATION_ID.toLowerCase() : null, applications, available: visible.status === 200 });
+  } catch (err) {
+    logger.error(`Monitoring: the applications could not be listed: ${err.code ?? err.message}`);
+    return fail(res, 502, 'Backend unavailable');
+  }
+});
+
 router.get('/health', view('health', { scoped: false }));
 router.get('/outages', view('outages', { scoped: false, upstream: 'health/outages' }));
 
@@ -124,7 +215,7 @@ function cleanRule(body) {
 
 /** A write to Mercury (retry, alert rules): needs the application, the Bearer and, in Mercury, the write scope. */
 const write = (path, { withBody = false } = {}) => async (req, res) => {
-  if (!MONITORED_APPLICATION_ID) return fail(res, 503, 'Monitoring is not available');
+  if (!MONITORED_APPLICATION_ID && !req.query.applicationId) return applicationOf(req, res, null);
   let body;
   if (withBody) {
     const { rule, error } = cleanRule(req.body);
@@ -133,8 +224,11 @@ const write = (path, { withBody = false } = {}) => async (req, res) => {
   }
   const bearer = await bearerOrFail(res, 'write');
   if (bearer === false) return undefined;
+  const application = await applicationOf(req, res, bearer);
+  if (application === null) return undefined;
   const upstream = typeof path === 'function' ? path(req) : path;
-  return proxyToApi(req, res, 'mercury', `/monitoring/applications/${encodeURIComponent(MONITORED_APPLICATION_ID)}/${upstream}`, {
+  return proxyToApi(req, res, 'mercury', applicationPath(application, upstream), {
+    query: {},
     headers: bearer ? { Authorization: `Bearer ${bearer}` } : {},
     ...(withBody ? { body } : {}),
   });
@@ -152,14 +246,16 @@ router.delete('/alerts/rules/:id', write((req) => `alerts/rules/${req.params.id}
  * back to polling.
  */
 router.get('/stream', async (req, res) => {
-  if (!MONITORED_APPLICATION_ID) return fail(res, 503, 'Monitoring is not available');
+  if (!MONITORED_APPLICATION_ID && !req.query.applicationId) return applicationOf(req, res, null);
   const sessionToken = req.cookies?.[SESSION_COOKIE];
   if (!sessionToken) return fail(res, 401, 'Not authenticated');
   const { query, error } = cleanQuery('stream', req.query);
   if (error) return fail(res, 400, error);
   const bearer = await bearerOrFail(res, 'stream');
   if (bearer === false) return undefined;
-  const url = targetUrl(MERCURY_BASE_URL, MERCURY_API_PREFIX, applicationPath('stream'));
+  const application = await applicationOf(req, res, bearer);
+  if (application === null) return undefined;
+  const url = targetUrl(MERCURY_BASE_URL, MERCURY_API_PREFIX, applicationPath(application, 'stream'));
   if (url === null) return fail(res, 400, 'Invalid path');
 
   const controller = new AbortController();

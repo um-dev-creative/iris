@@ -1,6 +1,6 @@
 import { HttpTestingController, TestRequest } from '@angular/common/http/testing';
 import {
-  AlertRulesResponse, AlertsResponse, FailuresResponse, HealthResponse, MessagePage, OutagesResponse, SeriesResponse, SummaryResponse, VerificationCodeStats,
+  AlertRulesResponse, ApplicationsResponse, AlertsResponse, FailuresResponse, HealthResponse, MessagePage, OutagesResponse, SeriesResponse, SummaryResponse, VerificationCodeStats,
 } from '../models/monitoring-live.model';
 
 export const summaryFixture = (): SummaryResponse => ({
@@ -83,6 +83,15 @@ export const rulesFixture = (): AlertRulesResponse => ({
   ],
 });
 
+export const OWN_APP = 'aaaaaaaa-0000-4000-8000-000000000001';
+export const OTHER_APP = 'bbbbbbbb-0000-4000-8000-000000000002';
+
+export const applicationsFixture = (): ApplicationsResponse => ({
+  defaultId: OWN_APP,
+  applications: [{ id: OTHER_APP, name: 'ZeroBound' }],
+  available: true,
+});
+
 /** What Mercury would answer for a path of `/monitoring`. */
 export function bodyFor(path: string): object {
   if (path.endsWith('/summary')) return summaryFixture();
@@ -91,6 +100,7 @@ export function bodyFor(path: string): object {
   if (path.endsWith('/verification-codes')) return codesFixture();
   if (path.endsWith('/health')) return healthFixture();
   if (path.endsWith('/outages')) return outagesFixture();
+  if (path.endsWith('/applications')) return applicationsFixture();
   if (path.endsWith('/alerts/rules')) return rulesFixture();
   if (path.endsWith('/alerts')) return alertsFixture();
   return messagesFixture();

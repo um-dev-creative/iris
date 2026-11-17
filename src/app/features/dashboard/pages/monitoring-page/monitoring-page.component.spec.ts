@@ -4,7 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { API_BASE_URL } from '../../../../core/config';
 import { MonitoringPageComponent, RuleDraft, draftProblem, toRequest } from './monitoring-page.component';
 import { EVENT_SOURCE_FACTORY } from '../../services/monitoring-live.service';
-import { FakeEventSource, answerAll } from '../../services/monitoring-live.testing';
+import { FakeEventSource, OTHER_APP, OWN_APP, answerAll, healthFixture } from '../../services/monitoring-live.testing';
 
 async function open() {
   const fixture = TestBed.createComponent(MonitoringPageComponent);
@@ -178,7 +178,7 @@ describe('MonitoringPageComponent', () => {
 
     (el.querySelector('button[aria-label="Actualizar"]') as HTMLButtonElement).click();
 
-    expect(answerAll(http)).toHaveLength(9);
+    expect(answerAll(http)).toHaveLength(10);
   });
 
   it('sin mensajes ni fallos ni caídas lo dice', async () => {
@@ -326,6 +326,67 @@ describe('MonitoringPageComponent', () => {
 
       expect(exportMessages).toHaveBeenNthCalledWith(1, 'csv');
       expect(exportMessages).toHaveBeenNthCalledWith(2, 'json');
+    });
+  });
+
+  describe('aplicación y almacenamiento', () => {
+    it('muestra el selector de aplicación con la de Iris y las de la persona, y elegir una la cambia', async () => {
+      const { fixture, el, http, live } = await open();
+      const select = el.querySelector('[data-testid="application"]') as HTMLSelectElement;
+
+      expect(Array.from(select.options).map((o) => [o.value, o.textContent!.trim()])).toEqual([[OWN_APP, 'Aplicación de Iris'], [OTHER_APP, 'ZeroBound']]);
+      expect(select.value).toBe(OWN_APP);
+
+      select.value = OTHER_APP;
+      select.dispatchEvent(new Event('change'));
+      answerAll(http);
+      fixture.detectChanges();
+
+      expect(live.application()).toBe(OTHER_APP);
+      expect(fixture.componentInstance.selectedApplication()).toBe(OTHER_APP);
+    });
+
+    it('sin otras aplicaciones no hay selector; y si Mercury no lista la de Iris, se añade', async () => {
+      const { fixture, el, live } = await open();
+
+      live.applications.set({ defaultId: OWN_APP, applications: [], available: true });
+      fixture.detectChanges();
+      expect(el.querySelector('[data-testid="application"]')).toBeNull();
+
+      live.applications.set({ defaultId: null, applications: [{ id: OTHER_APP, name: 'ZeroBound' }], available: true });
+      fixture.detectChanges();
+      expect(fixture.componentInstance.applicationOptions()).toEqual([{ id: OTHER_APP, name: 'ZeroBound' }]);
+
+      live.applications.set(null);
+      expect(fixture.componentInstance.applicationOptions()).toEqual([]);
+    });
+
+    it('si a Mercury le faltan las tablas lo dice, con las tablas y las migraciones, en vez de dejar las vistas vacías', async () => {
+      const { fixture, el, live } = await open();
+      expect(el.querySelector('[data-testid="storage-missing"]')).toBeNull();
+
+      live.health.set({ ...healthFixture(), storage: { ready: false, missingTables: ['send_events', 'alert_rules'], migrations: ['V2039__send_events.sql', 'V2041__monitoring_alerts.sql'], recordFailures: 4 } });
+      fixture.detectChanges();
+
+      const banner = el.querySelector('[data-testid="storage-missing"]')!;
+      expect(banner.textContent).toContain('Mercury no está registrando los envíos');
+      expect(banner.textContent).toContain('send_events, alert_rules');
+      expect(banner.textContent).toContain('V2039__send_events.sql, V2041__monitoring_alerts.sql');
+      expect(el.querySelector('[data-testid="storage-failures"]')).toBeNull();
+    });
+
+    it('si hay tablas pero fallaron registros, avisa cuántos', async () => {
+      const { fixture, el, live } = await open();
+
+      live.health.set({ ...healthFixture(), storage: { ready: true, missingTables: [], migrations: [], recordFailures: 3 } });
+      fixture.detectChanges();
+
+      expect(el.querySelector('[data-testid="storage-failures"]')!.textContent).toContain('3 envío(s)');
+      expect(el.querySelector('[data-testid="storage-missing"]')).toBeNull();
+
+      live.health.set({ ...healthFixture(), storage: { ready: true, missingTables: [], migrations: [], recordFailures: 0 } });
+      fixture.detectChanges();
+      expect(el.querySelector('[data-testid="storage-failures"]')).toBeNull();
     });
   });
 });

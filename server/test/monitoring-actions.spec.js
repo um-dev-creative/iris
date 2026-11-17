@@ -16,7 +16,7 @@ beforeEach(() => { bff.state.live = { calls: [], streams: [], closed: 0 }; });
 
 describe('exportar los mensajes', () => {
   it('pasa el archivo de Mercury con sus encabezados y los filtros permitidos', async () => {
-    const res = await send('/messages/export?format=csv&channel=EMAIL&status=FAILED&from=2026-11-17T00:00:00&applicationId=otra');
+    const res = await send('/messages/export?format=csv&channel=EMAIL&status=FAILED&from=2026-11-17T00:00:00&unknown=1');
 
     assert.equal(res.status, 200);
     assert.match(res.headers.get('content-type'), /^text\/csv/);

@@ -5,7 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { API_BASE_URL } from '../../../core/config';
 import { NotificationService } from '../../../core/services/notification.service';
 import {
-  AlertRuleRequest, AlertRule, AlertRulesResponse, AlertsResponse, Connection, FailuresResponse, HealthResponse, MessageItem, MessagePage, MessageStatus, MonitoringRange, OutagesResponse, SeriesPoint, SeriesResponse,
+  AlertRuleRequest, AlertRule, ApplicationsResponse, AlertRulesResponse, AlertsResponse, Connection, FailuresResponse, HealthResponse, MessageItem, MessagePage, MessageStatus, MonitoringRange, OutagesResponse, SeriesPoint, SeriesResponse,
   SummaryResponse, VerificationCodeStats,
 } from '../models/monitoring-live.model';
 import { bucketWindow, downloadName, saveBlob } from '../utils/monitoring-live';
@@ -45,6 +45,8 @@ export class MonitoringLiveService {
   private readonly _bucket = signal<SeriesPoint | null>(null);
   private readonly _service = signal<string | null>(null);
   private readonly _page = signal(0);
+  /** La aplicación elegida; `null` es la de Iris, la que el BFF usa sin que se le diga. */
+  private readonly _application = signal<string | null>(null);
   readonly range = this._range.asReadonly();
   readonly channel = this._channel.asReadonly();
   readonly kind = this._kind.asReadonly();
@@ -52,6 +54,7 @@ export class MonitoringLiveService {
   readonly bucket = this._bucket.asReadonly();
   readonly service = this._service.asReadonly();
   readonly page = this._page.asReadonly();
+  readonly application = this._application.asReadonly();
 
   // ── datos ──
   readonly summary = signal<SummaryResponse | null>(null);
@@ -63,6 +66,7 @@ export class MonitoringLiveService {
   readonly messages = signal<MessagePage | null>(null);
   readonly alerts = signal<AlertsResponse | null>(null);
   readonly rules = signal<AlertRulesResponse | null>(null);
+  readonly applications = signal<ApplicationsResponse | null>(null);
 
   private readonly _connection = signal<Connection>('connecting');
   private readonly _loading = signal(false);
@@ -183,7 +187,7 @@ export class MonitoringLiveService {
     this._loading.set(true);
     const results = await Promise.allSettled([
       this.loadSummary(), this.loadSeries(), this.loadFailures(), this.loadCodes(), this.loadHealth(), this.loadOutages(), this.loadMessages(),
-      this.loadAlerts(), this.loadRules(),
+      this.loadAlerts(), this.loadRules(), this.loadApplications(),
     ]);
     this._loading.set(false);
     this.markResult(results.every((r) => r.status === 'fulfilled'));
@@ -192,6 +196,7 @@ export class MonitoringLiveService {
   // ── consultas ──
   private params(extra: Record<string, string | number | null | undefined> = {}): HttpParams {
     let params = new HttpParams().set('range', this._range());
+    if (this._application()) params = params.set('applicationId', this._application()!);
     for (const [key, value] of Object.entries(extra)) {
       if (value !== null && value !== undefined && value !== '') params = params.set(key, String(value));
     }
@@ -213,7 +218,8 @@ export class MonitoringLiveService {
   loadHealth = () => this.load<HealthResponse>('health', new HttpParams(), this.health);
   loadOutages = () => this.load<OutagesResponse>('outages', this.params(), this.outages);
   loadAlerts = () => this.load<AlertsResponse>('alerts', this.params(), this.alerts);
-  loadRules = () => this.load<AlertRulesResponse>('alerts/rules', new HttpParams(), this.rules);
+  loadRules = () => this.load<AlertRulesResponse>('alerts/rules', this.params(), this.rules);
+  loadApplications = () => this.load<ApplicationsResponse>('applications', new HttpParams(), this.applications);
 
   loadMessages = () => this.load<MessagePage>('messages', new HttpParams({ fromObject: this.messageQuery(this.messageWindow()) }), this.messages);
 
@@ -227,6 +233,7 @@ export class MonitoringLiveService {
 
   private messageQuery(window: { from: string; to: string | null }): Record<string, string> {
     const query: Record<string, string> = { page: String(this._page()), size: String(PAGE_SIZE) };
+    if (this._application()) query['applicationId'] = this._application()!;
     const filters: Record<string, string | null | undefined> = {
       channel: this._channel(), kind: this._kind(), status: this._status(), from: window.from, to: window.to,
     };
@@ -236,12 +243,32 @@ export class MonitoringLiveService {
     return query;
   }
 
+  /** La aplicación elegida como parámetro, para las acciones que no llevan el periodo. */
+  private applicationParams(): HttpParams {
+    return this._application() ? new HttpParams().set('applicationId', this._application()!) : new HttpParams();
+  }
+
+  /** Elige la aplicación a mirar; `null`, o la de Iris, vuelve a la de siempre. Los filtros no valen para otra aplicación: se quitan. */
+  selectApplication(id: string | null): void {
+    const next = id === null || id === this.applications()?.defaultId ? null : id;
+    if (next === this._application()) return;
+    this._application.set(next);
+    this._channel.set(null);
+    this._kind.set(null);
+    this._status.set(null);
+    this._bucket.set(null);
+    this._service.set(null);
+    this._page.set(0);
+    this.reconnect();
+    void this.refreshAll();
+  }
+
   // ── acciones ──
   /** Vuelve a poner en cola un correo fallido. Los errores los avisa el interceptor; aquí solo se dice que no se hizo. */
   async retry(item: MessageItem): Promise<boolean> {
     if (!item.messageId) return false;
     try {
-      await firstValueFrom(this.http.post(`${this.base}/messages/${encodeURIComponent(item.messageId)}/retry`, {}));
+      await firstValueFrom(this.http.post(`${this.base}/messages/${encodeURIComponent(item.messageId)}/retry`, {}, { params: this.applicationParams() }));
     } catch {
       return false;
     }
@@ -253,7 +280,11 @@ export class MonitoringLiveService {
   /** Crea o actualiza una regla de alerta. */
   async saveRule(request: AlertRuleRequest, id?: string): Promise<boolean> {
     try {
-      await firstValueFrom(id ? this.http.put<AlertRule>(`${this.base}/alerts/rules/${encodeURIComponent(id)}`, request) : this.http.post<AlertRule>(`${this.base}/alerts/rules`, request));
+      await firstValueFrom(
+        id
+          ? this.http.put<AlertRule>(`${this.base}/alerts/rules/${encodeURIComponent(id)}`, request, { params: this.applicationParams() })
+          : this.http.post<AlertRule>(`${this.base}/alerts/rules`, request, { params: this.applicationParams() }),
+      );
     } catch {
       return false;
     }
@@ -264,7 +295,7 @@ export class MonitoringLiveService {
 
   async deleteRule(id: string): Promise<boolean> {
     try {
-      await firstValueFrom(this.http.delete(`${this.base}/alerts/rules/${encodeURIComponent(id)}`));
+      await firstValueFrom(this.http.delete(`${this.base}/alerts/rules/${encodeURIComponent(id)}`, { params: this.applicationParams() }));
     } catch {
       return false;
     }
@@ -305,15 +336,15 @@ export class MonitoringLiveService {
     this._connection.set('connecting');
     let source: EventSource;
     try {
-      source = this.openStream(`${this.base}/stream?range=${this._range()}`);
+      source = this.openStream(`${this.base}/stream?range=${this._range()}${this._application() ? `&applicationId=${encodeURIComponent(this._application()!)}` : ''}`);
     } catch {
       this.fallBack();
       return;
     }
     this.source = source;
     source.onopen = () => this.zone.run(() => this._connection.set('live'));
-    source.addEventListener('summary', (event) => this.zone.run(() => this.onEvent(event, this.summary)));
-    source.addEventListener('health', (event) => this.zone.run(() => this.onEvent(event, this.health)));
+    source.addEventListener('summary', (event) => this.zone.run(() => this.onEvent(event, this.summary, (data) => 'totals' in data)));
+    source.addEventListener('health', (event) => this.zone.run(() => this.onEvent(event, this.health, (data) => 'services' in data)));
     source.onerror = () =>
       this.zone.run(() => {
         // CLOSED: el BFF o Mercury rechazaron el flujo (sesión, límite): no reconecta solo, se reintenta más tarde
@@ -322,10 +353,19 @@ export class MonitoringLiveService {
       });
   }
 
-  private onEvent<T>(event: Event, into: { set(value: T): void }): void {
+  /**
+   * Un evento del flujo. Mercury manda `{"error": ...}` en lugar del resumen cuando no pudo calcularlo (por ejemplo, sin las tablas de
+   * monitoreo): eso no reemplaza lo que ya se ve, solo avisa de que los datos pueden estar desactualizados.
+   */
+  private onEvent<T>(event: Event, into: { set(value: T): void }, isData: (data: Record<string, unknown>) => boolean): void {
     try {
-      into.set(JSON.parse((event as MessageEvent<string>).data) as T);
+      const data = JSON.parse((event as MessageEvent<string>).data) as Record<string, unknown>;
       this._connection.set('live');
+      if (data === null || typeof data !== 'object' || !isData(data)) {
+        this._stale.set(true);
+        return;
+      }
+      into.set(data as T);
       this._stale.set(false);
       this._lastUpdate.set(new Date());
     } catch {

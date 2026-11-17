@@ -29,7 +29,13 @@ export type ServiceState = 'UP' | 'DEGRADED' | 'DOWN' | 'NOT_CONFIGURED' | 'UNKN
 export interface ServiceHealth {
   service: string; status: ServiceState; latencyMs: number | null; cause: string | null; causeText: string | null; since: string | null; lastCheckedAt: string | null;
 }
-export interface HealthResponse { generatedAt: string; overall: 'OPERATIONAL' | 'DEGRADED' | 'OUTAGE' | 'UNKNOWN'; services: ServiceHealth[] }
+/** Si las tablas del monitoreo existen en Mercury y cuántos registros fallaron: sin ellas las vistas quedan vacías aunque se envíe. */
+export interface StorageStatus { ready: boolean; missingTables: string[]; migrations: string[]; recordFailures: number }
+export interface HealthResponse { generatedAt: string; overall: 'OPERATIONAL' | 'DEGRADED' | 'OUTAGE' | 'UNKNOWN'; services: ServiceHealth[]; storage?: StorageStatus }
+
+export interface ApplicationChoice { id: string; name: string }
+/** Las aplicaciones que la persona puede mirar y la de Iris, con la que empieza. */
+export interface ApplicationsResponse { defaultId: string | null; applications: ApplicationChoice[]; available: boolean }
 
 export interface Outage {
   id: string; service: string; status: ServiceState; cause: string; causeText: string; startedAt: string; endedAt: string | null; durationSeconds: number; ongoing: boolean;

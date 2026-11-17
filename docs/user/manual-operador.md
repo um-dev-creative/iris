@@ -211,3 +211,17 @@ flowchart LR
 - **Reintentar.** En la tabla de mensajes, un **correo fallido** tiene el botón **Reintentar**: Mercury lo vuelve a enviar en su próxima ronda. El intento fallido sigue en la tabla y el nuevo aparece aparte. Los mensajes de Telegram no se pueden reintentar desde aquí.
 - **Exportar.** **Exportar CSV** o **Exportar JSON** descarga la tabla con los filtros que tengas, hasta 10 000 filas; si el archivo queda corto te avisa. Los destinatarios siguen enmascarados.
 - Crear reglas, eliminarlas y reintentar necesitan que tu aplicación tenga permiso de escritura en Mercury; si no lo tiene, la página dice «Acceso denegado».
+
+### Si la página de monitoreo está vacía
+
+```mermaid
+flowchart TD
+    A[Envié un correo y no aparece] --> B{Hay un aviso rojo arriba?}
+    B -->|sí| C[Mercury no tiene sus tablas de monitoreo:<br/>pide a quien administra Mercury aplicar los scripts que nombra]
+    B -->|no| D{Quién lo envió?}
+    D -->|otra aplicación, por ejemplo ZeroBound| E[Elige esa aplicación en el selector Aplicación]
+    D -->|la tuya| F[Revisa el periodo y los filtros]
+```
+
+- Cada envío se ve **bajo la aplicación que lo envió**. Si tienes acceso a varias, aparece el selector **Aplicación** junto al periodo; elige la que enviaste y todo (resumen, gráfica, fallos, tabla, exportar, reintentar y alertas) pasa a ser de esa aplicación.
+- Un **aviso rojo** «Mercury no está registrando los envíos» significa que a Mercury le faltan sus tablas de monitoreo: los envíos se hacen, pero no se guardan. Un **aviso amarillo** dice cuántos envíos no se pudieron registrar.

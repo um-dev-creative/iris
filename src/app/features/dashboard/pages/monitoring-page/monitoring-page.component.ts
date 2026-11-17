@@ -59,12 +59,28 @@ export class MonitoringPageComponent {
   readonly resolved = computed(() => (this.live.alerts()?.alerts ?? []).filter((a) => a.status === 'RESOLVED').slice(0, 5));
   readonly draftError = computed(() => draftProblem(this.draft()));
 
+  /** Las aplicaciones entre las que se puede elegir: las de la persona y, siempre, la de Iris (que Mercury no lista si la persona no la administra). */
+  readonly applicationOptions = computed(() => {
+    const data = this.live.applications();
+    if (!data) return [];
+    const options = [...data.applications];
+    if (data.defaultId && !options.some((a) => a.id === data.defaultId)) options.unshift({ id: data.defaultId, name: 'Aplicación de Iris' });
+    return options;
+  });
+  readonly selectedApplication = computed(() => this.live.application() ?? this.live.applications()?.defaultId ?? '');
+  /** Mercury no tiene sus tablas de monitoreo, o no pudo registrar envíos: las vistas están vacías aunque se envíe. */
+  readonly storage = computed(() => this.live.health()?.storage ?? null);
+
   constructor() {
     this.live.start(inject(DestroyRef));
   }
 
   setRange(range: MonitoringRange): void {
     this.live.setRange(range);
+  }
+
+  chooseApplication(id: string): void {
+    this.live.selectApplication(id);
   }
 
   canRetry(item: MessageItem): boolean {

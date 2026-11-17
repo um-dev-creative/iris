@@ -39,6 +39,14 @@ sequenceDiagram
 - **Credenciales:** `Authorization: Bearer` del cliente de la aplicación (necesita `mercury:message:read` en `BACKBONE_CLIENT_SCOPES`, ya presente para campañas) y `session-token` de la persona. Las vistas JSON usan `proxyToApi`, que renueva la sesión una vez ante un `401`. Si Backbone rechaza al cliente de la aplicación, `502`.
 - **El stream** (`GET /monitoring/stream`) abre la conexión con Mercury, la pasa tal cual al navegador (`text/event-stream`, `Cache-Control: no-store, no-transform`, `X-Accel-Buffering: no`) y la cierra cuando el navegador se va. Un rechazo de Mercury llega como JSON con su estado (`400`, `401`, `403`, `429`; cualquier otro, `502`) para que la página siga con sondeo. `compression()` no comprime `text/event-stream`: el buffer de la compresión retendría los eventos. Detrás de nginx hace falta `proxy_buffering off` para esta ruta (o el encabezado `X-Accel-Buffering`, que ya se envía).
 
+## Elegir la aplicación y avisar si Mercury no registra
+
+Mercury guarda cada envío bajo la aplicación de la **definición de plantilla** que usó. Lo que envía otra aplicación (ZeroBound, por ejemplo) queda bajo la suya, no bajo la de Iris (`MONITORED_APPLICATION_ID`).
+
+- **Selector «Aplicación»** (aparece si la persona puede mirar más de una): `GET /monitoring/applications` devuelve `{ defaultId, applications, available }` con las aplicaciones que Mercury lista para la persona (`/templates/applications`; todas para un administrador de la plataforma, las que administra para el resto) y la de Iris. Todas las rutas de monitoreo aceptan `applicationId`: sin él, la de Iris; un valor que no es UUID es `400`; uno que la persona no puede mirar es `403` y no se llama a Mercury. La lista se pide una vez por minuto y sesión. Aplica a las vistas, al stream, a la exportación, al reintento y a las reglas; cambiar de aplicación quita los filtros y reabre el stream.
+- **Aviso de almacenamiento:** `health.storage` (en `/monitoring/health` y en el evento `health` del stream) dice si existen las tablas de monitoreo de Mercury. Si faltan (migraciones `V2039` a `V2041` sin aplicar, p. ej. con `MERCURY_FLYWAY_ENABLED=false`) la página muestra un aviso rojo con las tablas y los scripts; si hay tablas pero fallaron registros, un aviso amarillo con la cuenta.
+- **Qué hacer si la página está vacía y Mercury envió:** ver `docs/tec/en/24-monitoring-api.md` de Mercury, sección *Nothing appears in the dashboard*.
+
 ## Alertas, reintento y exportación (fase 4)
 
 Rutas de escritura y de archivo, en el mismo `server/routes/monitoring-live.routes.js`:
