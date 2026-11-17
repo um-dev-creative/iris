@@ -38,3 +38,18 @@ export interface OutagesResponse { range: string; outages: Outage[] }
 
 /** Cómo llegan los datos: por el stream, por consultas periódicas, o no llegan. */
 export type Connection = 'connecting' | 'live' | 'polling' | 'offline';
+
+export type AlertType = 'FAILURE_RATE' | 'QUEUE_STUCK' | 'SERVICE_DOWN';
+
+export interface AlertRule {
+  id: string; type: AlertType; threshold: number; windowMinutes: number; minVolume: number; service: string | null; notifyEmails: string[];
+  enabled: boolean; createdAt: string; updatedAt: string;
+}
+export interface AlertRulesResponse { rules: AlertRule[] }
+export interface AlertRuleRequest {
+  type: AlertType; threshold?: number; windowMinutes?: number; minVolume?: number; service?: string; notifyEmails?: string[]; enabled?: boolean;
+}
+export interface AlertEvent {
+  id: string; ruleId: string; type: AlertType; status: 'FIRING' | 'RESOLVED'; value: number; detail: string; startedAt: string; resolvedAt: string | null;
+}
+export interface AlertsResponse { range: string; firing: number; alerts: AlertEvent[] }

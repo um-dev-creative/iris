@@ -27,6 +27,8 @@ const QUERY_FIELDS = {
   'verification-codes': ['range'],
   [MESSAGES_PATH]: ['channel', 'status', 'kind', 'templateDefinedId', 'from', 'to', 'page', 'size'],
   stream: ['range'],
+  alerts: ['range'],
+  export: ['format', 'channel', 'status', 'kind', 'templateDefinedId', 'from', 'to'],
 };
 
 /** The allowed parameters of a view, or a message saying which one is wrong. */
@@ -37,6 +39,7 @@ function cleanQuery(view, query) {
     if (value === undefined || value === '') continue;
     if (typeof value !== 'string' || !VALUE.test(value)) return { error: `Invalid ${field}` };
     if (field === 'range' && !RANGES.has(value)) return { error: 'Invalid range: use 1h, 24h, 7d or 30d' };
+    if (field === 'format' && !['csv', 'json'].includes(value)) return { error: 'Invalid format: use csv or json' };
     if (field === 'templateDefinedId' && !UUID.test(value)) return { error: 'Invalid templateDefinedId' };
     if ((field === 'page' || field === 'size') && !/^\d{1,4}$/.test(value)) return { error: `Invalid ${field}` };
     out[field] = value;
@@ -83,8 +86,65 @@ router.get('/series', view('series'));
 router.get('/failures', view('failures'));
 router.get('/verification-codes', view('verification-codes'));
 router.get('/messages', view(MESSAGES_PATH));
+router.get('/messages/export', view('export', { upstream: 'messages/export' }));
+router.get('/alerts', view('alerts'));
+router.get('/alerts/rules', view('alerts-rules', { upstream: 'alerts/rules' }));
 router.get('/health', view('health', { scoped: false }));
 router.get('/outages', view('outages', { scoped: false, upstream: 'health/outages' }));
+
+/** The fields of an alert rule the browser may set; the BFF checks their type and Mercury their values. */
+const RULE_TYPES = ['FAILURE_RATE', 'QUEUE_STUCK', 'SERVICE_DOWN'];
+
+/** The rule of the request body, or a message saying what is wrong. */
+function cleanRule(body) {
+  const rule = {};
+  if (typeof body?.type !== 'string' || !RULE_TYPES.includes(body.type)) return { error: 'Invalid type' };
+  rule.type = body.type;
+  for (const field of ['threshold', 'windowMinutes', 'minVolume']) {
+    if (body[field] === undefined || body[field] === null) continue;
+    if (typeof body[field] !== 'number' || !Number.isFinite(body[field])) return { error: `Invalid ${field}` };
+    rule[field] = body[field];
+  }
+  if (body.service !== undefined && body.service !== null && body.service !== '') {
+    if (typeof body.service !== 'string' || !VALUE.test(body.service)) return { error: 'Invalid service' };
+    rule.service = body.service;
+  }
+  if (body.notifyEmails !== undefined && body.notifyEmails !== null) {
+    if (!Array.isArray(body.notifyEmails) || body.notifyEmails.length > 5 || body.notifyEmails.some((a) => typeof a !== 'string' || a.length > 320)) {
+      return { error: 'Invalid notifyEmails' };
+    }
+    rule.notifyEmails = body.notifyEmails;
+  }
+  if (body.enabled !== undefined && body.enabled !== null) {
+    if (typeof body.enabled !== 'boolean') return { error: 'Invalid enabled' };
+    rule.enabled = body.enabled;
+  }
+  return { rule };
+}
+
+/** A write to Mercury (retry, alert rules): needs the application, the Bearer and, in Mercury, the write scope. */
+const write = (path, { withBody = false } = {}) => async (req, res) => {
+  if (!MONITORED_APPLICATION_ID) return fail(res, 503, 'Monitoring is not available');
+  let body;
+  if (withBody) {
+    const { rule, error } = cleanRule(req.body);
+    if (error) return fail(res, 400, error);
+    body = rule;
+  }
+  const bearer = await bearerOrFail(res, 'write');
+  if (bearer === false) return undefined;
+  const upstream = typeof path === 'function' ? path(req) : path;
+  return proxyToApi(req, res, 'mercury', `/monitoring/applications/${encodeURIComponent(MONITORED_APPLICATION_ID)}/${upstream}`, {
+    headers: bearer ? { Authorization: `Bearer ${bearer}` } : {},
+    ...(withBody ? { body } : {}),
+  });
+};
+
+router.param('id', (_req, res, next, id) => (UUID.test(id) ? next() : fail(res, 400, 'Invalid id')));
+router.post('/messages/:id/retry', write((req) => `messages/${req.params.id}/retry`));
+router.post('/alerts/rules', write('alerts/rules', { withBody: true }));
+router.put('/alerts/rules/:id', write((req) => `alerts/rules/${req.params.id}`, { withBody: true }));
+router.delete('/alerts/rules/:id', write((req) => `alerts/rules/${req.params.id}`));
 
 /**
  * The live stream: Mercury's Server-Sent Events passed through untouched. The browser cannot send the Bearer, so the BFF opens the

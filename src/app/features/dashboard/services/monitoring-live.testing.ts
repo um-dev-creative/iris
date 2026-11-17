@@ -1,6 +1,6 @@
 import { HttpTestingController, TestRequest } from '@angular/common/http/testing';
 import {
-  FailuresResponse, HealthResponse, MessagePage, OutagesResponse, SeriesResponse, SummaryResponse, VerificationCodeStats,
+  AlertRulesResponse, AlertsResponse, FailuresResponse, HealthResponse, MessagePage, OutagesResponse, SeriesResponse, SummaryResponse, VerificationCodeStats,
 } from '../models/monitoring-live.model';
 
 export const summaryFixture = (): SummaryResponse => ({
@@ -67,6 +67,22 @@ export const messagesFixture = (total = 45): MessagePage => ({
   ],
 });
 
+export const alertsFixture = (): AlertsResponse => ({
+  range: '24h',
+  firing: 1,
+  alerts: [
+    { id: 'a-1', ruleId: 'r-1', type: 'FAILURE_RATE', status: 'FIRING', value: 33.3, detail: '33.3% of the messages failed in the last 15 min (10 of 30)', startedAt: '2026-11-17T07:45:00', resolvedAt: null },
+    { id: 'a-2', ruleId: 'r-2', type: 'SERVICE_DOWN', status: 'RESOLVED', value: 12, detail: 'SMTP DOWN for at least 10 min', startedAt: '2026-11-16T07:00:00', resolvedAt: '2026-11-16T07:30:00' },
+  ],
+});
+
+export const rulesFixture = (): AlertRulesResponse => ({
+  rules: [
+    { id: 'r-1', type: 'FAILURE_RATE', threshold: 20, windowMinutes: 15, minVolume: 10, service: null, notifyEmails: ['ops@example.com'], enabled: true, createdAt: '2026-11-01T00:00:00', updatedAt: '2026-11-01T00:00:00' },
+    { id: 'r-2', type: 'SERVICE_DOWN', threshold: 1, windowMinutes: 10, minVolume: 0, service: 'SMTP', notifyEmails: [], enabled: false, createdAt: '2026-11-01T00:00:00', updatedAt: '2026-11-01T00:00:00' },
+  ],
+});
+
 /** What Mercury would answer for a path of `/monitoring`. */
 export function bodyFor(path: string): object {
   if (path.endsWith('/summary')) return summaryFixture();
@@ -75,6 +91,8 @@ export function bodyFor(path: string): object {
   if (path.endsWith('/verification-codes')) return codesFixture();
   if (path.endsWith('/health')) return healthFixture();
   if (path.endsWith('/outages')) return outagesFixture();
+  if (path.endsWith('/alerts/rules')) return rulesFixture();
+  if (path.endsWith('/alerts')) return alertsFixture();
   return messagesFixture();
 }
 

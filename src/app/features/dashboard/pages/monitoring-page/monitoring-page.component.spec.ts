@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { API_BASE_URL } from '../../../../core/config';
-import { MonitoringPageComponent } from './monitoring-page.component';
+import { MonitoringPageComponent, RuleDraft, draftProblem, toRequest } from './monitoring-page.component';
 import { EVENT_SOURCE_FACTORY } from '../../services/monitoring-live.service';
 import { FakeEventSource, answerAll } from '../../services/monitoring-live.testing';
 
@@ -178,7 +178,7 @@ describe('MonitoringPageComponent', () => {
 
     (el.querySelector('button[aria-label="Actualizar"]') as HTMLButtonElement).click();
 
-    expect(answerAll(http)).toHaveLength(7);
+    expect(answerAll(http)).toHaveLength(9);
   });
 
   it('sin mensajes ni fallos ni caídas lo dice', async () => {
@@ -192,5 +192,166 @@ describe('MonitoringPageComponent', () => {
     expect(el.textContent).toContain('No hay mensajes con estos filtros.');
     expect(el.textContent).toContain('Sin fallos en este periodo.');
     expect(el.textContent).toContain('Sin caídas en este periodo.');
+  });
+
+  describe('alertas', () => {
+    it('muestra las alertas que suenan ahora, las reglas y las alertas resueltas', async () => {
+      const { el } = await open();
+
+      expect(el.querySelector('[data-testid="firing"]')!.textContent).toContain('1 alerta(s) activa(s)');
+      expect(el.querySelector('[data-testid="firing"]')!.textContent).toContain('33.3% of the messages failed');
+      expect(el.textContent).toContain('Más de 20 % de fallos en 15 min (mínimo 10 mensajes)');
+      expect(el.textContent).toContain('avisa a ops@example.com');
+      expect(el.textContent).toContain('SMTP degradado o caído durante 10 min');
+      expect(el.textContent).toContain('desactivada');
+      expect(el.textContent).toContain('SMTP DOWN for at least 10 min');
+    });
+
+    it('sin alertas ni reglas no muestra el aviso y lo dice', async () => {
+      const { fixture, el, live } = await open();
+
+      live.alerts.set({ range: '24h', firing: 0, alerts: [] });
+      live.rules.set({ rules: [] });
+      fixture.detectChanges();
+
+      expect(el.querySelector('[data-testid="firing"]')).toBeNull();
+      expect(el.textContent).toContain('Todavía no hay reglas');
+    });
+
+    it('activar o desactivar una regla la guarda con el valor contrario', async () => {
+      const { fixture, el, live } = await open();
+      const save = vi.spyOn(live, 'saveRule').mockResolvedValue(true);
+
+      button(el, 'Desactivar').click();
+      button(el, 'Activar').click();
+      fixture.detectChanges();
+
+      expect(save).toHaveBeenNthCalledWith(1, expect.objectContaining({ type: 'FAILURE_RATE', threshold: 20, enabled: false, notifyEmails: ['ops@example.com'] }), 'r-1');
+      expect(save).toHaveBeenNthCalledWith(2, expect.objectContaining({ type: 'SERVICE_DOWN', service: 'SMTP', enabled: true }), 'r-2');
+    });
+
+    it('eliminar una regla la borra', async () => {
+      const { el, live } = await open();
+      const remove = vi.spyOn(live, 'deleteRule').mockResolvedValue(true);
+
+      (el.querySelector('button[aria-label^="Eliminar la regla"]') as HTMLButtonElement).click();
+
+      expect(remove).toHaveBeenCalledWith('r-1');
+    });
+
+    it('el formulario crea la regla con lo escrito y se vacía al guardarse', async () => {
+      const { fixture, el, live } = await open();
+      const save = vi.spyOn(live, 'saveRule').mockResolvedValue(true);
+      const form = el.querySelector('form[aria-label="Nueva regla"]') as HTMLFormElement;
+      const type = form.querySelector('select') as HTMLSelectElement;
+
+      type.value = 'QUEUE_STUCK';
+      type.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+      const [threshold, windowMinutes] = Array.from(form.querySelectorAll('input[type="number"]')) as HTMLInputElement[];
+      threshold.value = '7';
+      threshold.dispatchEvent(new Event('input'));
+      windowMinutes.value = '30';
+      windowMinutes.dispatchEvent(new Event('input'));
+      const emails = form.querySelector('input[type="text"]') as HTMLInputElement;
+      emails.value = 'a@x.com, b@x.com';
+      emails.dispatchEvent(new Event('input'));
+      form.dispatchEvent(new Event('submit'));
+      await vi.waitFor(() => expect(save).toHaveBeenCalled());
+
+      expect(save).toHaveBeenCalledWith({ type: 'QUEUE_STUCK', threshold: 7, windowMinutes: 30, notifyEmails: ['a@x.com', 'b@x.com'], enabled: true });
+      await vi.waitFor(() => expect(fixture.componentInstance.draft().type).toBe('FAILURE_RATE'));
+    });
+
+    it('un formulario con un problema lo dice, desactiva el botón y no guarda', async () => {
+      const { fixture, el, live } = await open();
+      const save = vi.spyOn(live, 'saveRule').mockResolvedValue(true);
+
+      fixture.componentInstance.patchDraft({ threshold: '0' });
+      fixture.detectChanges();
+
+      expect(el.querySelector('[data-testid="draft-error"]')!.textContent).toContain('mayor que 0');
+      expect((button(el, 'Crear regla')).disabled).toBe(true);
+      await fixture.componentInstance.createRule();
+      expect(save).not.toHaveBeenCalled();
+    });
+
+    it('si guardar falla el formulario conserva lo escrito', async () => {
+      const { fixture, live } = await open();
+      vi.spyOn(live, 'saveRule').mockResolvedValue(false);
+      fixture.componentInstance.patchDraft({ threshold: '35' });
+
+      await fixture.componentInstance.createRule();
+
+      expect(fixture.componentInstance.draft().threshold).toBe('35');
+      expect(fixture.componentInstance.saving()).toBe(false);
+    });
+
+    it('una regla de servicio muestra el selector de servicio y no el umbral', async () => {
+      const { fixture, el } = await open();
+
+      fixture.componentInstance.patchDraft({ type: 'SERVICE_DOWN', service: 'SMTP' });
+      fixture.detectChanges();
+      const form = el.querySelector('form[aria-label="Nueva regla"]')!;
+
+      expect(form.textContent).toContain('Servicio');
+      expect(form.textContent).not.toContain('Avisar si fallan');
+      expect(toRequest(fixture.componentInstance.draft())).toEqual({ type: 'SERVICE_DOWN', windowMinutes: 15, service: 'SMTP', notifyEmails: [], enabled: true });
+    });
+  });
+
+  describe('mensajes: reintentar y exportar', () => {
+    it('solo un correo fallido con id ofrece «Reintentar», y el botón lo reintenta', async () => {
+      const { fixture, el, live } = await open();
+      const retry = vi.spyOn(live, 'retry').mockResolvedValue(true);
+      const withId = { ...live.messages()!.items[0], messageId: '3f0c1f4e-8b1e-4f7e-9d54-0c6f0d2a7b11' };
+      live.messages.set({ ...live.messages()!, items: [withId, live.messages()!.items[1]] });
+      fixture.detectChanges();
+
+      expect(Array.from(el.querySelectorAll('button')).filter((b) => b.textContent!.includes('Reintentar'))).toHaveLength(1);
+      button(el, 'Reintentar').click();
+
+      expect(retry).toHaveBeenCalledWith(withId);
+      expect(fixture.componentInstance.canRetry({ ...withId, status: 'SENT' })).toBe(false);
+      expect(fixture.componentInstance.canRetry({ ...withId, channel: 'TELEGRAM' })).toBe(false);
+      expect(fixture.componentInstance.canRetry({ ...withId, messageId: null })).toBe(false);
+    });
+
+    it('los botones de exportar piden CSV o JSON', async () => {
+      const { el, live } = await open();
+      const exportMessages = vi.spyOn(live, 'exportMessages').mockResolvedValue(true);
+
+      button(el, 'Exportar CSV').click();
+      button(el, 'Exportar JSON').click();
+
+      expect(exportMessages).toHaveBeenNthCalledWith(1, 'csv');
+      expect(exportMessages).toHaveBeenNthCalledWith(2, 'json');
+    });
+  });
+});
+
+describe('formulario de reglas', () => {
+  const draft = (patch: Partial<RuleDraft>): RuleDraft => ({ type: 'FAILURE_RATE', threshold: '20', windowMinutes: '15', minVolume: '10', service: '', emails: '', ...patch });
+
+  it.each([
+    [{}, null],
+    [{ windowMinutes: '0' }, 'La ventana debe ser de 1 a 1440 minutos.'],
+    [{ windowMinutes: '1441' }, 'La ventana debe ser de 1 a 1440 minutos.'],
+    [{ windowMinutes: '1.5' }, 'La ventana debe ser de 1 a 1440 minutos.'],
+    [{ threshold: '' }, 'El umbral debe ser mayor que 0.'],
+    [{ threshold: 'abc' }, 'El umbral debe ser mayor que 0.'],
+    [{ threshold: '101' }, 'El umbral de la tasa de fallos es un porcentaje, hasta 100.'],
+    [{ type: 'QUEUE_STUCK', threshold: '500' }, null],
+    [{ minVolume: '' }, 'El mínimo de mensajes debe ser 0 o más.'],
+    [{ minVolume: '-1' }, 'El mínimo de mensajes debe ser 0 o más.'],
+    [{ emails: 'a@x.com,b@x.com,c@x.com,d@x.com,e@x.com,f@x.com' }, 'Como máximo 5 correos.'],
+    [{ emails: 'no-es-correo' }, 'Hay un correo que no es válido.'],
+    [{ type: 'SERVICE_DOWN', threshold: '', minVolume: '' }, null],
+  ] as [Partial<RuleDraft>, string | null][])('draftProblem(%j) = %s', (patch, problem) => expect(draftProblem(draft(patch))).toBe(problem));
+
+  it('toRequest solo lleva lo que aplica al tipo', () => {
+    expect(toRequest(draft({ emails: ' a@x.com , ' }))).toEqual({ type: 'FAILURE_RATE', windowMinutes: 15, threshold: 20, minVolume: 10, notifyEmails: ['a@x.com'], enabled: true });
+    expect(toRequest(draft({ type: 'QUEUE_STUCK' }))).toEqual({ type: 'QUEUE_STUCK', windowMinutes: 15, threshold: 20, notifyEmails: [], enabled: true });
+    expect(toRequest(draft({ type: 'SERVICE_DOWN' }))).toEqual({ type: 'SERVICE_DOWN', windowMinutes: 15, notifyEmails: [], enabled: true });
   });
 });
