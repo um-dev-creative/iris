@@ -73,7 +73,8 @@ export const ALERT_TYPES: { value: AlertType; label: string }[] = [
   { value: 'QUEUE_STUCK', label: 'Mensajes detenidos' },
   { value: 'SERVICE_DOWN', label: 'Servicio caído' },
 ];
-export const SERVICES = ['POSTGRES', 'MONGO', 'KAFKA', 'SMTP', 'BACKBONE', 'TELEGRAM'];
+/** Los nombres que Mercury da a sus servicios en `/monitoring/health`; una regla «servicio caído» solo acepta estos. */
+export const SERVICES = ['POSTGRESQL', 'MONGODB', 'KAFKA', 'SMTP', 'BACKBONE', 'TELEGRAM'];
 
 /** La regla en una frase: qué vigila y cuándo avisa. */
 export function ruleLabel(rule: AlertRule): string {

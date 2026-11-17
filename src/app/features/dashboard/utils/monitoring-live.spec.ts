@@ -1,5 +1,5 @@
 import { AlertRule } from '../models/monitoring-live.model';
-import { bucketLabel, bucketWindow, channelLabel, downloadName, duration, formatNumber, kindLabel, parseUtc, percent, ruleLabel, saveBlob } from './monitoring-live';
+import { SERVICES, bucketLabel, bucketWindow, channelLabel, downloadName, duration, formatNumber, kindLabel, parseUtc, percent, ruleLabel, saveBlob } from './monitoring-live';
 
 describe('monitoring-live utils', () => {
   it('percent no inventa una tasa sin envíos', () => {
@@ -75,5 +75,9 @@ describe('monitoring-live utils', () => {
     expect(revoke).toHaveBeenCalledWith('blob:x');
     expect(document.querySelector('a[download]')).toBeNull();
     click.mockRestore();
+  });
+
+  it('los servicios de una regla son los que Mercury reporta en su salud', () => {
+    expect([...SERVICES].sort()).toEqual(['BACKBONE', 'KAFKA', 'MONGODB', 'POSTGRESQL', 'SMTP', 'TELEGRAM']);
   });
 });
