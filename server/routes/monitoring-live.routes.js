@@ -71,6 +71,8 @@ const applicationPath = (application, view) => `/monitoring/applications/${encod
  * The applications the person may look at: the ones Mercury lists for them in `/templates/applications` (all of them for a platform
  * administrator, the ones they manage for anybody else). It is asked once a minute per session, not once per request.
  */
+/** What Mercury reads as "every application". */
+const ALL_APPLICATIONS = '00000000-0000-0000-0000-000000000000';
 const VISIBLE_TTL_MS = 60_000;
 const MAX_CACHED_SESSIONS = 500;
 const visibleCache = new Map();
@@ -94,21 +96,18 @@ async function visibleApplications(sessionToken, bearer) {
 }
 
 /**
- * The application a monitoring request is about: the one the person chose (`applicationId`, which must be one they may look at) or, without
- * one, the application of Iris itself. Answers the error and returns null when there is none.
+ * The application a monitoring request is about. The monitoring is Mercury's own, not one client's, so without a choice it covers every
+ * application (Mercury's nil UUID). The person may narrow it to one (`applicationId`), which must be one they may look at. Answers the error
+ * and returns null when it cannot.
  */
 async function applicationOf(req, res, bearer) {
   const requested = req.query.applicationId;
-  if (requested === undefined || requested === '') {
-    if (MONITORED_APPLICATION_ID) return MONITORED_APPLICATION_ID;
-    logger.error('Monitoring: MONITORED_APPLICATION_ID (or BACKBONE_APPLICATION_ID) is not set');
-    fail(res, 503, 'Monitoring is not available');
-    return null;
-  }
+  if (requested === undefined || requested === '') return ALL_APPLICATIONS;
   if (typeof requested !== 'string' || !UUID.test(requested)) {
     fail(res, 400, 'Invalid applicationId');
     return null;
   }
+  if (requested === ALL_APPLICATIONS) return ALL_APPLICATIONS;
   if (requested.toLowerCase() === String(MONITORED_APPLICATION_ID).toLowerCase()) return MONITORED_APPLICATION_ID;
   const sessionToken = req.cookies?.[SESSION_COOKIE];
   if (!sessionToken) {
@@ -139,11 +138,10 @@ async function applicationOf(req, res, bearer) {
   return requested.toLowerCase();
 }
 
-/** A view of the application (needs MONITORED_APPLICATION_ID) or a global one (service health). */
+/** A view of an application (all of them unless the person chose one) or a global one (service health). */
 const view = (name, { scoped = true, upstream = name } = {}) => async (req, res) => {
   const { query, error } = cleanQuery(name, req.query);
   if (error) return fail(res, 400, error);
-  if (scoped && !MONITORED_APPLICATION_ID && !req.query.applicationId) return applicationOf(req, res, null);
   const bearer = await bearerOrFail(res, name);
   if (bearer === false) return undefined;
   let application;
@@ -173,7 +171,7 @@ router.get('/applications', async (req, res) => {
     const visible = await visibleApplications(sessionToken, bearer);
     if (visible.status === 401) return fail(res, 401, 'Not authenticated');
     const applications = visible.status === 200 ? visible.list : [];
-    return res.json({ defaultId: MONITORED_APPLICATION_ID ? MONITORED_APPLICATION_ID.toLowerCase() : null, applications, available: visible.status === 200 });
+    return res.json({ applications, available: visible.status === 200 });
   } catch (err) {
     logger.error(`Monitoring: the applications could not be listed: ${err.code ?? err.message}`);
     return fail(res, 502, 'Backend unavailable');
@@ -215,7 +213,6 @@ function cleanRule(body) {
 
 /** A write to Mercury (retry, alert rules): needs the application, the Bearer and, in Mercury, the write scope. */
 const write = (path, { withBody = false } = {}) => async (req, res) => {
-  if (!MONITORED_APPLICATION_ID && !req.query.applicationId) return applicationOf(req, res, null);
   let body;
   if (withBody) {
     const { rule, error } = cleanRule(req.body);
@@ -246,7 +243,6 @@ router.delete('/alerts/rules/:id', write((req) => `alerts/rules/${req.params.id}
  * back to polling.
  */
 router.get('/stream', async (req, res) => {
-  if (!MONITORED_APPLICATION_ID && !req.query.applicationId) return applicationOf(req, res, null);
   const sessionToken = req.cookies?.[SESSION_COOKIE];
   if (!sessionToken) return fail(res, 401, 'Not authenticated');
   const { query, error } = cleanQuery('stream', req.query);

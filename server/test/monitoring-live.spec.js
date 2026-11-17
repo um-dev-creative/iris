@@ -6,7 +6,8 @@ const { start, tokens } = require('./harness');
 let bff;
 const SESSION = `iris_session=${tokens.GOOD}`;
 const get = (path, cookie = SESSION) => bff.call(`/mrc/api/v1/monitoring${path}`, { cookie });
-const APP = 'app-1';
+// the monitoring is Mercury's own: without a choice it covers every application (Mercury's nil UUID)
+const APP = '00000000-0000-0000-0000-000000000000';
 
 beforeAll(async () => { bff = await start({ env: { BACKBONE_CLIENT_ID: 'iris', BACKBONE_CLIENT_SECRET: 's3cret' } }); });
 afterAll(() => bff.stop());

@@ -6,7 +6,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../../../core/config';
 import { EVENT_SOURCE_FACTORY, MonitoringLiveService } from './monitoring-live.service';
 import { NotificationService } from '../../../core/services/notification.service';
-import { FakeEventSource, OTHER_APP, OWN_APP, answerAll, healthFixture, messagesFixture, paths, summaryFixture } from './monitoring-live.testing';
+import { FakeEventSource, OTHER_APP, answerAll, healthFixture, messagesFixture, paths, summaryFixture } from './monitoring-live.testing';
 
 const ALL = ['alerts', 'alerts/rules', 'applications', 'failures', 'health', 'messages', 'outages', 'series', 'summary', 'verification-codes'];
 const destroyRef = (): DestroyRef & { destroy: () => void } => {
@@ -530,7 +530,7 @@ describe('MonitoringLiveService', () => {
   });
 
   describe('otra aplicación', () => {
-    it('al empezar no manda applicationId (es la de Iris) y guarda la lista de aplicaciones', async () => {
+    it('al empezar no manda applicationId (son todas las aplicaciones) y guarda la lista de aplicaciones', async () => {
       service.start(destroyRef());
       const requests = answerAll(http);
 
@@ -558,14 +558,14 @@ describe('MonitoringLiveService', () => {
       expect(FakeEventSource.instances[0].closed).toBe(true);
     });
 
-    it('elegir la de Iris, o la misma otra vez, vuelve a la de siempre o no hace nada', async () => {
+    it('elegir «todas» (vacío), o la misma otra vez, vuelve a la de siempre o no hace nada', async () => {
       await started();
       service.selectApplication(OTHER_APP);
       answerAll(http);
 
       service.selectApplication(OTHER_APP);
       expect(http.match(() => true)).toHaveLength(0);
-      service.selectApplication(OWN_APP);
+      service.selectApplication('');
       const requests = answerAll(http);
 
       expect(service.application()).toBeNull();

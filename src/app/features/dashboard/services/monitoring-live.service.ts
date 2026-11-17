@@ -45,7 +45,7 @@ export class MonitoringLiveService {
   private readonly _bucket = signal<SeriesPoint | null>(null);
   private readonly _service = signal<string | null>(null);
   private readonly _page = signal(0);
-  /** La aplicación elegida; `null` es la de Iris, la que el BFF usa sin que se le diga. */
+  /** La aplicación elegida; `null` son todas las de Mercury, lo que el BFF usa sin que se le diga (el monitoreo es de Mercury, no de un cliente). */
   private readonly _application = signal<string | null>(null);
   readonly range = this._range.asReadonly();
   readonly channel = this._channel.asReadonly();
@@ -248,9 +248,9 @@ export class MonitoringLiveService {
     return this._application() ? new HttpParams().set('applicationId', this._application()!) : new HttpParams();
   }
 
-  /** Elige la aplicación a mirar; `null`, o la de Iris, vuelve a la de siempre. Los filtros no valen para otra aplicación: se quitan. */
+  /** Elige la aplicación a mirar; `null` o vacío vuelve a todas. Los filtros no valen para otra aplicación: se quitan. */
   selectApplication(id: string | null): void {
-    const next = id === null || id === this.applications()?.defaultId ? null : id;
+    const next = id ? id : null;
     if (next === this._application()) return;
     this._application.set(next);
     this._channel.set(null);

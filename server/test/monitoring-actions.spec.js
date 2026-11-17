@@ -5,7 +5,7 @@ const { start, tokens } = require('./harness');
 
 let bff;
 const SESSION = `iris_session=${tokens.GOOD}`;
-const APP = 'app-1';
+const APP = '00000000-0000-0000-0000-000000000000';
 const BASE = `/mercury/api/v1/monitoring/applications/${APP}`;
 const ID = '3f0c1f4e-8b1e-4f7e-9d54-0c6f0d2a7b11';
 const send = (path, { method = 'GET', body, cookie = SESSION, csrf = true } = {}) => bff.call(`/mrc/api/v1/monitoring${path}`, { method, body, cookie, csrf });

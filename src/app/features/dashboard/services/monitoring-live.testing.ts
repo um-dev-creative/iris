@@ -83,11 +83,9 @@ export const rulesFixture = (): AlertRulesResponse => ({
   ],
 });
 
-export const OWN_APP = 'aaaaaaaa-0000-4000-8000-000000000001';
 export const OTHER_APP = 'bbbbbbbb-0000-4000-8000-000000000002';
 
 export const applicationsFixture = (): ApplicationsResponse => ({
-  defaultId: OWN_APP,
   applications: [{ id: OTHER_APP, name: 'ZeroBound' }],
   available: true,
 });

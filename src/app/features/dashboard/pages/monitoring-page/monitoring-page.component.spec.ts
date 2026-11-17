@@ -4,7 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { API_BASE_URL } from '../../../../core/config';
 import { MonitoringPageComponent, RuleDraft, draftProblem, toRequest } from './monitoring-page.component';
 import { EVENT_SOURCE_FACTORY } from '../../services/monitoring-live.service';
-import { FakeEventSource, OTHER_APP, OWN_APP, answerAll, healthFixture } from '../../services/monitoring-live.testing';
+import { FakeEventSource, OTHER_APP, answerAll, healthFixture } from '../../services/monitoring-live.testing';
 
 async function open() {
   const fixture = TestBed.createComponent(MonitoringPageComponent);
@@ -330,12 +330,12 @@ describe('MonitoringPageComponent', () => {
   });
 
   describe('aplicación y almacenamiento', () => {
-    it('muestra el selector de aplicación con la de Iris y las de la persona, y elegir una la cambia', async () => {
+    it('muestra el selector con «Todas las aplicaciones» y las de la persona, y elegir una la cambia; volver a «Todas» la quita', async () => {
       const { fixture, el, http, live } = await open();
       const select = el.querySelector('[data-testid="application"]') as HTMLSelectElement;
 
-      expect(Array.from(select.options).map((o) => [o.value, o.textContent!.trim()])).toEqual([[OWN_APP, 'Aplicación de Iris'], [OTHER_APP, 'ZeroBound']]);
-      expect(select.value).toBe(OWN_APP);
+      expect(Array.from(select.options).map((o) => [o.value, o.textContent!.trim()])).toEqual([['', 'Todas las aplicaciones'], [OTHER_APP, 'ZeroBound']]);
+      expect(select.value).toBe('');
 
       select.value = OTHER_APP;
       select.dispatchEvent(new Event('change'));
@@ -344,18 +344,19 @@ describe('MonitoringPageComponent', () => {
 
       expect(live.application()).toBe(OTHER_APP);
       expect(fixture.componentInstance.selectedApplication()).toBe(OTHER_APP);
+
+      select.value = '';
+      select.dispatchEvent(new Event('change'));
+      answerAll(http);
+      expect(live.application()).toBeNull();
     });
 
-    it('sin otras aplicaciones no hay selector; y si Mercury no lista la de Iris, se añade', async () => {
+    it('sin otras aplicaciones que elegir no hay selector', async () => {
       const { fixture, el, live } = await open();
 
-      live.applications.set({ defaultId: OWN_APP, applications: [], available: true });
+      live.applications.set({ applications: [], available: true });
       fixture.detectChanges();
       expect(el.querySelector('[data-testid="application"]')).toBeNull();
-
-      live.applications.set({ defaultId: null, applications: [{ id: OTHER_APP, name: 'ZeroBound' }], available: true });
-      fixture.detectChanges();
-      expect(fixture.componentInstance.applicationOptions()).toEqual([{ id: OTHER_APP, name: 'ZeroBound' }]);
 
       live.applications.set(null);
       expect(fixture.componentInstance.applicationOptions()).toEqual([]);

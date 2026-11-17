@@ -34,8 +34,8 @@ export interface StorageStatus { ready: boolean; missingTables: string[]; migrat
 export interface HealthResponse { generatedAt: string; overall: 'OPERATIONAL' | 'DEGRADED' | 'OUTAGE' | 'UNKNOWN'; services: ServiceHealth[]; storage?: StorageStatus }
 
 export interface ApplicationChoice { id: string; name: string }
-/** Las aplicaciones que la persona puede mirar y la de Iris, con la que empieza. */
-export interface ApplicationsResponse { defaultId: string | null; applications: ApplicationChoice[]; available: boolean }
+/** Las aplicaciones que la persona puede mirar. Sin elegir una, el monitoreo cubre todas las de Mercury. */
+export interface ApplicationsResponse { applications: ApplicationChoice[]; available: boolean }
 
 export interface Outage {
   id: string; service: string; status: ServiceState; cause: string; causeText: string; startedAt: string; endedAt: string | null; durationSeconds: number; ongoing: boolean;

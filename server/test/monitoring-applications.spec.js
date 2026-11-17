@@ -5,7 +5,7 @@ const { start, tokens } = require('./harness');
 
 let bff;
 const SESSION = `iris_session=${tokens.GOOD}`;
-const OWN = 'app-1';
+const OWN = '00000000-0000-0000-0000-000000000000';
 const OTHER = '3f0c1f4e-8b1e-4f7e-9d54-0c6f0d2a7b11';
 const FOREIGN = '9a1b2c3d-1111-4222-8333-444455556666';
 const send = (path, { method = 'GET', body, cookie = SESSION } = {}) => bff.call(`/mrc/api/v1/monitoring${path}`, { method, body, cookie });
@@ -19,11 +19,11 @@ beforeEach(() => {
 });
 
 describe('las aplicaciones que se pueden mirar', () => {
-  it('lista las que Mercury da a la persona (ids válidos, en minúsculas) y la de Iris por defecto', async () => {
+  it('lista las que Mercury da a la persona (ids válidos, en minúsculas)', async () => {
     const res = await send('/applications');
 
     assert.equal(res.status, 200);
-    assert.deepEqual(await res.json(), { defaultId: OWN, applications: [{ id: OTHER, name: 'ZeroBound' }], available: true });
+    assert.deepEqual(await res.json(), { applications: [{ id: OTHER, name: 'ZeroBound' }], available: true });
   });
 
   it('si Mercury no responde la lista, devuelve vacío y lo dice (la página sigue con la de Iris)', async () => {
@@ -49,7 +49,7 @@ describe('las aplicaciones que se pueden mirar', () => {
 });
 
 describe('mirar otra aplicación', () => {
-  it('sin applicationId es la de Iris, como siempre, y no pregunta nada a Mercury', async () => {
+  it('sin applicationId son todas las aplicaciones (el monitoreo es de Mercury) y no pregunta nada a Mercury', async () => {
     await send('/summary?range=1h');
 
     assert.equal(bff.state.live.calls[0].url, `${BASE(OWN)}/summary?range=1h`);
