@@ -1,3 +1,4 @@
+import { provideRouter } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController } from '@angular/common/http/testing';
 import { HomePageComponent } from './home-page.component';
@@ -6,7 +7,7 @@ import { MonitoringKpi, MonitoringOverview } from '../../models/monitoring.model
 import { monitoringProviders, overviewFixture } from '../../services/monitoring.testing';
 
 function render(overview: MonitoringOverview | null = overviewFixture()) {
-  TestBed.configureTestingModule({ providers: monitoringProviders });
+  TestBed.configureTestingModule({ providers: [...monitoringProviders, provideRouter([])] });
   const service = TestBed.inject(MonitoringDataService);
   if (overview) service.apply(overview);
   const fixture = TestBed.createComponent(HomePageComponent);

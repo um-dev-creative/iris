@@ -10,6 +10,7 @@ Documentación para quien desarrolla, prueba, despliega u opera Iris. Cada tarea
 | [`security.md`](security.md) | Secretos, sesión por cookie, CSRF, matriz de controles por entorno | F0-01, F2-01, F5-02 |
 | [`registration.md`](registration.md) | Registro de usuarios y datos de monitoreo |
 | [`campaigns.md`](campaigns.md) | Gestión de campañas: rutas del BFF, formulario, permisos y estados |
+| [`monitoring.md`](monitoring.md) | Monitoreo de envíos: rutas del BFF, stream en vivo, vistas enlazadas y pruebas |
 | [`templates.md`](templates.md) | Editor de plantillas (HTML y Markdown), vista previa, bloqueo optimista, historial y plantillas del sistema |
 | [`deployment.md`](deployment.md) | Docker y Kubernetes |
 | [`environments.md`](environments.md) | Tabla de entornos (`ENVM`), URLs, certificados y variables | F1-05 |

@@ -173,3 +173,25 @@ flowchart LR
   L[Luis: administrador de la plataforma] --> T[Plantillas muestra todas]
 ```
 
+
+
+## Monitoreo de envíos
+
+En el menú, **Monitoreo**. Muestra los envíos de tu aplicación y se actualiza solo.
+
+```mermaid
+flowchart LR
+    A[Abrir Monitoreo] --> B[Elegir el periodo: 1 h, 24 h, 7 días, 30 días]
+    B --> C{Algo no cuadra?}
+    C -->|un canal o tipo| D[Clic en la tarjeta: todo se filtra]
+    C -->|un momento| E[Clic en una barra: la tabla muestra esos mensajes]
+    C -->|un fallo| F[Clic en la causa: mensajes fallidos de ese canal]
+    C -->|un servicio| G[Clic en el servicio: su historial de caídas]
+```
+
+- **Arriba a la derecha** ves si los datos llegan **en vivo**, se actualizan cada 15 segundos o **no hay conexión**. Si falla una actualización aparece un aviso: lo que ves puede estar desactualizado.
+- **Resumen:** enviados, fallidos, en cola y el anillo de la tasa de éxito. Si no hubo envíos dice «Sin datos» en vez de una tasa.
+- **Canales y tipos** (transaccional, campaña, código de verificación): pulsa uno para filtrar la gráfica y la tabla; púlsalo otra vez, o usa «Quitar filtros», para volver. SMS, WhatsApp y Push dicen **«En cola, sin proveedor»**: todavía no hay un proveedor que los entregue.
+- **Estado de los servicios** (base de datos, mensajería, correo, Backbone, Telegram): cada uno dice su estado con texto (Operativo, Degradado, Caído, No configurado, Sin comprobar) y, si falla, por qué. «No configurado» no es una falla: ese servicio está apagado en este ambiente. Debajo, el historial de caídas con cuándo empezaron y cuánto duraron.
+- **Mensajes:** cada envío con su fecha (UTC), canal, tipo, estado y destinatario **enmascarado** (`j***@e***.com`). Nunca se muestra el contenido del mensaje ni el código de verificación.
+- Solo ves los datos de tu aplicación.

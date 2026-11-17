@@ -23,6 +23,7 @@ const authRoutes = require('./routes/auth.routes');
 const mercuryRoutes = require('./routes/mercury.routes');
 const mediaRoutes = require('./routes/media.routes');
 const monitoringRoutes = require('./routes/monitoring.routes');
+const monitoringLiveRoutes = require('./routes/monitoring-live.routes');
 const campaignsRoutes = require('./routes/campaigns.routes');
 const templatesRoutes = require('./routes/templates.routes');
 const adminRoutes = require('./routes/admin.routes');
@@ -37,7 +38,8 @@ function createApp({ distPath = path.join(__dirname, '../dist/dashboard/browser'
   app.disable('x-powered-by');
   // Behind nginx the client IP is in X-Forwarded-For; without this every user shares nginx's IP in the rate limits
   app.set('trust proxy', TRUST_PROXY);
-  app.use(compression());
+  // an event stream must reach the browser as it happens: compressing it would hold the events back in a buffer
+  app.use(compression({ filter: (req, res) => !String(res.getHeader('Content-Type') ?? '').startsWith('text/event-stream') && compression.filter(req, res) }));
   app.use(cors({
     origin: CORS_ORIGIN,
     credentials: true,
@@ -54,6 +56,7 @@ function createApp({ distPath = path.join(__dirname, '../dist/dashboard/browser'
   app.use(API_PREFIXES, requireCsrfHeader);
   app.use('/mrc/api/v1/auth', authRoutes);
   app.use('/mrc/api/v1/monitoring', monitoringRoutes);
+  app.use('/mrc/api/v1/monitoring', monitoringLiveRoutes);
   app.use('/mrc/api/v1/campaigns', campaignsRoutes);
   app.use('/mrc/api/v1/templates', templatesRoutes);
   app.use('/mrc/api/v1/general', mercuryRoutes);

@@ -126,6 +126,23 @@ async function start({ env = {}, appOptions } = {}) {
     }
     return res.json(monitoring.campaigns);
   });
+  // the monitoring views and the live stream, guarded like Mercury's: the application's Bearer and the person's session; off unless a test asks
+  mercury.use('/mercury/api/v1/monitoring', (req, res, next) => {
+    const live = state.live;
+    if (!live) return next();
+    live.calls.push({ url: req.originalUrl, authorization: req.headers.authorization, token: req.headers['session-token'] });
+    if (!String(req.headers.authorization ?? '').startsWith('Bearer ')) return res.status(401).json({});
+    if (live.status) return res.status(live.status).json({});
+    if (req.path.endsWith('/stream')) {
+      res.set({ 'Content-Type': 'text/event-stream' });
+      res.flushHeaders();
+      res.write('event: summary\ndata: {"range":"1h"}\n\n');
+      live.streams.push(res);
+      req.on('close', () => { live.closed += 1; });
+      return undefined;
+    }
+    return res.json({ path: req.path });
+  });
   mercury.get('/mercury/actuator/health', (_req, res) => res.status(state.mercuryHealth ?? 200).json({ status: 'UP' }));
   // Iris as a login client of Mercury; off unless a test asks for it
   mercury.use('/mercury/api/v1', (req, res, next) => {
