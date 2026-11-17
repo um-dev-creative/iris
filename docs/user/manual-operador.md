@@ -195,3 +195,19 @@ flowchart LR
 - **Estado de los servicios** (base de datos, mensajería, correo, Backbone, Telegram): cada uno dice su estado con texto (Operativo, Degradado, Caído, No configurado, Sin comprobar) y, si falla, por qué. «No configurado» no es una falla: ese servicio está apagado en este ambiente. Debajo, el historial de caídas con cuándo empezaron y cuánto duraron.
 - **Mensajes:** cada envío con su fecha (UTC), canal, tipo, estado y destinatario **enmascarado** (`j***@e***.com`). Nunca se muestra el contenido del mensaje ni el código de verificación.
 - Solo ves los datos de tu aplicación.
+
+### Alertas, reintentar y exportar
+
+```mermaid
+flowchart LR
+    A[Crear una regla en Alertas] --> B[Mercury la revisa cada minuto]
+    B -->|se pasa el umbral| C[Aviso rojo arriba y correo]
+    C --> D[Ver los mensajes fallidos]
+    D --> E[Reintentar un correo]
+    D --> F[Exportar CSV o JSON]
+```
+
+- **Alertas.** En la sección **Alertas** elige qué vigilar: más de X % de fallos en N minutos (con un mínimo de mensajes), X mensajes o más esperando más de N minutos, o un servicio degradado o caído N minutos. Puedes poner hasta 5 correos para que Mercury avise cuando suene. Una alerta suena una vez, se queda arriba mientras dure el problema y se resuelve sola. Puedes desactivar o eliminar una regla.
+- **Reintentar.** En la tabla de mensajes, un **correo fallido** tiene el botón **Reintentar**: Mercury lo vuelve a enviar en su próxima ronda. El intento fallido sigue en la tabla y el nuevo aparece aparte. Los mensajes de Telegram no se pueden reintentar desde aquí.
+- **Exportar.** **Exportar CSV** o **Exportar JSON** descarga la tabla con los filtros que tengas, hasta 10 000 filas; si el archivo queda corto te avisa. Los destinatarios siguen enmascarados.
+- Crear reglas, eliminarlas y reintentar necesitan que tu aplicación tenga permiso de escritura en Mercury; si no lo tiene, la página dice «Acceso denegado».

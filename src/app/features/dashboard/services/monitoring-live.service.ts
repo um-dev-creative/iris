@@ -3,11 +3,12 @@ import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { API_BASE_URL } from '../../../core/config';
+import { NotificationService } from '../../../core/services/notification.service';
 import {
-  Connection, FailuresResponse, HealthResponse, MessagePage, MessageStatus, MonitoringRange, OutagesResponse, SeriesPoint, SeriesResponse,
+  AlertRuleRequest, AlertRule, AlertRulesResponse, AlertsResponse, Connection, FailuresResponse, HealthResponse, MessageItem, MessagePage, MessageStatus, MonitoringRange, OutagesResponse, SeriesPoint, SeriesResponse,
   SummaryResponse, VerificationCodeStats,
 } from '../models/monitoring-live.model';
-import { bucketWindow } from '../utils/monitoring-live';
+import { bucketWindow, downloadName, saveBlob } from '../utils/monitoring-live';
 
 /** Abre el flujo de eventos; se inyecta para poder sustituirlo en las pruebas. */
 export const EVENT_SOURCE_FACTORY = new InjectionToken<(url: string) => EventSource>('EVENT_SOURCE_FACTORY', {
@@ -30,6 +31,7 @@ const RANGE_MS: Record<MonitoringRange, number> = { '1h': 3_600_000, '24h': 86_4
 @Injectable()
 export class MonitoringLiveService {
   private readonly http = inject(HttpClient);
+  private readonly notifications = inject(NotificationService);
   private readonly zone = inject(NgZone);
   private readonly openStream = inject(EVENT_SOURCE_FACTORY);
   private readonly base = `${inject(API_BASE_URL)}/monitoring`;
@@ -59,6 +61,8 @@ export class MonitoringLiveService {
   readonly health = signal<HealthResponse | null>(null);
   readonly outages = signal<OutagesResponse | null>(null);
   readonly messages = signal<MessagePage | null>(null);
+  readonly alerts = signal<AlertsResponse | null>(null);
+  readonly rules = signal<AlertRulesResponse | null>(null);
 
   private readonly _connection = signal<Connection>('connecting');
   private readonly _loading = signal(false);
@@ -179,6 +183,7 @@ export class MonitoringLiveService {
     this._loading.set(true);
     const results = await Promise.allSettled([
       this.loadSummary(), this.loadSeries(), this.loadFailures(), this.loadCodes(), this.loadHealth(), this.loadOutages(), this.loadMessages(),
+      this.loadAlerts(), this.loadRules(),
     ]);
     this._loading.set(false);
     this.markResult(results.every((r) => r.status === 'fulfilled'));
@@ -207,15 +212,18 @@ export class MonitoringLiveService {
   loadCodes = () => this.load<VerificationCodeStats>('verification-codes', this.params(), this.codes);
   loadHealth = () => this.load<HealthResponse>('health', new HttpParams(), this.health);
   loadOutages = () => this.load<OutagesResponse>('outages', this.params(), this.outages);
+  loadAlerts = () => this.load<AlertsResponse>('alerts', this.params(), this.alerts);
+  loadRules = () => this.load<AlertRulesResponse>('alerts/rules', new HttpParams(), this.rules);
 
-  loadMessages = () => {
+  loadMessages = () => this.load<MessagePage>('messages', new HttpParams({ fromObject: this.messageQuery(this.messageWindow()) }), this.messages);
+
+  /** El intervalo de la tabla: el de la barra elegida o, sin barra, el periodo elegido, como el resto de las vistas. */
+  private messageWindow(): { from: string; to: string | null } {
     const bucket = this._bucket();
-    // sin una barra elegida, la tabla muestra el periodo elegido, como el resto de las vistas
-    const window = bucket
+    return bucket
       ? bucketWindow(bucket, this.series()?.unit ?? 'hour')
       : { from: new Date(Date.now() - RANGE_MS[this._range()]).toISOString().slice(0, 19), to: null };
-    return this.load<MessagePage>('messages', new HttpParams({ fromObject: this.messageQuery(window) }), this.messages);
-  };
+  }
 
   private messageQuery(window: { from: string; to: string | null }): Record<string, string> {
     const query: Record<string, string> = { page: String(this._page()), size: String(PAGE_SIZE) };
@@ -226,6 +234,61 @@ export class MonitoringLiveService {
       if (value) query[key] = value;
     }
     return query;
+  }
+
+  // ── acciones ──
+  /** Vuelve a poner en cola un correo fallido. Los errores los avisa el interceptor; aquí solo se dice que no se hizo. */
+  async retry(item: MessageItem): Promise<boolean> {
+    if (!item.messageId) return false;
+    try {
+      await firstValueFrom(this.http.post(`${this.base}/messages/${encodeURIComponent(item.messageId)}/retry`, {}));
+    } catch {
+      return false;
+    }
+    this.notifications.success('Reintento en cola', 'El correo se enviará de nuevo en la próxima ronda.');
+    await this.loadMessages().catch(() => undefined);
+    return true;
+  }
+
+  /** Crea o actualiza una regla de alerta. */
+  async saveRule(request: AlertRuleRequest, id?: string): Promise<boolean> {
+    try {
+      await firstValueFrom(id ? this.http.put<AlertRule>(`${this.base}/alerts/rules/${encodeURIComponent(id)}`, request) : this.http.post<AlertRule>(`${this.base}/alerts/rules`, request));
+    } catch {
+      return false;
+    }
+    this.notifications.success('Regla guardada', 'Mercury la evaluará cada minuto.');
+    await Promise.all([this.loadRules(), this.loadAlerts()]).catch(() => undefined);
+    return true;
+  }
+
+  async deleteRule(id: string): Promise<boolean> {
+    try {
+      await firstValueFrom(this.http.delete(`${this.base}/alerts/rules/${encodeURIComponent(id)}`));
+    } catch {
+      return false;
+    }
+    await Promise.all([this.loadRules(), this.loadAlerts()]).catch(() => undefined);
+    return true;
+  }
+
+  /** Descarga la tabla de mensajes con los filtros de ahora. Avisa si el archivo no trae todo. */
+  async exportMessages(format: 'csv' | 'json'): Promise<boolean> {
+    const query = this.messageQuery(this.messageWindow());
+    delete query['page'];
+    delete query['size'];
+    try {
+      const response = await firstValueFrom(
+        this.http.get(`${this.base}/messages/export`, { params: new HttpParams({ fromObject: { ...query, format } }), observe: 'response', responseType: 'blob' }),
+      );
+      saveBlob(response.body as Blob, downloadName(response.headers.get('Content-Disposition'), `mensajes.${format}`));
+      if (response.headers.get('X-Export-Truncated') === 'true') {
+        this.notifications.warning('Archivo incompleto', `El archivo trae solo las filas más recientes de ${response.headers.get('X-Total-Count') ?? 'muchas'}. Acota el periodo o los filtros.`);
+      }
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private markResult(ok: boolean): void {
@@ -307,7 +370,7 @@ export class MonitoringLiveService {
 
   private async poll(): Promise<void> {
     if (this._connection() === 'live') {
-      const results = await Promise.allSettled([this.loadSeries(), this.loadFailures(), this.loadCodes(), this.loadOutages(), this.loadMessages()]);
+      const results = await Promise.allSettled([this.loadSeries(), this.loadFailures(), this.loadCodes(), this.loadOutages(), this.loadMessages(), this.loadAlerts()]);
       this.markResult(results.every((r) => r.status === 'fulfilled'));
       return;
     }

@@ -44,7 +44,7 @@ function createApp({ distPath = path.join(__dirname, '../dist/dashboard/browser'
     origin: CORS_ORIGIN,
     credentials: true,
     allowedHeaders: ['Content-Type', CSRF_HEADER, 'If-Match', 'If-None-Match', 'Idempotency-Key'],
-    exposedHeaders: ['ETag', 'X-Total-Count', 'Link', 'Idempotent-Replayed', 'X-Trace-Id', 'Warning', 'Message-header'],
+    exposedHeaders: ['ETag', 'X-Total-Count', 'Link', 'Idempotent-Replayed', 'X-Trace-Id', 'Warning', 'Message-header', 'Content-Disposition', 'X-Export-Truncated'],
   }));
   app.use(express.json({ limit: '2mb' }));
   app.use(cookieParser());

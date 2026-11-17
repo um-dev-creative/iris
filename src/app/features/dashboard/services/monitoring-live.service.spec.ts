@@ -5,9 +5,10 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../../../core/config';
 import { EVENT_SOURCE_FACTORY, MonitoringLiveService } from './monitoring-live.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { FakeEventSource, answerAll, healthFixture, messagesFixture, paths, summaryFixture } from './monitoring-live.testing';
 
-const ALL = ['failures', 'health', 'messages', 'outages', 'series', 'summary', 'verification-codes'];
+const ALL = ['alerts', 'alerts/rules', 'failures', 'health', 'messages', 'outages', 'series', 'summary', 'verification-codes'];
 const destroyRef = (): DestroyRef & { destroy: () => void } => {
   let callback = () => undefined as void;
   return { onDestroy: (fn: () => void) => { callback = fn; return () => undefined; }, destroy: () => callback() } as never;
@@ -65,7 +66,7 @@ describe('MonitoringLiveService', () => {
     service.start(destroyRef());
     service.start(destroyRef());
 
-    expect(answerAll(http)).toHaveLength(7);
+    expect(answerAll(http)).toHaveLength(9);
     expect(FakeEventSource.instances).toHaveLength(1);
   });
 
@@ -74,7 +75,7 @@ describe('MonitoringLiveService', () => {
     service.setRange('7d');
 
     const requests = answerAll(http);
-    expect(requests.filter((r) => r.request.params.get('range') === '7d').length).toBe(5);
+    expect(requests.filter((r) => r.request.params.get('range') === '7d').length).toBe(6);
     // la tabla de mensajes cubre el mismo periodo: desde hace 7 días
     const from = new Date(`${requests.find((r) => r.request.url.endsWith('/messages'))!.request.params.get('from')}Z`).getTime();
     expect(Date.now() - from).toBeGreaterThanOrEqual(7 * 86_400_000 - 5000);
@@ -316,7 +317,7 @@ describe('MonitoringLiveService', () => {
 
       vi.advanceTimersByTime(30_000);
 
-      expect(paths(http.match(() => true))).toEqual(['failures', 'messages', 'outages', 'series', 'verification-codes']);
+      expect(paths(http.match(() => true))).toEqual(['alerts', 'failures', 'messages', 'outages', 'series', 'verification-codes']);
     });
 
     it('con una pestaña oculta no consulta', () => {
@@ -376,5 +377,140 @@ describe('MonitoringLiveService', () => {
 
     expect(FakeEventSource.instances[0].closed).toBe(true);
     expect(http.match(() => true)).toHaveLength(0);
+  });
+
+  describe('acciones', () => {
+    const failedEmail = () => ({ ...messagesFixture().items[0], messageId: '3f0c1f4e-8b1e-4f7e-9d54-0c6f0d2a7b11' });
+    const downloads: string[] = [];
+
+    beforeEach(() => {
+      downloads.length = 0;
+      Object.assign(URL, { createObjectURL: () => 'blob:x', revokeObjectURL: () => undefined });
+      vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+        downloads.push(this.download);
+      });
+    });
+    afterEach(() => vi.restoreAllMocks());
+
+    /** Answers what the service asks next (it asks after the first answer) and returns the paths. */
+    const followUp = async () => {
+      let asked: string[] = [];
+      await vi.waitFor(() => {
+        const requests = answerAll(http);
+        if (requests.length === 0) throw new Error('nothing asked yet');
+        asked = paths(requests);
+      });
+      return asked;
+    };
+
+    it('reintentar pone el correo en cola, lo avisa y vuelve a pedir los mensajes', async () => {
+      await started();
+      const notifications = TestBed.inject(NotificationService);
+      const success = vi.spyOn(notifications, 'success');
+
+      const done = service.retry(failedEmail());
+      const post = http.expectOne('/mrc/api/v1/monitoring/messages/3f0c1f4e-8b1e-4f7e-9d54-0c6f0d2a7b11/retry');
+      expect(post.request.method).toBe('POST');
+      post.flush(null, { status: 202, statusText: 'Accepted' });
+      expect((await followUp())).toEqual(['messages']);
+      expect(await done).toBe(true);
+      expect(success).toHaveBeenCalled();
+    });
+
+    it('si Mercury lo rechaza (404, 409, 403) devuelve false sin avisar de éxito', async () => {
+      await started();
+      const success = vi.spyOn(TestBed.inject(NotificationService), 'success');
+
+      const done = service.retry(failedEmail());
+      http.expectOne((r) => r.url.endsWith('/retry')).flush({}, { status: 409, statusText: 'Conflict' });
+
+      expect(await done).toBe(false);
+      expect(success).not.toHaveBeenCalled();
+      expect(await service.retry({ ...failedEmail(), messageId: null })).toBe(false);
+    });
+
+    it('guardar una regla nueva hace POST y vuelve a pedir reglas y alertas; con id hace PUT', async () => {
+      await started();
+      const request = { type: 'FAILURE_RATE' as const, threshold: 20, windowMinutes: 15 };
+
+      const created = service.saveRule(request);
+      const post = http.expectOne('/mrc/api/v1/monitoring/alerts/rules');
+      expect(post.request.method).toBe('POST');
+      expect(post.request.body).toEqual(request);
+      post.flush({});
+      expect(await followUp()).toEqual(['alerts', 'alerts/rules']);
+      expect(await created).toBe(true);
+
+      const updated = service.saveRule(request, 'r-1');
+      const put = http.expectOne('/mrc/api/v1/monitoring/alerts/rules/r-1');
+      expect(put.request.method).toBe('PUT');
+      put.flush({});
+      await followUp();
+      expect(await updated).toBe(true);
+    });
+
+    it('si guardar falla devuelve false', async () => {
+      await started();
+
+      const done = service.saveRule({ type: 'QUEUE_STUCK', threshold: 5 });
+      http.expectOne('/mrc/api/v1/monitoring/alerts/rules').flush({ error: 'x' }, { status: 400, statusText: 'Bad Request' });
+
+      expect(await done).toBe(false);
+    });
+
+    it('eliminar una regla hace DELETE y vuelve a pedir; si falla devuelve false', async () => {
+      await started();
+
+      const done = service.deleteRule('r-1');
+      const request = http.expectOne('/mrc/api/v1/monitoring/alerts/rules/r-1');
+      expect(request.request.method).toBe('DELETE');
+      request.flush(null, { status: 204, statusText: 'No Content' });
+      await followUp();
+      expect(await done).toBe(true);
+
+      const failing = service.deleteRule('r-2');
+      http.expectOne('/mrc/api/v1/monitoring/alerts/rules/r-2').flush({}, { status: 404, statusText: 'Not Found' });
+      expect(await failing).toBe(false);
+    });
+
+    it('exportar descarga el archivo con los filtros de ahora, sin paginación y con el formato', async () => {
+      await started();
+      service.toggleChannel('EMAIL');
+      answerAll(http);
+
+      const done = service.exportMessages('csv');
+      const request = http.expectOne((r) => r.url.endsWith('/messages/export'));
+      expect(request.request.params.get('format')).toBe('csv');
+      expect(request.request.params.get('channel')).toBe('EMAIL');
+      expect(request.request.params.has('page')).toBe(false);
+      expect(request.request.params.has('size')).toBe(false);
+      expect(request.request.params.has('from')).toBe(true);
+      request.flush(new Blob(['a']), { headers: { 'Content-Disposition': 'attachment; filename="mercury-messages-1.csv"', 'X-Export-Truncated': 'false' } });
+
+      expect(await done).toBe(true);
+      expect(downloads).toEqual(['mercury-messages-1.csv']);
+    });
+
+    it('avisa cuando el archivo no trae todas las filas y usa un nombre de respaldo', async () => {
+      await started();
+      const warning = vi.spyOn(TestBed.inject(NotificationService), 'warning');
+
+      const done = service.exportMessages('json');
+      http.expectOne((r) => r.url.endsWith('/messages/export')).flush(new Blob(['[]']), { headers: { 'X-Export-Truncated': 'true', 'X-Total-Count': '25000' } });
+
+      expect(await done).toBe(true);
+      expect(warning).toHaveBeenCalledWith('Archivo incompleto', expect.stringContaining('25000'));
+      expect(downloads).toEqual(['mensajes.json']);
+    });
+
+    it('si la exportación falla devuelve false y no descarga nada', async () => {
+      await started();
+
+      const done = service.exportMessages('csv');
+      http.expectOne((r) => r.url.endsWith('/messages/export')).flush(new Blob(['x']), { status: 503, statusText: 'Unavailable' });
+
+      expect(await done).toBe(false);
+      expect(downloads).toEqual([]);
+    });
   });
 });

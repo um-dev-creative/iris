@@ -13,7 +13,7 @@ const { toTraceparent } = require('./trace');
 const SESSION_TOKEN_HEADER = 'session-token';
 
 // What the upstream tells about a response (content type, versions, totals, downloads) and the browser must see.
-const PASSED_BACK_HEADERS = ['content-type', 'etag', 'x-total-count', 'link', 'content-disposition', 'idempotent-replayed'];
+const PASSED_BACK_HEADERS = ['content-type', 'etag', 'x-total-count', 'link', 'content-disposition', 'idempotent-replayed', 'x-export-truncated'];
 // backbone says why it refused ("User previously exist.", "E-mail previously exist.") in these headers, with an empty body: without them the
 // person only sees that the call failed. Only plain printable text of a sensible length goes through (a header cannot carry anything else).
 const MESSAGE_HEADERS = ['warning', 'message-header'];

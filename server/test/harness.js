@@ -130,7 +130,7 @@ async function start({ env = {}, appOptions } = {}) {
   mercury.use('/mercury/api/v1/monitoring', (req, res, next) => {
     const live = state.live;
     if (!live) return next();
-    live.calls.push({ url: req.originalUrl, authorization: req.headers.authorization, token: req.headers['session-token'] });
+    live.calls.push({ method: req.method, url: req.originalUrl, authorization: req.headers.authorization, token: req.headers['session-token'], body: req.body });
     if (!String(req.headers.authorization ?? '').startsWith('Bearer ')) return res.status(401).json({});
     if (live.status) return res.status(live.status).json({});
     if (req.path.endsWith('/stream')) {
@@ -141,6 +141,12 @@ async function start({ env = {}, appOptions } = {}) {
       req.on('close', () => { live.closed += 1; });
       return undefined;
     }
+    if (req.path.endsWith('/messages/export')) {
+      return res.set({ 'Content-Type': 'text/csv;charset=UTF-8', 'Content-Disposition': 'attachment; filename="mercury-messages.csv"', 'X-Total-Count': '3', 'X-Export-Truncated': 'false' })
+        .send('occurredAt,channel\r\n');
+    }
+    if (req.method === 'POST' && req.path.endsWith('/retry')) return res.status(202).end();
+    if (req.method === 'DELETE') return res.status(204).end();
     return res.json({ path: req.path });
   });
   mercury.get('/mercury/actuator/health', (_req, res) => res.status(state.mercuryHealth ?? 200).json({ status: 'UP' }));

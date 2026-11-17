@@ -1,4 +1,4 @@
-import { MonitoringRange, SeriesPoint, ServiceState } from '../models/monitoring-live.model';
+import { AlertRule, AlertType, MonitoringRange, SeriesPoint, ServiceState } from '../models/monitoring-live.model';
 
 export const RANGES: { value: MonitoringRange; label: string }[] = [
   { value: '1h', label: '1 h' },
@@ -66,4 +66,41 @@ export function bucketLabel(bucket: string, unit: string): string {
   const date = parseUtc(bucket);
   const two = (n: number) => String(n).padStart(2, '0');
   return unit === 'day' ? `${two(date.getUTCDate())}/${two(date.getUTCMonth() + 1)}` : `${two(date.getUTCHours())}:${two(date.getUTCMinutes())}`;
+}
+
+export const ALERT_TYPES: { value: AlertType; label: string }[] = [
+  { value: 'FAILURE_RATE', label: 'Tasa de fallos' },
+  { value: 'QUEUE_STUCK', label: 'Mensajes detenidos' },
+  { value: 'SERVICE_DOWN', label: 'Servicio caído' },
+];
+export const SERVICES = ['POSTGRES', 'MONGO', 'KAFKA', 'SMTP', 'BACKBONE', 'TELEGRAM'];
+
+/** La regla en una frase: qué vigila y cuándo avisa. */
+export function ruleLabel(rule: AlertRule): string {
+  switch (rule.type) {
+    case 'FAILURE_RATE':
+      return `Más de ${rule.threshold} % de fallos en ${rule.windowMinutes} min${rule.minVolume > 0 ? ` (mínimo ${rule.minVolume} mensajes)` : ''}`;
+    case 'QUEUE_STUCK':
+      return `${rule.threshold} mensajes o más esperando más de ${rule.windowMinutes} min`;
+    case 'SERVICE_DOWN':
+      return `${rule.service ?? 'Un servicio'} degradado o caído durante ${rule.windowMinutes} min`;
+  }
+}
+
+/** Nombre del archivo de una descarga según `Content-Disposition`, o el de respaldo. */
+export function downloadName(header: string | null, fallback: string): string {
+  const match = header ? /filename="([^"\\/]{1,100})"/.exec(header) : null;
+  return match ? match[1] : fallback;
+}
+
+/** Entrega un archivo al navegador. */
+export function saveBlob(blob: Blob, name: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }

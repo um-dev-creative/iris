@@ -28,6 +28,15 @@
   </div>
 }
 
+@if (firing().length > 0) {
+  <div role="alert" class="mb-4 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm" data-testid="firing">
+    <p class="font-semibold flex items-center gap-2"><lucide-icon [img]="WarningIcon" [size]="16" strokeWidth="1.5" />{{ firing().length }} alerta(s) activa(s)</p>
+    <ul class="mt-1 list-disc pl-6">
+      @for (a of firing(); track a.id) { <li>{{ a.detail }} <span class="text-muted-foreground">· desde {{ utc(a.startedAt) | date: 'dd/MM HH:mm' : 'UTC' }} UTC</span></li> }
+    </ul>
+  </div>
+}
+
 @if (live.hasFilters()) {
   <div class="flex flex-wrap items-center gap-2 mb-4" aria-label="Filtros activos">
     @if (live.channel(); as c) { <button type="button" class="chip" (click)="live.toggleChannel(c)">Canal: {{ channelLabel(c) }} <lucide-icon [img]="CloseIcon" [size]="12" /></button> }
@@ -145,20 +154,88 @@
   } @empty { <p class="text-sm text-muted-foreground">Sin caídas en este periodo.</p> }
 </section>
 
+<!-- Alertas -->
+<section aria-label="Alertas" class="bg-card rounded-xl border border-border p-5 mb-6">
+  <h3 class="text-sm font-semibold mb-3">Alertas <span class="font-normal text-muted-foreground">· Mercury evalúa las reglas cada minuto y avisa por correo</span></h3>
+  @for (rule of live.rules()?.rules ?? []; track rule.id) {
+    <div class="flex flex-wrap items-center justify-between gap-2 py-2 border-b border-border last:border-0 text-sm">
+      <span>
+        <span class="font-medium">{{ ruleLabel(rule) }}</span>
+        @if (rule.notifyEmails.length > 0) { <span class="text-muted-foreground"> · avisa a {{ rule.notifyEmails.join(', ') }}</span> }
+        @if (!rule.enabled) { <span class="text-muted-foreground"> · desactivada</span> }
+      </span>
+      <span class="flex gap-2">
+        <button type="button" class="px-2 py-1 rounded border border-border" (click)="toggleRule(rule)">{{ rule.enabled ? 'Desactivar' : 'Activar' }}</button>
+        <button type="button" class="px-2 py-1 rounded border border-border text-destructive" [attr.aria-label]="'Eliminar la regla: ' + ruleLabel(rule)" (click)="deleteRule(rule)">Eliminar</button>
+      </span>
+    </div>
+  } @empty { <p class="text-sm text-muted-foreground">Todavía no hay reglas. Crea una abajo.</p> }
+
+  <form class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm" aria-label="Nueva regla" (submit)="$event.preventDefault(); createRule()">
+    <label class="flex flex-col gap-1">Qué vigilar
+      <select class="field" [value]="draft().type" (change)="patchDraft({ type: $any($event.target).value })">
+        @for (t of alertTypes; track t.value) { <option [value]="t.value">{{ t.label }}</option> }
+      </select>
+    </label>
+    @if (draft().type !== 'SERVICE_DOWN') {
+      <label class="flex flex-col gap-1">{{ draft().type === 'FAILURE_RATE' ? 'Avisar si fallan más de (%)' : 'Avisar si esperan (mensajes)' }}
+        <input class="field" type="number" min="0" [value]="draft().threshold" (input)="patchDraft({ threshold: $any($event.target).value })" />
+      </label>
+    }
+    <label class="flex flex-col gap-1">Ventana (minutos)
+      <input class="field" type="number" min="1" max="1440" [value]="draft().windowMinutes" (input)="patchDraft({ windowMinutes: $any($event.target).value })" />
+    </label>
+    @if (draft().type === 'FAILURE_RATE') {
+      <label class="flex flex-col gap-1">Mínimo de mensajes
+        <input class="field" type="number" min="0" [value]="draft().minVolume" (input)="patchDraft({ minVolume: $any($event.target).value })" />
+      </label>
+    }
+    @if (draft().type === 'SERVICE_DOWN') {
+      <label class="flex flex-col gap-1">Servicio
+        <select class="field" [value]="draft().service" (change)="patchDraft({ service: $any($event.target).value })">
+          <option value="">Cualquiera</option>
+          @for (s of services; track s) { <option [value]="s">{{ s }}</option> }
+        </select>
+      </label>
+    }
+    <label class="flex flex-col gap-1 sm:col-span-2 lg:col-span-1">Correos a avisar (hasta 5, separados por coma)
+      <input class="field" type="text" [value]="draft().emails" (input)="patchDraft({ emails: $any($event.target).value })" />
+    </label>
+    <div class="flex items-end gap-3 sm:col-span-2 lg:col-span-3">
+      <button type="submit" class="px-4 py-2 rounded-lg bg-primary text-primary-foreground disabled:opacity-50" [disabled]="draftError() !== null || saving()">Crear regla</button>
+      @if (draftError(); as problem) { <span class="text-muted-foreground" data-testid="draft-error">{{ problem }}</span> }
+    </div>
+  </form>
+
+  @if (resolved().length > 0) {
+    <h4 class="text-xs font-semibold mt-5 mb-2">Alertas resueltas recientes</h4>
+    @for (a of resolved(); track a.id) {
+      <p class="text-sm py-1 border-b border-border last:border-0">{{ a.detail }} <span class="text-muted-foreground">· {{ utc(a.startedAt) | date: 'dd/MM HH:mm' : 'UTC' }} → {{ utc(a.resolvedAt ?? a.startedAt) | date: 'HH:mm' : 'UTC' }} UTC</span></p>
+    }
+  }
+</section>
+
 <!-- Mensajes -->
 <section aria-label="Mensajes" class="bg-card rounded-xl border border-border p-5">
-  <h3 class="text-sm font-semibold mb-3">Mensajes</h3>
+  <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+    <h3 class="text-sm font-semibold">Mensajes</h3>
+    <span class="flex gap-2 text-sm">
+      <button type="button" class="px-3 py-1 rounded border border-border" (click)="exportAs('csv')">Exportar CSV</button>
+      <button type="button" class="px-3 py-1 rounded border border-border" (click)="exportAs('json')">Exportar JSON</button>
+    </span>
+  </div>
   <div class="overflow-x-auto">
     <table class="w-full text-sm">
-      <thead><tr class="text-left text-muted-foreground"><th class="py-2 pr-3">Fecha (UTC)</th><th class="pr-3">Canal</th><th class="pr-3">Tipo</th><th class="pr-3">Estado</th><th class="pr-3">Destinatario</th><th>Causa</th></tr></thead>
+      <thead><tr class="text-left text-muted-foreground"><th class="py-2 pr-3">Fecha (UTC)</th><th class="pr-3">Canal</th><th class="pr-3">Tipo</th><th class="pr-3">Estado</th><th class="pr-3">Destinatario</th><th class="pr-3">Causa</th><th></th></tr></thead>
       <tbody>
         @for (m of live.messages()?.items ?? []; track m.id) {
           <tr class="border-t border-border">
             <td class="py-2 pr-3 whitespace-nowrap">{{ utc(m.occurredAt) | date: 'dd/MM HH:mm:ss' : 'UTC' }}</td>
             <td class="pr-3">{{ channelLabel(m.channel) }}</td><td class="pr-3">{{ kindLabel(m.kind) }}</td>
-            <td class="pr-3">{{ m.status === 'SENT' ? 'Enviado' : 'Fallido' }}</td><td class="pr-3">{{ m.recipient ?? '—' }}</td><td>{{ m.errorCause ?? '—' }}</td>
+            <td class="pr-3">{{ m.status === 'SENT' ? 'Enviado' : 'Fallido' }}</td><td class="pr-3">{{ m.recipient ?? '—' }}</td><td class="pr-3">{{ m.errorCause ?? '—' }}</td>
+            <td>@if (canRetry(m)) { <button type="button" class="px-2 py-1 rounded border border-border" (click)="retry(m)">Reintentar</button> }</td>
           </tr>
-        } @empty { <tr><td colspan="6" class="py-6 text-center text-muted-foreground">No hay mensajes con estos filtros.</td></tr> }
+        } @empty { <tr><td colspan="7" class="py-6 text-center text-muted-foreground">No hay mensajes con estos filtros.</td></tr> }
       </tbody>
     </table>
   </div>
