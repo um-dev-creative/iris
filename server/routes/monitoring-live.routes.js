@@ -16,7 +16,7 @@ const { MONITORED_APPLICATION_ID, MERCURY_BASE_URL, MERCURY_API_PREFIX, SESSION_
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const VALUE = /^[A-Za-z0-9_:.+-]{1,40}$/;
-const RANGES = ['1h', '24h', '7d', '30d'];
+const RANGES = new Set(['1h', '24h', '7d', '30d']);
 const MESSAGES_PATH = 'messages';
 
 /** What the browser may ask for in each view; any other parameter is dropped. */
@@ -36,7 +36,7 @@ function cleanQuery(view, query) {
     const value = query[field];
     if (value === undefined || value === '') continue;
     if (typeof value !== 'string' || !VALUE.test(value)) return { error: `Invalid ${field}` };
-    if (field === 'range' && !RANGES.includes(value)) return { error: 'Invalid range: use 1h, 24h, 7d or 30d' };
+    if (field === 'range' && !RANGES.has(value)) return { error: 'Invalid range: use 1h, 24h, 7d or 30d' };
     if (field === 'templateDefinedId' && !UUID.test(value)) return { error: 'Invalid templateDefinedId' };
     if ((field === 'page' || field === 'size') && !/^\d{1,4}$/.test(value)) return { error: `Invalid ${field}` };
     out[field] = value;

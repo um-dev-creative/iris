@@ -88,11 +88,11 @@ export function answerAll(http: HttpTestingController, failWith?: number): TestR
   return requests;
 }
 
-export const paths = (requests: TestRequest[]) => requests.map((r) => r.request.url.replace('/mrc/api/v1/monitoring/', '')).sort();
+export const paths = (requests: TestRequest[]) => requests.map((r) => r.request.url.replace('/mrc/api/v1/monitoring/', '')).sort((a, b) => a.localeCompare(b));
 
 /** A stand-in for the browser's EventSource that a test drives by hand. */
 export class FakeEventSource {
-  static instances: FakeEventSource[] = [];
+  static readonly instances: FakeEventSource[] = [];
   onopen: (() => void) | null = null;
   onerror: (() => void) | null = null;
   readyState = 0;

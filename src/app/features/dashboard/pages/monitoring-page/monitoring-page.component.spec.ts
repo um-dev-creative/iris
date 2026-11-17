@@ -19,7 +19,7 @@ const button = (el: HTMLElement, text: string) => Array.from(el.querySelectorAll
 
 describe('MonitoringPageComponent', () => {
   beforeEach(() => {
-    FakeEventSource.instances = [];
+    FakeEventSource.instances.length = 0;
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(), provideHttpClientTesting(), { provide: API_BASE_URL, useValue: '/mrc/api/v1' },

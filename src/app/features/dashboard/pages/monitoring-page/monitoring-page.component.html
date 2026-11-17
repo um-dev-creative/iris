@@ -4,17 +4,17 @@
     <p class="text-sm text-muted-foreground mt-1">Correo, Telegram, SMS, WhatsApp, Push y códigos de verificación de tu aplicación</p>
   </div>
   <div class="flex flex-wrap items-center gap-3">
-    <span class="inline-flex items-center gap-2 text-xs text-muted-foreground" role="status" data-testid="connection">
+    <output class="inline-flex items-center gap-2 text-xs text-muted-foreground" data-testid="connection">
       <span class="inline-block w-2 h-2 rounded-full" [class.bg-success]="live.connection() === 'live'" [class.bg-warning]="live.connection() === 'polling' || live.connection() === 'connecting'" [class.bg-destructive]="live.connection() === 'offline'"></span>
       {{ connectionLabel() }}
       @if (live.lastUpdate(); as updated) { · {{ updated | date: 'HH:mm:ss' }} }
-    </span>
-    <div class="inline-flex rounded-lg border border-border overflow-hidden" role="group" aria-label="Periodo">
+    </output>
+    <fieldset class="inline-flex rounded-lg border border-border overflow-hidden m-0 p-0 min-w-0" aria-label="Periodo">
       @for (r of ranges; track r.value) {
         <button type="button" class="px-3 py-1.5 text-sm transition-colors" [class.bg-primary]="live.range() === r.value" [class.text-primary-foreground]="live.range() === r.value"
                 [class.bg-card]="live.range() !== r.value" [attr.aria-pressed]="live.range() === r.value" (click)="setRange(r.value)">{{ r.label }}</button>
       }
-    </div>
+    </fieldset>
     <button type="button" aria-label="Actualizar" class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-border bg-card text-muted-foreground hover:bg-muted" [class.animate-spin]="live.loading()" (click)="live.refreshAll()">
       <lucide-icon [img]="RefreshIcon" [size]="16" strokeWidth="1.5" />
     </button>

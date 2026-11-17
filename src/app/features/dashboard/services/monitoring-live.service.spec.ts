@@ -18,7 +18,7 @@ describe('MonitoringLiveService', () => {
   let http: HttpTestingController;
 
   beforeEach(() => {
-    FakeEventSource.instances = [];
+    FakeEventSource.instances.length = 0;
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(), provideHttpClientTesting(), MonitoringLiveService,

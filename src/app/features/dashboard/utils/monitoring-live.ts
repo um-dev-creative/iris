@@ -51,7 +51,7 @@ export function duration(seconds: number): string {
 const UNIT_MS: Record<string, number> = { minute: 60_000, hour: 3_600_000, day: 86_400_000 };
 
 /** Las fechas de Mercury no llevan zona: son UTC. */
-export const parseUtc = (value: string) => new Date(/[zZ]|[+-]\d{2}:?\d{2}$/.test(value) ? value : `${value}Z`);
+export const parseUtc = (value: string) => new Date(/(?:[zZ]|[+-]\d{2}:?\d{2})$/.test(value) ? value : `${value}Z`);
 
 /** El intervalo `[from, to)` que cubre una barra, en el formato que acepta Mercury (ISO sin zona, UTC). */
 export function bucketWindow(point: SeriesPoint, unit: string): { from: string; to: string } {
