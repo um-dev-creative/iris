@@ -1,6 +1,6 @@
 # Federación social en Iris (diseño propuesto)
 
-> Estado: **decisiones confirmadas** (17 nov 2026); sin implementar. Proveedores: Google, Microsoft, Apple, GitHub y Meta. Solo entran usuarios que ya existen.
+> Estado: **implementado en el BFF y en Angular** (18 nov 2026), apagado por defecto (`FEDERATION_ENABLED=false`). Proveedores: Google, Microsoft, Apple, GitHub y Meta. Solo entran usuarios que ya existen. Requiere el Backbone con la federación (`V10`, `com.umdc:persistence` 0.0.4).
 > Documentos hermanos en `backbone-rest`: `docs/requirements/social-federation.md` (requisitos), `docs/architecture/social-federation.md`
 > (diseño de Backbone), `docs/plans/social-federation-implementation-plan.md` (plan por fases).
 
@@ -21,24 +21,25 @@ flowchart LR
     BFF -->|session-token| MER[Mercury]
 ```
 
-## 2. Rutas nuevas del BFF (`server/routes/federation.routes.js`)
+## 2. Rutas del BFF (`server/routes/federation.routes.js`, bajo `/mrc/api/v1/auth/federation`)
 
 | Ruta | Método | Qué hace |
 |---|---|---|
-| `/auth/federation/providers` | GET | Proveedores habilitados de la aplicación (para pintar los botones). Sin proveedores → sin botones |
-| `/auth/federation/:provider/start?returnTo=` | GET | Valida `returnTo`, pide `authorize` a Backbone, guarda la cookie `fed_state` y redirige (302) al IdP |
-| `/auth/federation/callback` | GET | Compara `state` con la cookie; llama a `callback` de Backbone; fija las cookies de sesión; redirige a `returnTo` |
-| `/auth/federation/:provider/link` | POST | (con sesión + CSRF) inicia el enlace de una cuenta |
-| `/auth/federation/identities` | GET | Lista de cuentas enlazadas del usuario |
-| `/auth/federation/identities/:id` | DELETE | (CSRF) desenlaza; `409` si es el único medio de acceso |
+| `/providers` | GET | `{enabled, providers[]}` de la aplicación (para pintar los botones). Con la función apagada responde `{enabled:false, providers:[]}`; si Backbone falla, lista vacía: el acceso por contraseña sigue |
+| `/:provider/start?returnTo=` | GET | Valida `returnTo`, pide `authorize` a Backbone, guarda la cookie `iris_fed_state` y redirige (302) al proveedor |
+| `/callback?code&state` | GET | Compara `state` con la cookie; llama a `callback` de Backbone; fija las cookies de sesión (`iris_session`, `iris_refresh`) y redirige a `returnTo` |
+| `/callback` | POST (form) | Lo mismo para **Apple** (`form_post`). Está fuera del chequeo CSRF por cabecera (un formulario de otro sitio no puede añadirla): lo protegen la cookie de estado y el `state` de un solo uso de Backbone |
+| `/:provider/link` | POST | (sesión + CSRF) inicia el enlace de una cuenta: devuelve `{authorizationUrl}` y fija la cookie con `link:true` |
+| `/identities` | GET | Cuentas enlazadas del usuario en sesión (`Authorization: Bearer` de la sesión hacia Backbone) |
+| `/identities/:identityId` | DELETE | (CSRF) desenlaza; siempre permitido: la contraseña sigue existiendo |
 
 Reglas del BFF:
 
-- **`fed_state`**: `HttpOnly; Secure; SameSite=Lax; Path=/auth/federation; Max-Age=600`. Lax es necesario porque el IdP vuelve con un GET de nivel superior; Strict perdería la cookie. (Apple usa `form_post`: fase 3, ruta POST propia; GitHub y Meta usan el mismo flujo de este documento.)
-- **`returnTo`**: solo rutas relativas del mismo origen (`/` + no `//`, sin esquema, sin `\`), con lista de permitidos; si no, `/dashboard`.
-- Un `state` que no coincide **no llama a Backbone** y termina en `/login?error=expired`.
-- Todas las respuestas llevan `Cache-Control: no-store`; los límites de tasa reutilizan `express-rate-limit` del login.
-- Nunca se registran `code`, `state` ni tokens (máscara en `logger`).
+- **`iris_fed_state`**: `HttpOnly; Secure; SameSite=Lax; Path=/mrc/api/v1/auth/federation; Max-Age=600`. Lax porque el proveedor vuelve con un GET de nivel superior; **Apple** usa `SameSite=None; Secure` porque su respuesta es un POST entre sitios. Contiene `{state, provider, returnTo, link}` (no es un secreto: el `state` solo sirve una vez y solo para el cliente que lo inició).
+- **`returnTo`**: ruta relativa del mismo origen (empieza con una sola `/`, sin `\`, saltos de línea ni esquema) y bajo un prefijo de `FEDERATION_RETURN_TO_ALLOWLIST` (por defecto `/dashboard`); si no, `/dashboard`.
+- Un `state` que no coincide con la cookie **no llama a Backbone** y termina en `/login?error=expired`.
+- El callback siempre borra la cookie de estado. Un 403 de federación de Backbone (usuario no registrado, correo no permitido…) es sobre la persona, no una mala configuración del cliente de aplicación; solo `federation_client_rejected` se trata como error de configuración.
+- Todas las respuestas llevan `Cache-Control: no-store`; los límites de tasa reutilizan `express-rate-limit` (3 × el del login). No se registran `code`, `state` ni tokens.
 
 ### Mapa de errores → `/login?error=<código>`
 
@@ -62,39 +63,38 @@ sequenceDiagram
     participant F as BFF
     L->>S: loadProviders()
     S->>F: GET /auth/federation/providers
-    F-->>S: [{provider, displayName}]
+    F-->>S: {enabled, providers}
     U->>L: clic «Continuar con Google»
-    L->>F: navegación completa a /auth/federation/google/start (no XHR)
-    F-->>U: 302 al IdP … 302 a returnTo
+    L->>S: signIn('google', returnUrl segura)
+    S->>F: navegación completa a /auth/federation/google/start (no XHR)
+    F-->>U: 302 al proveedor … 302 a returnTo con las cookies de sesión
     U->>L: /auth/me → usuario con foto y nombre
 ```
 
-- `FederationService` (signals): proveedores, cuentas enlazadas, estados `loading|error`.
-- `LoginPageComponent`: botones por proveedor (icono Lucide/SVG propio, texto traducible, `aria-label`), banner de error según `?error=`, deshabilitado mientras redirige.
-- Página **Cuenta → Cuentas enlazadas**: listar, enlazar (POST con CSRF), desenlazar con confirmación.
-- SSR: los botones se renderizan solo en el navegador (la navegación depende de `window.location`); el servidor no llama al IdP.
-- `toUser()` pasa a leer `amr` y `picture` (ya soporta `email`/`avatarUrl`).
+- `FederationService` (`core/services/federation.service.ts`, signals): proveedores, cuentas enlazadas, `signIn`, `link`, `unlink`; en SSR no llama a nadie.
+- `LoginPageComponent`: sección «o continúa con» solo si hay proveedores; banner con el mensaje del código `?error=`; `returnUrl` pasa por `safeReturnUrl`.
+- **Mi cuenta** (`/dashboard/account`, enlace en el menú): cuentas enlazadas con «Quitar» (pide confirmación en la propia fila), «Enlazar <proveedor>» para los que faltan, y los avisos `?linked=` / `?linkError=` que deja el BFF.
+- `core/models/federation.model.ts`: los mensajes por código (ninguno repite texto del proveedor).
+- `toUser()` del BFF ya lee `email` y `picture`; el token federado los trae.
 
 ## 4. Configuración
 
-| Variable | Valor por defecto | Nota |
+| Variable | Por defecto | Nota |
 |---|---|---|
-| `FEDERATION_ENABLED` | `false` | Interruptor de funcionalidad (también oculta los botones) |
-| `FEDERATION_RETURN_TO_ALLOWLIST` | `/dashboard` | Prefijos permitidos |
-| `FEDERATION_CALLBACK_URL` | derivada de la URL pública | Debe registrarse **exacta** en Backbone y en el IdP, por entorno |
+| `FEDERATION_ENABLED` | `false` | Interruptor de la función (sin ella `/providers` devuelve vacío y el resto responde 404) |
+| `FEDERATION_CALLBACK_URL` | — | **Obligatoria** si está activa. Debe ser **exactamente** el `redirectUri` registrado en el ajuste del proveedor en Backbone y en el proveedor: `https://<host-de-iris>/mrc/api/v1/auth/federation/callback` (una por entorno; `http` solo en localhost) |
+| `FEDERATION_RETURN_TO_ALLOWLIST` | `/dashboard` | Prefijos de ruta permitidos como destino tras entrar (separados por coma) |
 
-Los secretos del IdP **no** están en Iris: viven en Vault y los usa Backbone. CSP: sin nuevos `script-src`; `form-action` ya cubre las
-redirecciones por navegación. Registrar `…/auth/federation/callback` por entorno (development, qa, production).
+`settings-check` impide arrancar si `FEDERATION_ENABLED=true` y falta la URL de callback, no es https, o falta `BACKBONE_APPLICATION_ID` / `BACKBONE_CLIENT_ID`. Los secretos del proveedor **no** están en Iris: viven en Vault y los usa Backbone. Sin cambios de CSP. Registrar el callback por entorno (development, qa, production). Backbone debe tener el cliente de aplicación de Iris con acceso a su aplicación (el mismo del login por contraseña).
 
 ## 5. Pruebas (≥ 85 %)
 
-| Nivel | Casos |
+| Nivel | Qué cubre |
 |---|---|
-| BFF (Vitest + `harness.js`, Backbone simulado) | start redirige con cookie; callback feliz fija cookies; `state` ≠ cookie → sin llamada; `returnTo` malicioso (`//evil`, `https://evil`, `\\evil`) → `/dashboard`; cada código de error; CSRF en link/unlink; flag apagado → 404; no se filtran `code`/tokens en logs |
-| Angular | login con/sin proveedores, banner por `?error=`, cuentas enlazadas (listar/enlazar/desenlazar/409), accesibilidad básica |
-| Integración | BFF + Backbone con IdP simulado (MockServer): login, denegado, reintento del mismo `code` |
+| BFF (`server/test/federation.spec.js`, `federation-off.spec.js`, `settings-check.spec.js`; Backbone simulado en `harness.js`) | start redirige con cookie (Lax; Apple `None`); `returnTo` hostil → `/dashboard`; callback feliz fija cookies; `state` ≠ cookie, sin cookie o sin `code` → sin llamada a Backbone; denegado ≠ fallo; cada código de Backbone → su código de login y sin sesión; 200 sin token; POST de Apple sin cabecera CSRF; enlazar (sesión, `LINK`, sin reemplazar la sesión, error de enlace); listar/desenlazar con el Bearer de la sesión; CSRF exigido en el resto; función apagada → 404 y cero llamadas |
+| Angular (`federation.service.spec.ts`, `login-page`, `account-page`, `sidebar`) | proveedores, SSR, `signIn`, carga/errores de cuentas, enlazar y desenlazar con confirmación, banners por código |
 
-Se ejecutan **todas** las suites (`pnpm test:all`) antes de cada PR.
+Se ejecutan **todas** las suites (`pnpm test:all`) antes de cada PR: BFF 308 pruebas (funciones 99 %), Angular 842 pruebas (funciones 91,8 %).
 
 ## 6. Dependencias y orden
 
@@ -106,4 +106,4 @@ Se ejecutan **todas** las suites (`pnpm test:all`) antes de cada PR.
 
 En la pantalla de inicio de sesión aparecerá **Continuar con Google / Microsoft / Apple / GitHub / Meta**. Tu cuenta debe existir ya en Iris (si no, pide acceso a
 un administrador). Si el correo del proveedor está verificado y coincide, se enlaza la primera vez; con Meta (o correo sin verificar) enlaza la cuenta tú mismo en **Cuenta → Cuentas enlazadas**. En **Cuenta → Cuentas enlazadas** puedes enlazar o quitar proveedores; no puedes quitar el último medio de acceso. La
-contraseña sigue funcionando. Se incorporará al manual del operador (`docs/user/manual-operador.md`) al implementarse.
+contraseña sigue funcionando. Ver la sección «Entrar con una cuenta externa» del manual del operador.

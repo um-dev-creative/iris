@@ -16,6 +16,29 @@ _Pendiente — F2-06._
 ## 3. Cerrar sesión
 _Pendiente — F2-07._
 
+## 3 bis. Entrar con una cuenta externa
+
+Si tu administrador activó el acceso con proveedores, la pantalla de inicio de sesión muestra, bajo el formulario, **Continuar con Google / Microsoft / Apple / GitHub / Meta** (los que estén disponibles).
+
+1. Pulsa el botón del proveedor y entra allí con tu cuenta; Iris nunca ve tu contraseña del proveedor.
+2. Vuelves a la página que pediste, ya con la sesión abierta.
+
+Conviene saber:
+
+- La cuenta **debe existir ya** en Iris; entrar con un proveedor nunca crea una. Si ves «Tu cuenta no está registrada en Iris», pide acceso a un administrador.
+- La primera vez, si el correo del proveedor está verificado y coincide con el de tu usuario, se enlaza solo. Con Meta (o un correo sin verificar) entra con tu contraseña y enlaza el proveedor en **Mi cuenta**.
+- En **Mi cuenta** (menú lateral) ves las cuentas enlazadas, puedes enlazar otra o **Quitar** una (con confirmación). Tu contraseña sigue funcionando siempre.
+
+| Mensaje | Qué hacer |
+|---|---|
+| Cancelaste el inicio de sesión | Vuelve a intentarlo |
+| El inicio de sesión expiró o no es válido | Empieza de nuevo; no tardes más de 10 minutos ni uses dos pestañas a la vez |
+| No pudimos verificar tu cuenta | Reintenta; si persiste, avisa a un administrador |
+| Tu cuenta no está registrada / no tiene permiso | Pide acceso a un administrador |
+| Esta cuenta aún no está enlazada | Entra con tu contraseña y enlázala en Mi cuenta |
+| Esa cuenta ya está enlazada a otro usuario | Usa la cuenta que enlazaste primero, o pide a un administrador que la libere |
+| El servicio no está disponible | Entra con tu contraseña y reintenta más tarde |
+
 ## 4. Página principal
 Los indicadores salen de las campañas de Mercury. Si aún no hay datos, la página lo indica en lugar de mostrar cifras.
 

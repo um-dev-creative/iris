@@ -11,6 +11,11 @@ export const DASHBOARD_ROUTES: Routes = [
       ),
   },
   {
+    path: ROUTE_PATHS.ACCOUNT,
+    loadComponent: () =>
+      import('./pages/account-page/account-page.component').then((m) => m.AccountPageComponent),
+  },
+  {
     path: ROUTE_PATHS.MONITORING,
     loadComponent: () =>
       import('./pages/monitoring-page/monitoring-page.component').then(

@@ -1,5 +1,19 @@
 # Seguridad
 
+## Acceso con proveedores sociales
+
+Con `FEDERATION_ENABLED=true` el BFF ofrece Google, Microsoft, Apple, GitHub y Meta a través de Backbone (ver [social-federation.md](social-federation.md)). Controles propios:
+
+| Control | Dónde |
+|---|---|
+| `state` de un solo uso en Backbone **y** cookie `iris_fed_state` `HttpOnly; Secure` (Lax; `None` solo para Apple): un callback ajeno no llega a Backbone | `federation.routes.js` |
+| PKCE `S256`, `nonce`, verificación del ID token (firma contra el JWKS, `iss`, `aud`, `exp`) | Backbone |
+| `returnTo` solo ruta relativa del mismo origen bajo `FEDERATION_RETURN_TO_ALLOWLIST` | `safeReturnTo` |
+| El callback POST de Apple no puede llevar la cabecera CSRF: lo protegen cookie de estado + `state` único | `app.js` |
+| Solo entran usuarios que ya existen; enlace por correo solo verificado y de proveedor de confianza | Backbone |
+| Sin tokens ni `code`/`state` en logs; `Cache-Control: no-store` | BFF |
+| Secretos de proveedor: solo en Vault, usados por Backbone; Iris no los tiene | — |
+
 ## Sesión
 
 El navegador nunca ve un token: el BFF guarda los JWT de Backbone en cookies `httpOnly` y los reenvía a Mercury y Backbone en la cabecera `session-token`. No hay sesión en el servidor (ni Redis), así que un reinicio del BFF no cierra sesiones.

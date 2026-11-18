@@ -98,6 +98,35 @@ async function start({ env = {}, appOptions } = {}) {
     }
     return next();
   });
+  // social sign-in (federation); the answers are whatever state.federation says, and every call is recorded
+  backbone.get(`${root}/federation/providers`, (req, res) => {
+    record(req);
+    if (!knownClient(req, res)) return;
+    res.status(state.federation?.providersStatus ?? 200).json(state.federation?.providers ?? []);
+  });
+  backbone.post(`${root}/federation/authorize`, (req, res) => {
+    record(req);
+    if (!knownClient(req, res)) return;
+    const f = state.federation ?? {};
+    if (f.authorizeStatus && f.authorizeStatus !== 200) return res.status(f.authorizeStatus).json({ error: f.authorizeError });
+    res.json({ authorizationUrl: `https://idp.example/${req.body.provider}/auth?state=st-1`, state: 'st-1' });
+  });
+  backbone.post(`${root}/federation/callback`, (req, res) => {
+    record(req);
+    if (!knownClient(req, res)) return;
+    const f = state.federation ?? {};
+    if (f.callbackStatus && f.callbackStatus !== 200) return res.status(f.callbackStatus).json({ error: f.callbackError });
+    if (req.headers['session-token']) return res.json({ id: 'i-1', provider: 'google', email: 'a@b.c' });
+    res.json(f.callbackBody ?? { token: tokens.GOOD, refreshToken: tokens.REFRESH });
+  });
+  backbone.get(`${root}/users/:userId/federated-identities`, (req, res) => {
+    state.backboneCalls.push({ path: req.path, authorization: req.headers.authorization, method: 'GET' });
+    res.status(state.federation?.identitiesStatus ?? 200).json(state.federation?.identities ?? []);
+  });
+  backbone.delete(`${root}/users/:userId/federated-identities/:id`, (req, res) => {
+    state.backboneCalls.push({ path: req.path, authorization: req.headers.authorization, method: 'DELETE' });
+    res.status(state.federation?.unlinkStatus ?? 204).end();
+  });
   backbone.get(`${root}/session/validate`, (_req, res) => res.status(200).json(state.sessionActive ?? true));
   // anything else under /backbone/api/v1 is a resource of the backbone API, guarded by the session token
   backbone.use(root, (req, res) => {
@@ -200,17 +229,17 @@ async function start({ env = {}, appOptions } = {}) {
   const { app } = createApp(appOptions);
   let bff = await listen(http.createServer(app));
 
-  const call = (path, { method = 'GET', body, cookie, csrf = true, headers = {} } = {}) =>
+  const call = (path, { method = 'GET', body, raw, cookie, csrf = true, headers = {} } = {}) =>
     fetch(`http://127.0.0.1:${bff.port}${path}`, {
       method,
       redirect: 'manual',
       headers: {
-        ...(body && !(body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
+        ...(body && raw === undefined && !(body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
         ...(csrf ? { 'x-iris-csrf': '1' } : {}),
         ...(cookie ? { cookie } : {}),
         ...headers,
       },
-      body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
+      body: raw !== undefined ? raw : body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
     });
 
   /** Stops the BFF and starts a fresh instance on a new port against the same stand-ins: a process restart. */

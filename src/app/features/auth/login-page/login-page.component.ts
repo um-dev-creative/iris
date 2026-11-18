@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, ElementRef, inject, input, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, OnInit, computed, inject, input, signal, viewChild } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
 import { Eye, EyeOff, LoaderCircle, LucideAngularModule, TriangleAlert } from 'lucide-angular';
-import { AuthService } from '../../../core/services';
+import { AuthService, FederationService } from '../../../core/services';
+import { federationMessage } from '../../../core/models';
 import { ROUTE_PATHS, routeUrl } from '../../../core/routes';
 import { AppButtonComponent, AppLogoComponent } from '../../../shared/components';
 import { ThemeToggleComponent } from '../../../shared/components/theme-toggle/theme-toggle.component';
@@ -47,7 +48,7 @@ export function safeReturnUrl(value: string | null | undefined): string {
         </header>
 
         <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="space-y-4">
-          @if (errorMessage(); as message) {
+          @if (errorMessage() ?? federationError(); as message) {
             <div role="alert" class="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               <lucide-icon [img]="TriangleAlert" [size]="16" strokeWidth="1.5" class="mt-0.5 flex-shrink-0" />
               <span>{{ message }}</span>
@@ -111,6 +112,30 @@ export function safeReturnUrl(value: string | null | undefined): string {
           </app-button>
         </form>
 
+        @if (federation.providers().length > 0) {
+          <div class="mt-6" data-testid="federation">
+            <div class="flex items-center gap-3 text-xs text-muted-foreground" role="separator">
+              <span class="h-px flex-1 bg-border"></span>
+              <span>o continúa con</span>
+              <span class="h-px flex-1 bg-border"></span>
+            </div>
+            <ul class="mt-4 space-y-2">
+              @for (provider of federation.providers(); track provider.provider) {
+                <li>
+                  <button
+                    type="button"
+                    class="w-full px-4 py-2 text-sm font-medium border border-input rounded-lg bg-background text-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring transition-colors"
+                    [attr.data-provider]="provider.provider"
+                    (click)="signInWith(provider.provider)"
+                  >
+                    Continuar con {{ provider.displayName }}
+                  </button>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+
         <p class="mt-6 text-center text-sm text-muted-foreground">
           ¿No tienes cuenta?
           <a [routerLink]="registerUrl" class="font-medium text-primary hover:underline">Crear una cuenta</a>
@@ -119,12 +144,16 @@ export function safeReturnUrl(value: string | null | undefined): string {
     </main>
   `,
 })
-export class LoginPageComponent {
+export class LoginPageComponent implements OnInit {
   private readonly auth = inject(AuthService);
+  protected readonly federation = inject(FederationService);
   private readonly router = inject(Router);
 
   /** Ruta a la que volver tras iniciar sesión; llega como `?returnUrl=` (binding de parámetros del router). */
   readonly returnUrl = input<string>();
+  /** Código que deja el BFF en `?error=` cuando el acceso con un proveedor no se completó. */
+  readonly error = input<string>();
+  readonly federationError = computed(() => federationMessage(this.error()));
 
   readonly form = inject(FormBuilder).nonNullable.group({
     email: ['', [Validators.required, Validators.pattern(/\S/)]],
@@ -142,6 +171,15 @@ export class LoginPageComponent {
   readonly EyeOff = EyeOff;
   readonly LoaderCircle = LoaderCircle;
   readonly TriangleAlert = TriangleAlert;
+
+  ngOnInit(): void {
+    void this.federation.loadProviders();
+  }
+
+  /** Empieza el acceso con el proveedor: navega al BFF, que redirige. */
+  signInWith(provider: string): void {
+    this.federation.signIn(provider, safeReturnUrl(this.returnUrl()));
+  }
 
   /** `true` si el campo ya se tocó (o se intentó enviar) y no es válido; alimenta `aria-invalid` y el mensaje. */
   invalid(name: 'email' | 'password'): boolean {

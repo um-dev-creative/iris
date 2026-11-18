@@ -82,6 +82,7 @@ flowchart TD
 |---|---|---|
 | `ENVM` | build | Tabla de arriba |
 | `IRIS_BFF_URL` | `pnpm start` | Destino del proxy de `ng serve` (por defecto `https://localhost:4000`) |
+| `FEDERATION_ENABLED`, `FEDERATION_CALLBACK_URL`, `FEDERATION_RETURN_TO_ALLOWLIST` | BFF | Acceso con proveedores sociales (apagado por defecto); ver [social-federation.md](social-federation.md#4-configuración) |
 | `NODE_ENV`, `PORT`, `MERCURY_*`, `BACKBONE_*`, `COOKIE_SECURE`, `CORS_ORIGIN`, `TRUST_PROXY`, `RATE_LIMIT_MAX`, `LOGIN_RATE_LIMIT_MAX`, `TRACING_ENABLED`, `TRACE_SAMPLE_RATE`, `SSL_*` | BFF | Comentadas en [`config/local.env`](../../config/local.env), [`secrets/local.env.example`](../../secrets/local.env.example) y en [DEVELOPMENT_SETUP.md](../../DEVELOPMENT_SETUP.md) |
 
 ## Verificación en CI
