@@ -1,13 +1,13 @@
 # Federación social en Iris (diseño propuesto)
 
-> Estado: **propuesta** (17 nov 2026). Nada de esto está implementado.
+> Estado: **decisiones confirmadas** (17 nov 2026); sin implementar. Proveedores: Google, Microsoft, Apple, GitHub y Meta. Solo entran usuarios que ya existen.
 > Documentos hermanos en `backbone-rest`: `docs/requirements/social-federation.md` (requisitos), `docs/architecture/social-federation.md`
 > (diseño de Backbone), `docs/plans/social-federation-implementation-plan.md` (plan por fases).
 
 ## 1. Qué cambia para Iris
 
 Iris sigue hablando **solo con Backbone**. Backbone hace de *broker* de identidad: inicia el flujo OAuth 2.0 Authorization Code + PKCE
-contra Google/Microsoft, valida el ID token y devuelve el **mismo** par de tokens (`token`, `refreshToken` con `aid`) que el login por
+contra el proveedor (Google, Microsoft, Apple, GitHub o Meta), valida el ID token y devuelve el **mismo** par de tokens (`token`, `refreshToken` con `aid`) que el login por
 contraseña. Por eso el BFF reutiliza `setSessionCookies`, `/auth/me`, el refresco y el logout sin cambios, y Mercury no se toca.
 
 ```mermaid
@@ -15,7 +15,7 @@ flowchart LR
     B[Navegador] --> SPA[Angular SPA]
     SPA -->|/auth/federation/*| BFF[BFF Express]
     BFF -->|M2M Bearer| BB[Backbone /api/v1/federation/*]
-    B -. redirección .-> IDP[[Google / Microsoft]]
+    B -. redirección .-> IDP[[Google / Microsoft / Apple / GitHub / Meta]]
     IDP -. code+state .-> BFF
     BB -->|back channel| IDP
     BFF -->|session-token| MER[Mercury]
@@ -34,7 +34,7 @@ flowchart LR
 
 Reglas del BFF:
 
-- **`fed_state`**: `HttpOnly; Secure; SameSite=Lax; Path=/auth/federation; Max-Age=600`. Lax es necesario porque el IdP vuelve con un GET de nivel superior; Strict perdería la cookie. (Apple usa `form_post`: fase 3, ruta POST propia.)
+- **`fed_state`**: `HttpOnly; Secure; SameSite=Lax; Path=/auth/federation; Max-Age=600`. Lax es necesario porque el IdP vuelve con un GET de nivel superior; Strict perdería la cookie. (Apple usa `form_post`: fase 3, ruta POST propia; GitHub y Meta usan el mismo flujo de este documento.)
 - **`returnTo`**: solo rutas relativas del mismo origen (`/` + no `//`, sin esquema, sin `\`), con lista de permitidos; si no, `/dashboard`.
 - Un `state` que no coincide **no llama a Backbone** y termina en `/login?error=expired`.
 - Todas las respuestas llevan `Cache-Control: no-store`; los límites de tasa reutilizan `express-rate-limit` del login.
@@ -47,7 +47,7 @@ Reglas del BFF:
 | IdP `error=access_denied` | `denied` | Cancelaste el inicio de sesión |
 | `state` inválido/expirado/reutilizado | `expired` | El inicio de sesión expiró; vuelve a intentarlo |
 | ID token inválido (`401`) | `failed` | No pudimos verificar tu cuenta |
-| `403 federation_not_registered` | `not_registered` | Tu cuenta no está registrada; pide acceso a un administrador |
+| `403 federation_not_registered` (Iris nunca crea usuarios) | `not_registered` | Tu cuenta no está registrada; pide acceso a un administrador |
 | `403` correo no verificado / dominio | `not_allowed` | Esta cuenta no tiene permiso |
 | `502/503` | `unavailable` | Servicio no disponible; usa tu contraseña |
 | `429` | `rate_limited` | Demasiados intentos |
@@ -104,6 +104,6 @@ Se ejecutan **todas** las suites (`pnpm test:all`) antes de cada PR.
 
 ## 7. Guía de usuario (resumen)
 
-En la pantalla de inicio de sesión aparecerá **Continuar con Google / Microsoft**. Tu cuenta debe existir ya en Iris (si no, pide acceso a
-un administrador). En **Cuenta → Cuentas enlazadas** puedes enlazar o quitar proveedores; no puedes quitar el último medio de acceso. La
+En la pantalla de inicio de sesión aparecerá **Continuar con Google / Microsoft / Apple / GitHub / Meta**. Tu cuenta debe existir ya en Iris (si no, pide acceso a
+un administrador). Si el correo del proveedor está verificado y coincide, se enlaza la primera vez; con Meta (o correo sin verificar) enlaza la cuenta tú mismo en **Cuenta → Cuentas enlazadas**. En **Cuenta → Cuentas enlazadas** puedes enlazar o quitar proveedores; no puedes quitar el último medio de acceso. La
 contraseña sigue funcionando. Se incorporará al manual del operador (`docs/user/manual-operador.md`) al implementarse.
