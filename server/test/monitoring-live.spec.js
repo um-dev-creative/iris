@@ -6,7 +6,8 @@ const { start, tokens } = require('./harness');
 let bff;
 const SESSION = `iris_session=${tokens.GOOD}`;
 const get = (path, cookie = SESSION) => bff.call(`/mrc/api/v1/monitoring${path}`, { cookie });
-const APP = 'app-1';
+// the monitoring is Mercury's own: without a choice it covers every application (Mercury's nil UUID)
+const APP = '00000000-0000-0000-0000-000000000000';
 
 beforeAll(async () => { bff = await start({ env: { BACKBONE_CLIENT_ID: 'iris', BACKBONE_CLIENT_SECRET: 's3cret' } }); });
 afterAll(() => bff.stop());
@@ -32,9 +33,11 @@ describe('las vistas de monitoreo', () => {
     assert.equal(res.headers.get('cache-control'), 'no-store');
   });
 
-  it('la aplicación la fija el BFF: la persona no puede cambiarla', async () => {
-    await get('/summary?applicationId=otra&range=1h');
+  it('sin elegir otra, la aplicación es la de Iris; un applicationId que no es un UUID se rechaza (elegir otra se prueba en monitoring-applications)', async () => {
+    assert.equal((await get('/summary?applicationId=otra&range=1h')).status, 400);
+    assert.equal(bff.state.live.calls.length, 0);
 
+    await get('/summary?range=1h');
     assert.equal(bff.state.live.calls[0].url, `/mercury/api/v1/monitoring/applications/${APP}/summary?range=1h`);
   });
 

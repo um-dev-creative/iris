@@ -177,7 +177,7 @@ flowchart LR
 
 ## Monitoreo de envíos
 
-En el menú, **Monitoreo**. Muestra los envíos de tu aplicación y se actualiza solo.
+En el menú, **Monitoreo**. Muestra **todas las comunicaciones que pasan por Mercury**, las envíe quien las envíe (ZeroBound, Iris u otro cliente), y se actualiza solo.
 
 ```mermaid
 flowchart LR
@@ -194,7 +194,7 @@ flowchart LR
 - **Canales y tipos** (transaccional, campaña, código de verificación): pulsa uno para filtrar la gráfica y la tabla; púlsalo otra vez, o usa «Quitar filtros», para volver. SMS, WhatsApp y Push dicen **«En cola, sin proveedor»**: todavía no hay un proveedor que los entregue.
 - **Estado de los servicios** (base de datos, mensajería, correo, Backbone, Telegram): cada uno dice su estado con texto (Operativo, Degradado, Caído, No configurado, Sin comprobar) y, si falla, por qué. «No configurado» no es una falla: ese servicio está apagado en este ambiente. Debajo, el historial de caídas con cuándo empezaron y cuánto duraron.
 - **Mensajes:** cada envío con su fecha (UTC), canal, tipo, estado y destinatario **enmascarado** (`j***@e***.com`). Nunca se muestra el contenido del mensaje ni el código de verificación.
-- Solo ves los datos de tu aplicación.
+- Ves los envíos de todas las aplicaciones; con el selector **Aplicación** puedes acotar a una.
 
 ### Alertas, reintentar y exportar
 
@@ -210,4 +210,16 @@ flowchart LR
 - **Alertas.** En la sección **Alertas** elige qué vigilar: más de X % de fallos en N minutos (con un mínimo de mensajes), X mensajes o más esperando más de N minutos, o un servicio degradado o caído N minutos. Puedes poner hasta 5 correos para que Mercury avise cuando suene. Una alerta suena una vez, se queda arriba mientras dure el problema y se resuelve sola. Puedes desactivar o eliminar una regla.
 - **Reintentar.** En la tabla de mensajes, un **correo fallido** tiene el botón **Reintentar**: Mercury lo vuelve a enviar en su próxima ronda. El intento fallido sigue en la tabla y el nuevo aparece aparte. Los mensajes de Telegram no se pueden reintentar desde aquí.
 - **Exportar.** **Exportar CSV** o **Exportar JSON** descarga la tabla con los filtros que tengas, hasta 10 000 filas; si el archivo queda corto te avisa. Los destinatarios siguen enmascarados.
-- Crear reglas, eliminarlas y reintentar necesitan que tu aplicación tenga permiso de escritura en Mercury; si no lo tiene, la página dice «Acceso denegado».
+- Crear reglas, eliminarlas y reintentar necesitan que Iris tenga permiso de escritura en Mercury; si no lo tiene, la página dice «Acceso denegado».
+
+### Si la página de monitoreo está vacía
+
+```mermaid
+flowchart TD
+    A[Envié un correo y no aparece] --> B{Hay un aviso rojo arriba?}
+    B -->|sí| C[Mercury no tiene sus tablas de monitoreo:<br/>pide a quien administra Mercury aplicar los scripts que nombra]
+    B -->|no| D[Revisa el periodo y los filtros, y que el selector Aplicación diga Todas]
+```
+
+- La página muestra **todas las aplicaciones** (ZeroBound, Iris, ...). Si eliges una en el selector **Aplicación**, solo verás la suya; vuelve a **Todas las aplicaciones** para ver todo.
+- Un **aviso rojo** «Mercury no está registrando los envíos» significa que a Mercury le faltan sus tablas de monitoreo: los envíos se hacen, pero no se guardan. Un **aviso amarillo** dice cuántos envíos no se pudieron registrar.

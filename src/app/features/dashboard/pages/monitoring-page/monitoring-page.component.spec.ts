@@ -4,7 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { API_BASE_URL } from '../../../../core/config';
 import { MonitoringPageComponent, RuleDraft, draftProblem, toRequest } from './monitoring-page.component';
 import { EVENT_SOURCE_FACTORY } from '../../services/monitoring-live.service';
-import { FakeEventSource, answerAll } from '../../services/monitoring-live.testing';
+import { FakeEventSource, OTHER_APP, answerAll, healthFixture } from '../../services/monitoring-live.testing';
 
 async function open() {
   const fixture = TestBed.createComponent(MonitoringPageComponent);
@@ -178,7 +178,7 @@ describe('MonitoringPageComponent', () => {
 
     (el.querySelector('button[aria-label="Actualizar"]') as HTMLButtonElement).click();
 
-    expect(answerAll(http)).toHaveLength(9);
+    expect(answerAll(http)).toHaveLength(10);
   });
 
   it('sin mensajes ni fallos ni caídas lo dice', async () => {
@@ -326,6 +326,68 @@ describe('MonitoringPageComponent', () => {
 
       expect(exportMessages).toHaveBeenNthCalledWith(1, 'csv');
       expect(exportMessages).toHaveBeenNthCalledWith(2, 'json');
+    });
+  });
+
+  describe('aplicación y almacenamiento', () => {
+    it('muestra el selector con «Todas las aplicaciones» y las de la persona, y elegir una la cambia; volver a «Todas» la quita', async () => {
+      const { fixture, el, http, live } = await open();
+      const select = el.querySelector('[data-testid="application"]') as HTMLSelectElement;
+
+      expect(Array.from(select.options).map((o) => [o.value, o.textContent!.trim()])).toEqual([['', 'Todas las aplicaciones'], [OTHER_APP, 'ZeroBound']]);
+      expect(select.value).toBe('');
+
+      select.value = OTHER_APP;
+      select.dispatchEvent(new Event('change'));
+      answerAll(http);
+      fixture.detectChanges();
+
+      expect(live.application()).toBe(OTHER_APP);
+      expect(fixture.componentInstance.selectedApplication()).toBe(OTHER_APP);
+
+      select.value = '';
+      select.dispatchEvent(new Event('change'));
+      answerAll(http);
+      expect(live.application()).toBeNull();
+    });
+
+    it('sin otras aplicaciones que elegir no hay selector', async () => {
+      const { fixture, el, live } = await open();
+
+      live.applications.set({ applications: [], available: true });
+      fixture.detectChanges();
+      expect(el.querySelector('[data-testid="application"]')).toBeNull();
+
+      live.applications.set(null);
+      expect(fixture.componentInstance.applicationOptions()).toEqual([]);
+    });
+
+    it('si a Mercury le faltan las tablas lo dice, con las tablas y las migraciones, en vez de dejar las vistas vacías', async () => {
+      const { fixture, el, live } = await open();
+      expect(el.querySelector('[data-testid="storage-missing"]')).toBeNull();
+
+      live.health.set({ ...healthFixture(), storage: { ready: false, missingTables: ['send_events', 'alert_rules'], migrations: ['V2039__send_events.sql', 'V2041__monitoring_alerts.sql'], recordFailures: 4 } });
+      fixture.detectChanges();
+
+      const banner = el.querySelector('[data-testid="storage-missing"]')!;
+      expect(banner.textContent).toContain('Mercury no está registrando los envíos');
+      expect(banner.textContent).toContain('send_events, alert_rules');
+      expect(banner.textContent).toContain('V2039__send_events.sql, V2041__monitoring_alerts.sql');
+      expect(el.querySelector('[data-testid="storage-failures"]')).toBeNull();
+    });
+
+    it('si hay tablas pero fallaron registros, avisa cuántos', async () => {
+      const { fixture, el, live } = await open();
+
+      live.health.set({ ...healthFixture(), storage: { ready: true, missingTables: [], migrations: [], recordFailures: 3 } });
+      fixture.detectChanges();
+
+      expect(el.querySelector('[data-testid="storage-failures"]')!.textContent).toContain('3 envío(s)');
+      expect(el.querySelector('[data-testid="storage-missing"]')).toBeNull();
+
+      live.health.set({ ...healthFixture(), storage: { ready: true, missingTables: [], migrations: [], recordFailures: 0 } });
+      fixture.detectChanges();
+      expect(el.querySelector('[data-testid="storage-failures"]')).toBeNull();
     });
   });
 });

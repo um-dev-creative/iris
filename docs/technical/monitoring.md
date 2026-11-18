@@ -34,10 +34,18 @@ sequenceDiagram
 | `/monitoring/outages` | `/monitoring/health/outages` | `range` |
 | `/monitoring/stream` | `.../stream` (SSE) | `range` |
 
-- **La aplicación la fija el BFF** (`MONITORED_APPLICATION_ID`, o `BACKBONE_APPLICATION_ID`): un `applicationId` del navegador se ignora. Sin ella, las vistas de la aplicación y el stream responden `503`. `health` y `outages` no son de una aplicación.
+- **El monitoreo es de Mercury, no de un cliente:** sin elegir otra, las vistas cubren **todas las aplicaciones** (el BFF manda a Mercury el UUID nulo `00000000-0000-0000-0000-000000000000`); no hace falta `MONITORED_APPLICATION_ID`. La persona puede acotar a una aplicación con `applicationId` (ver más abajo); un valor que no es UUID es `400` y una aplicación que no puede mirar es `403`.
 - **Solo pasan los parámetros de la tabla.** Cada valor debe ser corto y de caracteres simples; `range` es `1h`, `24h`, `7d` o `30d`; `templateDefinedId` un UUID; `page` y `size` enteros. Cualquier otra cosa es `400` y no se llama a Mercury.
 - **Credenciales:** `Authorization: Bearer` del cliente de la aplicación (necesita `mercury:message:read` en `BACKBONE_CLIENT_SCOPES`, ya presente para campañas) y `session-token` de la persona. Las vistas JSON usan `proxyToApi`, que renueva la sesión una vez ante un `401`. Si Backbone rechaza al cliente de la aplicación, `502`.
 - **El stream** (`GET /monitoring/stream`) abre la conexión con Mercury, la pasa tal cual al navegador (`text/event-stream`, `Cache-Control: no-store, no-transform`, `X-Accel-Buffering: no`) y la cierra cuando el navegador se va. Un rechazo de Mercury llega como JSON con su estado (`400`, `401`, `403`, `429`; cualquier otro, `502`) para que la página siga con sondeo. `compression()` no comprime `text/event-stream`: el buffer de la compresión retendría los eventos. Detrás de nginx hace falta `proxy_buffering off` para esta ruta (o el encabezado `X-Accel-Buffering`, que ya se envía).
+
+## Elegir la aplicación y avisar si Mercury no registra
+
+Mercury (y por tanto Iris) monitorea **todas** las comunicaciones que pasan por él, las envíe ZeroBound, Iris o cualquier otro cliente. Mercury guarda cada envío con la aplicación de la definición de plantilla que usó, y eso sirve para **acotar**, no para limitar.
+
+- **Selector «Aplicación»** (aparece si Mercury lista aplicaciones para la persona): «Todas las aplicaciones» (lo normal) o una. `GET /monitoring/applications` devuelve `{ applications, available }` con las que Mercury lista para la persona (`/templates/applications`; todas para un administrador de la plataforma, las que administra para el resto). Todas las rutas aceptan `applicationId`: sin él, todas; un valor que no es UUID es `400`; uno que la persona no puede mirar es `403` y no se llama a Mercury (`00000000-0000-0000-0000-000000000000` equivale a todas). La lista se pide una vez por minuto y sesión. Aplica a las vistas, al stream, a la exportación, al reintento y a las reglas (una regla creada sin elegir aplicación es de todas); cambiar de aplicación quita los filtros y reabre el stream.
+- **Aviso de almacenamiento:** `health.storage` (en `/monitoring/health` y en el evento `health` del stream) dice si existen las tablas de monitoreo de Mercury. Si faltan (migraciones `V2039` a `V2041` sin aplicar, p. ej. con `MERCURY_FLYWAY_ENABLED=false`) la página muestra un aviso rojo con las tablas y los scripts; si hay tablas pero fallaron registros, un aviso amarillo con la cuenta.
+- **Qué hacer si la página está vacía y Mercury envió:** ver `docs/tec/en/24-monitoring-api.md` de Mercury, sección *Nothing appears in the dashboard*.
 
 ## Alertas, reintento y exportación (fase 4)
 

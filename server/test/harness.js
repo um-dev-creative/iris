@@ -126,6 +126,14 @@ async function start({ env = {}, appOptions } = {}) {
     }
     return res.json(monitoring.campaigns);
   });
+  // the applications a person may look at (what Mercury lists for the templates), only when a test of the monitoring asks for them
+  mercury.get('/mercury/api/v1/templates/applications', (req, res, next) => {
+    const live = state.live;
+    if (!live?.applications) return next();
+    live.applicationCalls = (live.applicationCalls ?? 0) + 1;
+    if (live.applicationsStatus) return res.status(live.applicationsStatus).json({});
+    return res.json(live.applications);
+  });
   // the monitoring views and the live stream, guarded like Mercury's: the application's Bearer and the person's session; off unless a test asks
   mercury.use('/mercury/api/v1/monitoring', (req, res, next) => {
     const live = state.live;

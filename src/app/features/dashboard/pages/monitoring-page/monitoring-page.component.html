@@ -9,6 +9,13 @@
       {{ connectionLabel() }}
       @if (live.lastUpdate(); as updated) { · {{ updated | date: 'HH:mm:ss' }} }
     </output>
+    @if (applicationOptions().length > 1) {
+      <label class="inline-flex items-center gap-2 text-sm text-muted-foreground">Aplicación
+        <select class="field" data-testid="application" [value]="selectedApplication()" (change)="chooseApplication($any($event.target).value)">
+          @for (a of applicationOptions(); track a.id) { <option [value]="a.id" [selected]="a.id === selectedApplication()">{{ a.name }}</option> }
+        </select>
+      </label>
+    }
     <fieldset class="inline-flex rounded-lg border border-border overflow-hidden m-0 p-0 min-w-0" aria-label="Periodo">
       @for (r of ranges; track r.value) {
         <button type="button" class="px-3 py-1.5 text-sm transition-colors" [class.bg-primary]="live.range() === r.value" [class.text-primary-foreground]="live.range() === r.value"
@@ -20,6 +27,20 @@
     </button>
   </div>
 </div>
+
+@if (storage(); as st) {
+  @if (!st.ready) {
+    <div role="alert" class="mb-4 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm" data-testid="storage-missing">
+      <p class="font-semibold">Mercury no está registrando los envíos</p>
+      <p class="mt-1">Faltan las tablas {{ st.missingTables.join(', ') }} del esquema <code>mercury</code>. Por eso estas vistas están vacías aunque se envíen mensajes.
+        Quien administra Mercury debe aplicar {{ st.migrations.join(', ') }} (Flyway lo hace salvo que <code>MERCURY_FLYWAY_ENABLED=false</code>); no hace falta reiniciar.</p>
+    </div>
+  } @else if (st.recordFailures > 0) {
+    <div role="alert" class="mb-4 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm" data-testid="storage-failures">
+      Mercury no pudo registrar {{ st.recordFailures }} envío(s) desde que arrancó: esos envíos no aparecen aquí. El motivo está en su log (<code>Could not record the send event</code>).
+    </div>
+  }
+}
 
 @if (live.stale()) {
   <div role="alert" class="flex items-start gap-2 mb-4 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm" data-testid="stale">

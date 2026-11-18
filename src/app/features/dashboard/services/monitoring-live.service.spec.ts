@@ -6,9 +6,9 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../../../core/config';
 import { EVENT_SOURCE_FACTORY, MonitoringLiveService } from './monitoring-live.service';
 import { NotificationService } from '../../../core/services/notification.service';
-import { FakeEventSource, answerAll, healthFixture, messagesFixture, paths, summaryFixture } from './monitoring-live.testing';
+import { FakeEventSource, OTHER_APP, answerAll, healthFixture, messagesFixture, paths, summaryFixture } from './monitoring-live.testing';
 
-const ALL = ['alerts', 'alerts/rules', 'failures', 'health', 'messages', 'outages', 'series', 'summary', 'verification-codes'];
+const ALL = ['alerts', 'alerts/rules', 'applications', 'failures', 'health', 'messages', 'outages', 'series', 'summary', 'verification-codes'];
 const destroyRef = (): DestroyRef & { destroy: () => void } => {
   let callback = () => undefined as void;
   return { onDestroy: (fn: () => void) => { callback = fn; return () => undefined; }, destroy: () => callback() } as never;
@@ -66,7 +66,7 @@ describe('MonitoringLiveService', () => {
     service.start(destroyRef());
     service.start(destroyRef());
 
-    expect(answerAll(http)).toHaveLength(9);
+    expect(answerAll(http)).toHaveLength(10);
     expect(FakeEventSource.instances).toHaveLength(1);
   });
 
@@ -75,7 +75,7 @@ describe('MonitoringLiveService', () => {
     service.setRange('7d');
 
     const requests = answerAll(http);
-    expect(requests.filter((r) => r.request.params.get('range') === '7d').length).toBe(6);
+    expect(requests.filter((r) => r.request.params.get('range') === '7d').length).toBe(7);
     // la tabla de mensajes cubre el mismo periodo: desde hace 7 días
     const from = new Date(`${requests.find((r) => r.request.url.endsWith('/messages'))!.request.params.get('from')}Z`).getTime();
     expect(Date.now() - from).toBeGreaterThanOrEqual(7 * 86_400_000 - 5000);
@@ -238,6 +238,21 @@ describe('MonitoringLiveService', () => {
       expect(service.summary()?.totals.sent).toBe(1);
       expect(service.health()?.overall).toBe('OUTAGE');
       expect(service.connection()).toBe('live');
+      expect(service.stale()).toBe(false);
+    });
+
+    it('un evento con error (Mercury no pudo calcular el resumen) no reemplaza lo que se ve y marca los datos como desactualizados', async () => {
+      await started();
+      const source = FakeEventSource.instances[0];
+
+      source.emit('summary', { error: 'SUMMARY_UNAVAILABLE' });
+      source.emit('health', 'null');
+
+      expect(service.summary()?.totals.sent).toBe(90);
+      expect(service.health()?.overall).toBe('DEGRADED');
+      expect(service.stale()).toBe(true);
+
+      source.emit('summary', summaryFixture());
       expect(service.stale()).toBe(false);
     });
 
@@ -511,6 +526,78 @@ describe('MonitoringLiveService', () => {
 
       expect(await done).toBe(false);
       expect(downloads).toEqual([]);
+    });
+  });
+
+  describe('otra aplicación', () => {
+    it('al empezar no manda applicationId (son todas las aplicaciones) y guarda la lista de aplicaciones', async () => {
+      service.start(destroyRef());
+      const requests = answerAll(http);
+
+      expect(requests.every((r) => !r.request.params.has('applicationId'))).toBe(true);
+      expect(FakeEventSource.instances[0].url).not.toContain('applicationId');
+      await vi.waitFor(() => expect(service.applications()?.applications).toEqual([{ id: OTHER_APP, name: 'ZeroBound' }]));
+      expect(service.application()).toBeNull();
+    });
+
+    it('elegir otra aplicación la manda en todas las consultas con aplicación, reabre el stream y quita los filtros', async () => {
+      await started();
+      service.toggleChannel('EMAIL');
+      service.toggleStatus('FAILED');
+      answerAll(http);
+
+      service.selectApplication(OTHER_APP);
+      const requests = answerAll(http);
+
+      expect(service.application()).toBe(OTHER_APP);
+      expect(service.hasFilters()).toBe(false);
+      const byPath = Object.fromEntries(requests.map((r) => [r.request.url.replace('/mrc/api/v1/monitoring/', ''), r.request.params.get('applicationId')]));
+      for (const path of ['summary', 'series', 'failures', 'verification-codes', 'messages', 'alerts', 'alerts/rules', 'outages']) expect(byPath[path]).toBe(OTHER_APP);
+      expect(byPath['health']).toBeNull();
+      expect(FakeEventSource.instances.at(-1)!.url).toBe(`/mrc/api/v1/monitoring/stream?range=24h&applicationId=${OTHER_APP}`);
+      expect(FakeEventSource.instances[0].closed).toBe(true);
+    });
+
+    it('elegir «todas» (vacío), o la misma otra vez, vuelve a la de siempre o no hace nada', async () => {
+      await started();
+      service.selectApplication(OTHER_APP);
+      answerAll(http);
+
+      service.selectApplication(OTHER_APP);
+      expect(http.match(() => true)).toHaveLength(0);
+      service.selectApplication('');
+      const requests = answerAll(http);
+
+      expect(service.application()).toBeNull();
+      expect(requests.every((r) => !r.request.params.has('applicationId'))).toBe(true);
+      service.selectApplication(null);
+      expect(http.match(() => true)).toHaveLength(0);
+    });
+
+    it('la exportación, el reintento y las reglas llevan la aplicación elegida', async () => {
+      await started();
+      service.selectApplication(OTHER_APP);
+      answerAll(http);
+      vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+      Object.assign(URL, { createObjectURL: () => 'blob:x', revokeObjectURL: () => undefined });
+
+      const exported = service.exportMessages('csv');
+      const request = http.expectOne((r) => r.url.endsWith('/messages/export'));
+      expect(request.request.params.get('applicationId')).toBe(OTHER_APP);
+      request.flush(new Blob(['a']));
+      await exported;
+
+      void service.retry({ ...messagesFixture().items[0], messageId: '3f0c1f4e-8b1e-4f7e-9d54-0c6f0d2a7b11' });
+      expect(http.expectOne((r) => r.url.endsWith('/retry')).request.params.get('applicationId')).toBe(OTHER_APP);
+
+      void service.saveRule({ type: 'QUEUE_STUCK', threshold: 5 });
+      expect(http.expectOne('/mrc/api/v1/monitoring/alerts/rules?applicationId=' + OTHER_APP).request.method).toBe('POST');
+      void service.saveRule({ type: 'QUEUE_STUCK', threshold: 5 }, 'r-1');
+      expect(http.expectOne('/mrc/api/v1/monitoring/alerts/rules/r-1?applicationId=' + OTHER_APP).request.method).toBe('PUT');
+      void service.deleteRule('r-1');
+      expect(http.expectOne('/mrc/api/v1/monitoring/alerts/rules/r-1?applicationId=' + OTHER_APP).request.method).toBe('DELETE');
+      http.match(() => true);
+      vi.restoreAllMocks();
     });
   });
 });
