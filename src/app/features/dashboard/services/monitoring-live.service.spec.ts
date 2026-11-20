@@ -420,17 +420,23 @@ describe('MonitoringLiveService', () => {
       return asked;
     };
 
-    it('reintentar pone el correo en cola, lo avisa y vuelve a pedir los mensajes', async () => {
+    it('reintentar pone el correo en cola y lo avisa sin volver a pedir la tabla', async () => {
       await started();
       const notifications = TestBed.inject(NotificationService);
       const success = vi.spyOn(notifications, 'success');
+      const item = failedEmail();
 
-      const done = service.retry(failedEmail());
+      const done = service.retry(item);
+      expect(service.retrying().has(item.id)).toBe(true);
+      expect(await service.retry(item)).toBe(false);
       const post = http.expectOne('/mrc/api/v1/monitoring/messages/3f0c1f4e-8b1e-4f7e-9d54-0c6f0d2a7b11/retry');
       expect(post.request.method).toBe('POST');
       post.flush(null, { status: 202, statusText: 'Accepted' });
-      expect((await followUp())).toEqual(['messages']);
+
       expect(await done).toBe(true);
+      expect(http.match(() => true)).toHaveLength(0);
+      expect(service.retrying().has(item.id)).toBe(false);
+      expect(service.retried().has(item.id)).toBe(true);
       expect(success).toHaveBeenCalled();
     });
 
@@ -443,6 +449,8 @@ describe('MonitoringLiveService', () => {
 
       expect(await done).toBe(false);
       expect(success).not.toHaveBeenCalled();
+      expect(service.retrying().size).toBe(0);
+      expect(service.retried().size).toBe(0);
       expect(await service.retry({ ...failedEmail(), messageId: null })).toBe(false);
     });
 
