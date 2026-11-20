@@ -52,8 +52,46 @@ export function withDetectedParams(current: string, detected: readonly string[])
   return base + missing.map((name) => `${name}=`).join('\n');
 }
 
-/** Documento para el `iframe` de la vista previa: sin scripts ni recursos externos activos, con estilos propios permitidos. */
+/**
+ * Documento para el `iframe` de la vista previa: sin scripts ni recursos externos activos, con estilos propios permitidos.
+ * Lleva el HTML tal como Mercury lo pone en el cuerpo del correo (`text/html`, UTF-8), sin estilos añadidos, y con `viewport`
+ * para que el ancho de móvil se vea como en un teléfono.
+ */
 export function previewDocument(html: string): string {
   const policy = "default-src 'none'; img-src data: https:; style-src 'unsafe-inline'; font-src data:";
-  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${policy}"><base target="_blank"></head><body>${html}</body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="${policy}"><base target="_blank"></head><body>${html}</body></html>`;
+}
+
+/** El asunto como lo vería quien recibe el correo, y qué le falta para serlo exactamente. */
+export interface SubjectPreview {
+  text: string;
+  /** Datos que el asunto usa y no tienen valor de ejemplo: un envío real sin ellos se rechaza. */
+  missing: string[];
+  /** El asunto usa algo más que `${dato}` o `${dato!"respaldo"}`; esa parte se muestra tal cual y Mercury la resolverá al enviar. */
+  approximate: boolean;
+}
+
+const SIMPLE_PLACEHOLDER = /\$\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*(?:!\s*(?:"([^"]*)"|'([^']*)')?)?\s*\}/g;
+
+/**
+ * Sustituye en el asunto los datos de ejemplo igual que FreeMarker en Mercury (`SubjectRenderer`): `${dato}` toma su valor, y
+ * `${dato!"respaldo"}` el respaldo si el dato no viene. Lo demás (funciones, condiciones) no se imita: queda marcado como aproximado.
+ * El resultado es una sola línea, sin espacios en los extremos, como el asunto que se envía.
+ */
+export function renderSubject(subject: string, params: Record<string, string>): SubjectPreview {
+  const missing = new Set<string>();
+  const text = subject.replace(SIMPLE_PLACEHOLDER, (_, name: string, dq?: string, sq?: string) => {
+    if (Object.hasOwn(params, name)) return params[name];
+    const fallback = dq ?? sq;
+    if (fallback !== undefined) return fallback;
+    if (/!\s*\}$/.test(_)) return '';
+    missing.add(name);
+    return _;
+  });
+  return { text: text.replace(/\s+/g, ' ').trim(), missing: [...missing], approximate: /\$\{|<#|<@/.test(text.replace(SIMPLE_PLACEHOLDER, '')) };
+}
+
+/** Los datos que la plantilla usa y que en el ejemplo no tienen valor (o no están): con ellos vacíos la vista previa no es el envío real. */
+export function emptySamples(detected: readonly string[], params: Record<string, string>): string[] {
+  return detected.filter((name) => (params[name] ?? '').trim() === '');
 }

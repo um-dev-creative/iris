@@ -263,6 +263,36 @@ describe('TemplateEditorPageComponent (editar)', () => {
     expect(fake.service.saveContent).toHaveBeenLastCalledWith('a', 'otra vez', 'etag-2', false);
   });
 
+  it('guarda los datos y el contenido a la vez, sin esperar uno al otro', async () => {
+    const { component, fake } = await render('a');
+    let finishUpdate: (value: ReturnType<typeof summary>) => void = () => undefined;
+    fake.service.update.mockImplementation(() => new Promise((resolve) => (finishUpdate = resolve)));
+    component.description.set('Otra descripción');
+    component.content.set('nuevo');
+
+    const saving = component.save();
+    await Promise.resolve();
+    expect(fake.service.saveContent).toHaveBeenCalled();
+    finishUpdate(summary('a', { description: 'Otra descripción' }));
+    await saving;
+
+    expect(component.dirty()).toBe(false);
+  });
+
+  it('si fallan los datos pero el contenido se guardó, el contenido queda guardado y avisa del error', async () => {
+    const { component, fake, notifications } = await render('a');
+    fake.service.update.mockRejectedValue(httpError(400));
+    component.description.set('Otra descripción');
+    component.content.set('nuevo');
+
+    await component.save();
+
+    expect(notifications.error).toHaveBeenCalledWith('No se pudo guardar', expect.stringContaining('rechazó'));
+    expect(component.dirty()).toBe(true);
+    component.description.set('Plantilla a');
+    expect(component.dirty()).toBe(false);
+  });
+
   it('cambiar el asunto lo guarda con los metadatos; vaciarlo lo quita', async () => {
     const { component, fake } = await render('a');
     expect(component.subject()).toBe('');
@@ -431,7 +461,7 @@ describe('TemplateEditorPageComponent (editar)', () => {
 describe('TemplateEditorPageComponent (vista previa)', () => {
   afterEach(() => vi.useRealTimers());
 
-  it('renderiza 500 ms después de la última tecla, con los parámetros de ejemplo', async () => {
+  it('renderiza 350 ms después de la última tecla, con los parámetros de ejemplo', async () => {
     vi.useFakeTimers();
     const { fixture, component, fake } = await render('a');
     fake.service.preview.mockClear();
@@ -439,7 +469,7 @@ describe('TemplateEditorPageComponent (vista previa)', () => {
 
     component.content.set('# Hola ${name}!');
     fixture.detectChanges();
-    await vi.advanceTimersByTimeAsync(499);
+    await vi.advanceTimersByTimeAsync(349);
     expect(fake.service.preview).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(2);
     fixture.detectChanges();
@@ -456,12 +486,12 @@ describe('TemplateEditorPageComponent (vista previa)', () => {
 
     component.content.set('uno');
     fixture.detectChanges();
-    await vi.advanceTimersByTimeAsync(400);
+    await vi.advanceTimersByTimeAsync(300);
     component.content.set('dos');
     fixture.detectChanges();
-    await vi.advanceTimersByTimeAsync(400);
+    await vi.advanceTimersByTimeAsync(300);
     expect(fake.service.preview).not.toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(200);
+    await vi.advanceTimersByTimeAsync(100);
 
     expect(fake.service.preview).toHaveBeenCalledTimes(1);
   });
@@ -535,7 +565,8 @@ describe('TemplateEditorPageComponent (vista previa)', () => {
     const frame = el.querySelector('iframe[data-testid="preview"]') as HTMLIFrameElement;
     expect(frame.srcdoc).toContain('<h1 style="color:red">Hola Ana</h1>');
     expect(frame.srcdoc).toContain("default-src 'none'");
-    expect(frame.getAttribute('sandbox')).toBe('');
+    expect(frame.srcdoc).toContain('name="viewport"');
+    expect(frame.getAttribute('sandbox')).toBe('allow-same-origin');
   });
 
   it('con problemas la vista previa queda en blanco', async () => {
@@ -551,10 +582,203 @@ describe('TemplateEditorPageComponent (vista previa)', () => {
     expect((el.querySelector('iframe[data-testid="preview"]') as HTMLIFrameElement).srcdoc).toBe('');
   });
 
-  it('el iframe de la vista previa no tiene permisos (sandbox vacío)', async () => {
+  it('el iframe de la vista previa no puede ejecutar scripts, formularios ni ventanas: solo se lee su alto', async () => {
     const { el } = await render('a');
 
-    expect(el.querySelector('iframe[data-testid="preview"]')?.getAttribute('sandbox')).toBe('');
+    const sandbox = el.querySelector('iframe[data-testid="preview"]')?.getAttribute('sandbox') ?? '';
+    expect(sandbox.split(/\s+/)).toEqual(['allow-same-origin']);
+  });
+
+  it('con problemas conserva la última vista válida, atenuada, y lo dice', async () => {
+    vi.useFakeTimers();
+    const { fixture, component, el, fake } = await render('a');
+    fake.service.preview.mockResolvedValueOnce(previewOf({ output: '<p>bien</p>' }));
+    component.content.set('bien');
+    fixture.detectChanges();
+    await vi.advanceTimersByTimeAsync(400);
+    fixture.detectChanges();
+
+    fake.service.preview.mockResolvedValueOnce(previewOf({ ok: false, output: '', problems: [{ line: 1, column: 1, message: 'mal' }] }));
+    component.content.set('<#if');
+    fixture.detectChanges();
+    await vi.advanceTimersByTimeAsync(400);
+    fixture.detectChanges();
+
+    expect((el.querySelector('iframe[data-testid="preview"]') as HTMLIFrameElement).srcdoc).toContain('<p>bien</p>');
+    expect(component.previewState()).toBe('stale');
+    expect(el.querySelector('[data-testid="preview-state"]')?.textContent).toContain('última versión válida');
+  });
+
+  it('si la vista previa falla después de una válida, la conserva atenuada', async () => {
+    vi.useFakeTimers();
+    const { fixture, component, fake } = await render('a');
+    fake.service.preview.mockResolvedValueOnce(previewOf({ output: '<p>bien</p>' }));
+    component.content.set('bien');
+    fixture.detectChanges();
+    await vi.advanceTimersByTimeAsync(400);
+
+    fake.service.preview.mockRejectedValueOnce(httpError(503));
+    component.content.set('otra');
+    fixture.detectChanges();
+    await vi.advanceTimersByTimeAsync(400);
+
+    expect(component.previewDoc()).toContain('<p>bien</p>');
+    expect(component.previewStale()).toBe(true);
+  });
+
+  it('una respuesta vieja que llega tarde no reemplaza a la más nueva', async () => {
+    vi.useFakeTimers();
+    const { fixture, component, fake } = await render('a');
+    let answerOld: (value: ReturnType<typeof previewOf>) => void = () => undefined;
+    fake.service.preview
+      .mockImplementationOnce(() => new Promise((resolve) => (answerOld = resolve)))
+      .mockResolvedValueOnce(previewOf({ output: '<p>nueva</p>' }));
+
+    component.content.set('vieja');
+    fixture.detectChanges();
+    await vi.advanceTimersByTimeAsync(400);
+    component.content.set('nueva');
+    fixture.detectChanges();
+    await vi.advanceTimersByTimeAsync(400);
+    answerOld(previewOf({ output: '<p>vieja</p>' }));
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(component.previewDoc()).toContain('<p>nueva</p>');
+    expect(component.previewing()).toBe(false);
+  });
+
+  it('una vista previa ya hecha para el mismo texto se muestra al instante, sin pedirla', async () => {
+    vi.useFakeTimers();
+    const { fixture, component, fake } = await render('a', (f) =>
+      f.service.peekPreview.mockImplementation((_n: string, content: string) => (content === 'guardado' ? previewOf({ output: '<p>en memoria</p>' }) : null)),
+    );
+    fake.service.preview.mockClear();
+
+    component.content.set('guardado');
+    fixture.detectChanges();
+    await vi.advanceTimersByTimeAsync(400);
+
+    expect(component.previewDoc()).toContain('<p>en memoria</p>');
+    expect(fake.service.preview).not.toHaveBeenCalled();
+  });
+
+  it('muestra el asunto con los datos de ejemplo y avisa de los que faltan', async () => {
+    const { fixture, component, el } = await render('a');
+    component.subject.set('Hola ${name}, tu código es ${code}');
+    component.paramsText.set('name=Ana');
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-testid="preview-subject"]')?.textContent).toContain('Hola Ana, tu código es ${code}');
+    expect(el.querySelector('[data-testid="subject-missing"]')?.textContent).toContain('code');
+  });
+
+  it('sin asunto dice que quien envía debe ponerlo', async () => {
+    const { el } = await render('a');
+
+    expect(el.querySelector('[data-testid="preview-subject"]')?.textContent).toContain('quien envía debe ponerlo');
+  });
+
+  it('avisa de los parámetros sin valor de ejemplo', async () => {
+    const { fixture, component, el } = await render('a');
+    component.detected.set(['name', 'code']);
+    component.paramsText.set('name=Ana\ncode=');
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-testid="missing-samples"]')?.textContent).toContain('code');
+    expect(el.querySelector('[data-testid="missing-samples"]')?.textContent).not.toContain('name');
+  });
+
+  it('cambia entre ancho de escritorio y de móvil', async () => {
+    const { fixture, el } = await render('a');
+    const frame = () => el.querySelector('iframe[data-testid="preview"]') as HTMLIFrameElement;
+
+    (el.querySelector('[data-testid="device-mobile"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(frame().style.width).toBe('375px');
+    expect(el.querySelector('[data-testid="device-mobile"]')?.getAttribute('aria-pressed')).toBe('true');
+
+    (el.querySelector('[data-testid="device-desktop"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(frame().style.width).toBe('100%');
+  });
+
+  it('ajusta el alto del marco al del correo, dentro de sus límites', async () => {
+    const { fixture, component, el } = await render('a');
+    const frame = el.querySelector('iframe[data-testid="preview"]') as HTMLIFrameElement;
+    const measure = (height: number) => {
+      Object.defineProperty(frame, 'contentDocument', { configurable: true, value: { documentElement: { scrollHeight: height } } });
+      component.fitFrame();
+      fixture.detectChanges();
+    };
+
+    measure(600);
+    expect(component.frameHeight()).toBe(602);
+    measure(50);
+    expect(component.frameHeight()).toBe(240);
+    measure(99999);
+    expect(component.frameHeight()).toBe(1400);
+    measure(0);
+    expect(component.frameHeight()).toBe(1400);
+  });
+
+  it('recuerda los parámetros de ejemplo de la plantilla', async () => {
+    const { fixture, component, fake } = await render('a');
+
+    component.paramsText.set('name=Ana');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fake.service.rememberSamples).toHaveBeenLastCalledWith('a', 'name=Ana');
+  });
+});
+
+describe('TemplateEditorPageComponent (carga desde memoria)', () => {
+  const snapshot = { summary: summary('a', { description: 'En memoria', subject: 'Asunto ${name}' }), content: contentOf('a', { content: 'memoria' }), samples: 'name=Eva' };
+
+  it('dibuja al instante lo que ya se conocía y lo confirma con el servidor', async () => {
+    const { component, fake } = await render('a', (f) => {
+      f.service.peek.mockReturnValue(snapshot);
+      f.service.get.mockResolvedValue(summary('a', { description: 'Del servidor' }));
+      f.service.content.mockResolvedValue(contentOf('a', { content: 'servidor' }));
+    });
+
+    expect(fake.service.get).toHaveBeenCalledWith('a');
+    expect(component.ready()).toBe(true);
+    expect(component.description()).toBe('Del servidor');
+    expect(component.content()).toBe('servidor');
+    expect(component.paramsText()).toContain('name=Eva');
+  });
+
+  it('si se escribió mientras llegaba la respuesta, no pisa lo escrito', async () => {
+    let answer: (value: ReturnType<typeof contentOf>) => void = () => undefined;
+    const { fixture, component } = await render('a', (f) => {
+      f.service.peek.mockReturnValue(snapshot);
+      f.service.content.mockImplementation(() => new Promise((resolve) => (answer = resolve)));
+    });
+    expect(component.content()).toBe('memoria');
+
+    component.content.set('lo que escribo');
+    answer(contentOf('a', { content: 'servidor', etag: 'otra' }));
+    await fixture.whenStable();
+
+    expect(component.content()).toBe('lo que escribo');
+    expect(component.conflict()).toBe(true);
+  });
+
+  it('si el servidor no responde, se queda con lo que ya mostraba', async () => {
+    const { component } = await render('a', (f) => {
+      f.service.peek.mockReturnValue(snapshot);
+      f.service.get.mockRejectedValue(httpError(503));
+    });
+
+    expect(component.description()).toBe('En memoria');
+    expect(component.loadError()).toBeNull();
+  });
+
+  it('al abrir una plantilla sin memoria conserva los ejemplos recordados', async () => {
+    const { component } = await render('a', (f) => f.service.peek.mockReturnValueOnce(null).mockReturnValue({ ...snapshot, samples: 'name=Leo' }));
+
+    expect(component.paramsText()).toContain('name=Leo');
   });
 });
 

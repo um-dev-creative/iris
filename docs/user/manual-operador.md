@@ -128,13 +128,21 @@ flowchart LR
 2. Escribe la **descripción** y elige el **tipo** y la **severidad**.
 3. Elige el **formato**: Markdown (más sencillo: títulos, negritas, listas, enlaces) o HTML (control total del diseño). Iris propone el nombre del **archivo**; puedes cambiarlo.
 4. Escribe el contenido. Donde quieras un dato variable escribe `${nombre}`; por ejemplo `Hola ${name}`.
-5. A la derecha ves la **vista previa**. En **Parámetros de ejemplo** escribes valores de prueba (`name=Ana`); Iris agrega solo los parámetros que detecta.
-6. Pulsa **Guardar**.
+5. A la derecha ves la **vista previa**: es el correo tal como lo envía Mercury, con el **asunto** encima. En **Parámetros de ejemplo** escribes valores de prueba (`name=Ana`); Iris agrega solo los parámetros que detecta y te avisa de los que siguen sin valor (en un envío real deben llegar).
+6. Pulsa **Guardar**. La plantilla se abre al instante, con tus parámetros de ejemplo y su vista previa.
+
+**La vista previa, en detalle**
+
+- **Escritorio / Móvil** cambia el ancho para ver cómo queda en un teléfono. El marco se estira al alto del correo: lo ves entero.
+- Arriba a la derecha dice si está **Actualizando…**, **Al día** o si **hay errores**. Con un error de escritura no se queda en blanco: muestra atenuada la última versión que estaba bien, y la lista de errores te lleva a la línea.
+- El **asunto** se ve con tus datos de ejemplo. Si usa un dato sin ejemplo, Iris lo avisa: un envío que no lo traiga se rechaza.
+- Iris no añade estilos: cada programa de correo usa su tipo de letra para lo que la plantilla no defina.
 
 ### Editar, desactivar y cuidar el trabajo
 
 - **Editar** abre la plantilla con su contenido. El botón **Guardar** se enciende cuando hay cambios; si intentas salir sin guardar, Iris pregunta.
 - Si otra persona guardó la misma plantilla mientras la editabas, Iris lo avisa y te ofrece **Recargar** (tus cambios se pierden, cópialos antes si los necesitas).
+- En la **lista** ves de cada plantilla su formato (Markdown o HTML), su asunto y hace cuánto se cambió (pasa el puntero por la fecha para verla completa). La que acabas de guardar aparece resaltada como **Recién guardada**. Al volver a la lista se muestra al instante lo que ya conocías y se actualiza sola.
 - **Desactivar** (en la lista) pide confirmación: la plantilla deja de poder usarse en campañas nuevas; los mensajes y campañas anteriores no cambian.
 - Las plantillas del sistema (verificación de cuenta, avisos de ZeroBound y SmartKin) se abren **bloqueadas**: otros servicios dependen de ellas. Para cambiarlas marca la casilla «Entiendo que otros servicios dependen de esta plantilla»; el original queda guardado en el historial.
 
@@ -190,7 +198,9 @@ flowchart LR
 ```
 
 - **Arriba a la derecha** ves si los datos llegan **en vivo**, se actualizan cada 15 segundos o **no hay conexión**. Si falla una actualización aparece un aviso: lo que ves puede estar desactualizado.
-- **Resumen:** enviados, fallidos, en cola y el anillo de la tasa de éxito. Si no hubo envíos dice «Sin datos» en vez de una tasa.
+- **Resumen:** enviados, fallidos, en cola y el anillo de la tasa de éxito. Si no hubo envíos dice «Sin datos» en vez de una tasa. Las cifras **cuentan hasta su valor nuevo** cuando cambian y destellan en verde si mejoran o en rojo si empeoran; el anillo es verde desde 95 %, ámbar desde 80 % y rojo por debajo, y dice de cuántos envíos sale la tasa. Las barras bajo cada cifra, canal, tipo, causa de fallo y código de verificación muestran su proporción (pasa el puntero para ver la cantidad y el porcentaje).
+- **Envíos en el tiempo:** la gráfica tiene un eje de cantidades con líneas guía, y encima el total, los enviados, los fallidos y el **pico** del periodo. Pasa el puntero (o el foco con el teclado) por una barra para ver su intervalo, enviados, fallidos y tasa de fallos. La última barra va **rayada** si su intervalo aún no termina: está incompleta, no es una caída. Las horas son UTC.
+- Si tu sistema pide **reducir el movimiento**, Iris no anima nada: muestra los valores finales.
 - **Canales y tipos** (transaccional, campaña, código de verificación): pulsa uno para filtrar la gráfica y la tabla; púlsalo otra vez, o usa «Quitar filtros», para volver. SMS, WhatsApp y Push dicen **«En cola, sin proveedor»**: todavía no hay un proveedor que los entregue.
 - **Estado de los servicios** (base de datos, mensajería, correo, Backbone, Telegram): cada uno dice su estado con texto (Operativo, Degradado, Caído, No configurado, Sin comprobar) y, si falla, por qué. «No configurado» no es una falla: ese servicio está apagado en este ambiente. Debajo, el historial de caídas con cuándo empezaron y cuánto duraron.
 - **Mensajes:** cada envío con su fecha (UTC), canal, tipo, estado y destinatario **enmascarado** (`j***@e***.com`). Nunca se muestra el contenido del mensaje ni el código de verificación.

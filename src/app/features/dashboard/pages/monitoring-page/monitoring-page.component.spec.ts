@@ -416,4 +416,38 @@ describe('formulario de reglas', () => {
     expect(toRequest(draft({ type: 'QUEUE_STUCK' }))).toEqual({ type: 'QUEUE_STUCK', windowMinutes: 15, threshold: 20, notifyEmails: [], enabled: true });
     expect(toRequest(draft({ type: 'SERVICE_DOWN' }))).toEqual({ type: 'SERVICE_DOWN', windowMinutes: 15, notifyEmails: [], enabled: true });
   });
+
+  describe('proporciones de los gráficos', () => {
+    beforeEach(() => {
+      FakeEventSource.instances.length = 0;
+      TestBed.configureTestingModule({
+        providers: [
+          provideHttpClient(), provideHttpClientTesting(), { provide: API_BASE_URL, useValue: '/mrc/api/v1' },
+          { provide: EVENT_SOURCE_FACTORY, useValue: (url: string) => new FakeEventSource(url) },
+        ],
+      });
+    });
+
+    it('tasa de fallos, parte del volumen y escala de causas', async () => {
+      const { fixture } = await open();
+      const page = fixture.componentInstance;
+      const totals = { sent: 90, failed: 10, queued: 0, successRate: 0.9 };
+
+      expect(page.failureRate(totals)).toBeCloseTo(0.1);
+      expect(page.failureRate({ ...totals, sent: 0, failed: 0 })).toBeNull();
+      const summary = { range: '24h', generatedAt: '', totals, channels: [], kinds: [] };
+      expect(page.volumeShare(summary, 25)).toBeCloseTo(0.25);
+      expect(page.volumeShare({ ...summary, totals: { ...totals, sent: 0, failed: 0 } }, 0)).toBeNull();
+      expect(page.maxCause([{ cause: 'a', channel: 'EMAIL', total: 3 }, { cause: 'b', channel: 'SMS', total: 7 }])).toBe(7);
+      expect(page.maxCause([])).toBe(1);
+    });
+
+    it('dibuja barras de proporción en el resumen, los canales, las causas y los códigos', async () => {
+      const { el } = await open();
+
+      expect(el.querySelectorAll('app-ratio-bar').length).toBeGreaterThan(3);
+      expect(el.querySelector('[data-testid="codes-bar"]')).not.toBeNull();
+      expect(el.querySelector('[data-testid="ring-detail"]')?.textContent).toContain('de');
+    });
+  });
 });

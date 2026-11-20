@@ -1,4 +1,4 @@
-import { describeProblem, fileNameFor, formatOfFile, lineRange, previewDocument, TEMPLATE_FILE_NAME, withDetectedParams, withFormat } from './template-input';
+import { describeProblem, emptySamples, fileNameFor, formatOfFile, lineRange, previewDocument, renderSubject, TEMPLATE_FILE_NAME, withDetectedParams, withFormat } from './template-input';
 
 describe('fileNameFor', () => {
   it.each([
@@ -82,5 +82,36 @@ describe('previewDocument', () => {
     expect(doc).toContain("default-src 'none'");
     expect(doc).toContain('<p>Hola</p>');
     expect(doc).not.toContain('script-src');
+  });
+});
+
+describe('renderSubject', () => {
+  it('pone los datos de ejemplo y deja una sola línea', () => {
+    expect(renderSubject('  Hola ${name},\n tu código   es ${ code } ', { name: 'Ana', code: '123' })).toEqual({ text: 'Hola Ana, tu código es 123', missing: [], approximate: false });
+  });
+
+  it('usa el respaldo de ${dato!"…"} y ${dato!} cuando el dato no viene', () => {
+    expect(renderSubject('A ${x!"uno"} ${y!\'dos\'} ${z!}.', {}).text).toBe('A uno dos .');
+    expect(renderSubject('${x!"uno"}', { x: 'real' }).text).toBe('real');
+  });
+
+  it('dice qué datos faltan y los deja tal cual', () => {
+    expect(renderSubject('Hola ${name}', {})).toEqual({ text: 'Hola ${name}', missing: ['name'], approximate: false });
+  });
+
+  it('marca como aproximado lo que no es un dato simple', () => {
+    expect(renderSubject('${name?upper_case} <#if x>y</#if>', { name: 'a' }).approximate).toBe(true);
+  });
+});
+
+describe('emptySamples', () => {
+  it('lista los datos usados sin valor de ejemplo', () => {
+    expect(emptySamples(['a', 'b', 'c'], { a: 'x', b: '  ' })).toEqual(['b', 'c']);
+  });
+});
+
+describe('previewDocument (móvil)', () => {
+  it('lleva viewport para verse como en un teléfono', () => {
+    expect(previewDocument('<p>x</p>')).toContain('<meta name="viewport" content="width=device-width, initial-scale=1">');
   });
 });

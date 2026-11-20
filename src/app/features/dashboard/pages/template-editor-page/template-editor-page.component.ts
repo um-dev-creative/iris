@@ -3,7 +3,7 @@ import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { AlertTriangle, ArrowLeft, Eye, History, LucideAngularModule, Lock, RotateCcw, Save } from 'lucide-angular';
+import { AlertTriangle, ArrowLeft, Eye, History, LucideAngularModule, Lock, Monitor, RotateCcw, Save, Smartphone } from 'lucide-angular';
 import { AppBadgeComponent, AppButtonComponent, AppCardComponent } from '../../../../shared/components';
 import { HasUnsavedChanges } from '../../../../core/guards';
 import { NotificationService } from '../../../../core/services';
@@ -13,6 +13,7 @@ import {
   TEMPLATE_DESCRIPTION_MAX,
   TEMPLATE_SUBJECT_MAX,
   TemplateContent,
+  TemplatePreviewResult,
   TemplateProblem,
   TemplateProblemsBody,
   TemplateSummary,
@@ -27,17 +28,24 @@ import {
   EditorFormat,
   TEMPLATE_FILE_NAME,
   describeProblem,
+  emptySamples,
   fileNameFor,
   formatOfFile,
   lineRange,
   previewDocument,
+  renderSubject,
   withDetectedParams,
   withFormat,
 } from '../../utils/template-input';
 import { serviceMessage } from '../../../../core/utils/service-message';
 
 const templatesUrl = routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.TEMPLATES);
-const PREVIEW_DELAY_MS = 500;
+const PREVIEW_DELAY_MS = 350;
+/** Alto de la vista previa antes de medir su contenido, y sus límites. */
+const FRAME_MIN_PX = 240;
+const FRAME_MAX_PX = 1400;
+/** Ancho de un teléfono común: así se ve el correo en móvil. */
+export const MOBILE_WIDTH_PX = 375;
 const STARTER: Record<EditorFormat, string> = {
   MD: '# Hola ${name}\n\nEscribe aquí el mensaje. Usa **negritas**, listas y [enlaces](https://example.com).\n',
   HTML: '<h1>Hola ${name}</h1>\n<p>Escribe aquí el mensaje.</p>\n',
@@ -176,11 +184,59 @@ const STARTER: Record<EditorFormat, string> = {
         </app-card>
 
         <div class="space-y-4">
-          <app-card title="Vista previa" subtitle="Así se verá el mensaje con los parámetros de ejemplo" class="block">
-            <div class="relative">
-              @if (previewing()) { <span class="absolute right-2 top-2 text-xs text-muted-foreground" data-testid="previewing">Actualizando…</span> }
-              <iframe #previewFrame title="Vista previa de la plantilla" sandbox="" class="h-80 w-full rounded-lg border border-border bg-white" data-testid="preview"></iframe>
+          <app-card title="Vista previa" subtitle="El correo tal como lo envía Mercury, con los parámetros de ejemplo" class="block">
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div class="inline-flex overflow-hidden rounded-lg border border-border text-xs" role="group" aria-label="Ancho de la vista previa">
+                <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1.5" [class.bg-primary]="device() === 'desktop'" [class.text-primary-foreground]="device() === 'desktop'"
+                  [attr.aria-pressed]="device() === 'desktop'" (click)="device.set('desktop')" data-testid="device-desktop">
+                  <lucide-icon [img]="Monitor" [size]="14" strokeWidth="2" /> Escritorio
+                </button>
+                <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1.5" [class.bg-primary]="device() === 'mobile'" [class.text-primary-foreground]="device() === 'mobile'"
+                  [attr.aria-pressed]="device() === 'mobile'" (click)="device.set('mobile')" data-testid="device-mobile">
+                  <lucide-icon [img]="Smartphone" [size]="14" strokeWidth="2" /> Móvil
+                </button>
+              </div>
+              <span class="text-xs" role="status" data-testid="preview-state"
+                [class.text-muted-foreground]="previewState() !== 'stale'" [class.text-warning]="previewState() === 'stale'">
+                @switch (previewState()) {
+                  @case ('updating') { <span data-testid="previewing">Actualizando…</span> }
+                  @case ('stale') { Hay errores: se muestra la última versión válida }
+                  @case ('ready') { Al día }
+                  @default { Esperando contenido }
+                }
+              </span>
             </div>
+
+            <div class="mb-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm" data-testid="envelope">
+              <p class="flex gap-2"><span class="w-14 shrink-0 text-muted-foreground">Asunto</span>
+                @if (subjectPreview(); as sp) {
+                  <span class="font-medium text-foreground break-words" data-testid="preview-subject">{{ sp.text }}</span>
+                } @else {
+                  <span class="italic text-muted-foreground" data-testid="preview-subject">Sin asunto en la plantilla: quien envía debe ponerlo</span>
+                }
+              </p>
+              @if (subjectPreview()?.missing?.length) {
+                <p class="mt-1 text-xs text-warning" data-testid="subject-missing">El asunto usa {{ subjectPreview()!.missing.join(', ') }} sin valor de ejemplo; si un envío no lo trae, Mercury lo rechaza.</p>
+              }
+              @if (subjectPreview()?.approximate) {
+                <p class="mt-1 text-xs text-muted-foreground" data-testid="subject-approximate">Parte del asunto usa expresiones de FreeMarker: aquí se muestran tal cual y Mercury las resolverá al enviar.</p>
+              }
+            </div>
+
+            @if (missingSamples().length > 0) {
+              <p class="mb-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground" data-testid="missing-samples">
+                Sin valor de ejemplo: <code>{{ missingSamples().join(', ') }}</code>. La vista previa los deja vacíos; en un envío real deben llegar o Mercury rechaza el mensaje.
+              </p>
+            }
+
+            <div class="relative overflow-hidden rounded-lg border border-border bg-muted/30 p-2">
+              @if (previewing()) { <div class="iris-progress absolute inset-x-0 top-0" aria-hidden="true"></div> }
+              <iframe #previewFrame title="Vista previa de la plantilla" sandbox="allow-same-origin" (load)="fitFrame()"
+                class="mx-auto block rounded-md bg-white shadow-sm transition-[width,opacity] duration-300"
+                [class.opacity-60]="previewState() === 'stale'"
+                [style.width]="device() === 'mobile' ? mobileWidth + 'px' : '100%'" [style.max-width.%]="100" [style.height.px]="frameHeight()" data-testid="preview"></iframe>
+            </div>
+            <p class="mt-2 text-xs text-muted-foreground">Sin estilos añadidos: cada cliente de correo aplica su tipo de letra por defecto a lo que la plantilla no defina.</p>
           </app-card>
           <app-card title="Parámetros de ejemplo" subtitle="Una línea clave=valor por parámetro; solo para la vista previa" class="block">
             <textarea aria-label="Parámetros de ejemplo" rows="5" spellcheck="false" [ngModel]="paramsText()" (ngModelChange)="paramsText.set($event)"
@@ -271,6 +327,9 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
   readonly RotateCcw = RotateCcw;
   readonly Eye = Eye;
   readonly AlertTriangle = AlertTriangle;
+  readonly Monitor = Monitor;
+  readonly Smartphone = Smartphone;
+  readonly mobileWidth = MOBILE_WIDTH_PX;
   /** Al salir del editor: la lista de aplicaciones si hay una aplicación en la URL, y desde ahí sus plantillas. */
   readonly listUrl = templatesUrl;
   readonly applicationUrl = this.applicationId ? `${templatesUrl}/${this.applicationId}` : templatesUrl;
@@ -303,8 +362,23 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
   readonly conflict = signal(false);
   readonly problems = signal<TemplateProblem[]>([]);
   readonly previewing = signal(false);
-  /** The document shown in the preview iframe; it is written to the frame as `srcdoc`, which the empty `sandbox` keeps inert. */
+  /**
+   * The document shown in the preview iframe; it is written to the frame as `srcdoc`. The sandbox allows no scripts, forms or
+   * pop-ups (and the document's own CSP blocks scripts too); `allow-same-origin` is only there so the page can read the height
+   * of the rendered e-mail and show it whole, without an inner scroll bar.
+   */
   readonly previewDoc = signal('');
+  /** The last preview had problems: the frame keeps the last valid one, dimmed, until the template renders again. */
+  readonly previewStale = signal(false);
+  readonly device = signal<'desktop' | 'mobile'>('desktop');
+  readonly frameHeight = signal(FRAME_MIN_PX);
+  readonly previewState = computed(() =>
+    this.previewing() ? 'updating' : this.previewStale() ? 'stale' : this.previewDoc() !== '' ? 'ready' : 'empty',
+  );
+  /** The subject with the sample values, as the recipient would read it; null when the template defines none. */
+  readonly subjectPreview = computed(() => (this.subject().trim() === '' ? null : renderSubject(this.subject(), parseParams(this.paramsText()).params)));
+  /** Parameters the template uses that have no sample value. */
+  readonly missingSamples = computed(() => emptySamples(this.detected(), parseParams(this.paramsText()).params));
 
   readonly historyOpen = signal(false);
   readonly historyLoading = signal(false);
@@ -316,6 +390,8 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
 
   private etag: string | null = null;
   private fileNameTouched = false;
+  /** Each preview gets a number; an answer that arrives after a newer request was sent is dropped, so the frame never goes back. */
+  private previewSeq = 0;
   private saved = signal({ description: '', subject: '', typeId: '', severityId: '', content: '' });
 
   readonly bytes = computed(() => new TextEncoder().encode(this.content()).length);
@@ -337,15 +413,30 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
       if (frame) frame.srcdoc = this.previewDoc();
     });
 
-    // the preview follows what is typed, a moment after the last key
+    // the preview follows what is typed, a moment after the last key; one already rendered for the same text shows at once
     effect((onCleanup) => {
       const name = this.previewName();
       const content = this.content();
       const params = this.paramsText();
       if (!this.ready()) return;
+      const cached = this.templates.peekPreview(name, content, parseParams(params).params, this.applicationId ?? undefined);
+      if (cached) {
+        untracked(() => {
+          this.previewSeq++;
+          this.previewing.set(false);
+          this.applyPreview(cached);
+        });
+        return;
+      }
       // outside Angular's zone so a pending preview never keeps the application from being stable
       const timer = this.zone.runOutsideAngular(() => setTimeout(() => this.zone.run(() => void this.runPreview(name, content, params)), PREVIEW_DELAY_MS));
       onCleanup(() => clearTimeout(timer));
+    });
+
+    // the sample values belong to the template: reopening it (or opening it right after creating it) keeps them
+    effect(() => {
+      const text = this.paramsText();
+      if (this.id !== null && this.ready()) this.templates.rememberSamples(this.id, text);
     });
   }
 
@@ -357,6 +448,13 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
       this.content.set(STARTER[this.format()]);
       this.saved.set({ description: '', subject: '', typeId: '', severityId: '', content: '' });
       this.ready.set(true);
+      return;
+    }
+    const snapshot = this.templates.peek(this.id);
+    if (snapshot) {
+      // what was just saved or read is drawn at once; the server confirms it in the background
+      this.hydrate(snapshot.summary, snapshot.content, snapshot.samples);
+      void this.revalidate(this.id);
       return;
     }
     await this.load(this.id);
@@ -380,6 +478,13 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
     this.pendingRestore.set(null);
     await this.load(this.id);
     if (this.historyOpen()) await this.loadHistory();
+  }
+
+  /** Ajusta el alto del marco al del correo, para verlo completo como en el buzón. */
+  fitFrame(): void {
+    const doc = this.frame()?.nativeElement.contentDocument;
+    const height = doc?.documentElement?.scrollHeight ?? 0;
+    if (height > 0) this.frameHeight.set(Math.min(FRAME_MAX_PX, Math.max(FRAME_MIN_PX, height + 2)));
   }
 
   hasUnsavedChanges(): boolean {
@@ -533,6 +638,7 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
       this.notifications.error('No se pudo crear la plantilla', this.failure(error));
       return;
     }
+    this.templates.rememberSamples(created.id, this.paramsText());
     try {
       await this.templates.saveContent(created.id, this.content(), null);
       this.notifications.success('Plantilla creada', created.description);
@@ -548,47 +654,73 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
   private async update(): Promise<void> {
     const id = this.id as string;
     const before = this.saved();
-    try {
-      if (this.description() !== before.description || this.subject() !== before.subject || this.typeId() !== before.typeId || this.severityId() !== before.severityId) {
-        await this.templates.update(id, {
-          description: this.description().trim(),
-          templateTypeId: this.typeId(),
-          severityTypeId: this.severityId(),
-          // vacío lo quita en Mercury; solo se envía si cambió, para no tocar el de una plantilla que no se editó aquí
-          ...(this.subject() !== before.subject ? { subject: this.subject().trim() } : {}),
-        });
-        this.saved.update((s) => ({ ...s, description: this.description(), subject: this.subject(), typeId: this.typeId(), severityId: this.severityId() }));
-      }
-      if (this.content() !== before.content) {
-        const saved = await this.templates.saveContent(id, this.content(), this.exists() ? this.etag : null, this.system() && this.confirmSystem());
-        this.applyContent(saved);
-        this.saved.update((s) => ({ ...s, content: saved.content }));
-      }
-      this.conflict.set(false);
-      this.notifications.success('Plantilla guardada', this.description().trim());
-    } catch (error) {
-      if (error instanceof HttpErrorResponse && error.status === 412) this.conflict.set(true);
-      this.problemsFrom(error);
-      this.notifications.error('No se pudo guardar', this.failure(error));
+    const fields = { description: this.description(), subject: this.subject(), typeId: this.typeId(), severityId: this.severityId() };
+    const content = this.content();
+    const metadataChanged = fields.description !== before.description || fields.subject !== before.subject || fields.typeId !== before.typeId || fields.severityId !== before.severityId;
+    // the data and the text are independent in Mercury: both requests go out together instead of one after the other
+    const [metadata, text] = await Promise.allSettled([
+      metadataChanged
+        ? this.templates.update(id, {
+            description: fields.description.trim(),
+            templateTypeId: fields.typeId,
+            severityTypeId: fields.severityId,
+            // vacío lo quita en Mercury; solo se envía si cambió, para no tocar el de una plantilla que no se editó aquí
+            ...(fields.subject !== before.subject ? { subject: fields.subject.trim() } : {}),
+          })
+        : Promise.resolve(null),
+      content !== before.content
+        ? this.templates.saveContent(id, content, this.exists() ? this.etag : null, this.system() && this.confirmSystem())
+        : Promise.resolve(null),
+    ]);
+    if (metadata.status === 'fulfilled' && metadataChanged) this.saved.update((s) => ({ ...s, ...fields }));
+    if (text.status === 'fulfilled' && text.value) {
+      this.applyContent(text.value);
+      this.saved.update((s) => ({ ...s, content: text.value!.content }));
     }
+    const failed = [metadata, text].find((r): r is PromiseRejectedResult => r.status === 'rejected');
+    if (!failed) {
+      this.conflict.set(false);
+      this.notifications.success('Plantilla guardada', fields.description.trim());
+      return;
+    }
+    const error: unknown = failed.reason;
+    if (error instanceof HttpErrorResponse && error.status === 412) this.conflict.set(true);
+    this.problemsFrom(error);
+    this.notifications.error('No se pudo guardar', this.failure(error));
   }
 
   private async load(id: string): Promise<void> {
     try {
       const [summary, content] = await Promise.all([this.templates.get(id), this.templates.content(id)]);
-      this.description.set(summary.description);
-      this.subject.set(summary.subject ?? '');
-      this.typeId.set(summary.templateTypeId);
-      this.severityId.set(summary.severityTypeId);
-      this.fileName.set(content.name);
-      this.format.set(formatOfFile(content.name));
-      this.applyContent(content);
-      this.content.set(content.content);
-      this.saved.set({ description: summary.description, subject: summary.subject ?? '', typeId: summary.templateTypeId, severityId: summary.severityTypeId, content: content.content });
-      this.paramsText.set(withDetectedParams('', content.parameters));
-      this.ready.set(true);
+      this.hydrate(summary, content, this.templates.peek(id)?.samples ?? null);
     } catch (error) {
       this.loadError.set(loadFailure(error));
+    }
+  }
+
+  /** Fills the form with a template and its text; the sample values the person wrote before are kept. */
+  private hydrate(summary: TemplateSummary, content: TemplateContent, samples: string | null): void {
+    this.description.set(summary.description);
+    this.subject.set(summary.subject ?? '');
+    this.typeId.set(summary.templateTypeId);
+    this.severityId.set(summary.severityTypeId);
+    this.fileName.set(content.name);
+    this.format.set(formatOfFile(content.name));
+    this.applyContent(content);
+    this.content.set(content.content);
+    this.saved.set({ description: summary.description, subject: summary.subject ?? '', typeId: summary.templateTypeId, severityId: summary.severityTypeId, content: content.content });
+    this.paramsText.set(withDetectedParams(samples ?? '', content.parameters));
+    this.ready.set(true);
+  }
+
+  /** Asks the server for the template drawn from memory; if nothing was typed meanwhile, its answer replaces what is shown. */
+  private async revalidate(id: string): Promise<void> {
+    try {
+      const [summary, content] = await Promise.all([this.templates.get(id), this.templates.content(id)]);
+      if (!this.dirty()) this.hydrate(summary, content, this.paramsText());
+      else if (content.exists && content.etag !== this.etag) this.conflict.set(true);
+    } catch {
+      // what is shown stays; saving still checks the etag, so nothing is overwritten by mistake
     }
   }
 
@@ -605,18 +737,28 @@ export class TemplateEditorPageComponent implements OnInit, HasUnsavedChanges {
   }
 
   private async runPreview(name: string, content: string, paramsText: string): Promise<void> {
+    const seq = ++this.previewSeq;
     untracked(() => this.previewing.set(true));
     try {
       const result = await this.templates.preview(name, content, parseParams(paramsText).params, this.applicationId ?? undefined);
-      this.detected.set(result.parameters);
-      this.problems.set(result.problems);
-      this.previewDoc.set(result.ok ? previewDocument(result.output) : '');
-      this.paramsText.update((current) => withDetectedParams(current, result.parameters));
+      if (seq === this.previewSeq) this.applyPreview(result);
     } catch (error) {
-      this.problems.set([{ line: 0, column: 0, message: this.failure(error) }]);
+      if (seq === this.previewSeq) {
+        this.problems.set([{ line: 0, column: 0, message: this.failure(error) }]);
+        this.previewStale.set(this.previewDoc() !== '');
+      }
     } finally {
-      this.previewing.set(false);
+      if (seq === this.previewSeq) this.previewing.set(false);
     }
+  }
+
+  /** Shows a preview result; one with problems keeps the last valid e-mail on screen, marked as out of date. */
+  private applyPreview(result: TemplatePreviewResult): void {
+    this.detected.set(result.parameters);
+    this.problems.set(result.problems);
+    if (result.ok) this.previewDoc.set(previewDocument(result.output));
+    this.previewStale.set(!result.ok && this.previewDoc() !== '');
+    this.paramsText.update((current) => withDetectedParams(current, result.parameters));
   }
 
   private problemsFrom(error: unknown): void {
