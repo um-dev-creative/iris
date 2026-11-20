@@ -52,6 +52,13 @@ module.exports = {
   REGISTRATION_MAIL_FROM: process.env['REGISTRATION_MAIL_FROM'] || '',
   SSL_CERT_PATH: process.env['SSL_CERT_PATH'] || '',
   SSL_KEY_PATH: process.env['SSL_KEY_PATH'] || '',
+  // Social sign-in (Google, Microsoft, Apple, GitHub, Meta) through backbone. Off unless FEDERATION_ENABLED=true. The callback URL
+  // is the exact redirect URI registered in the provider setting of backbone and at the provider (one per environment).
+  FEDERATION_ENABLED: bool(process.env['FEDERATION_ENABLED']),
+  FEDERATION_CALLBACK_URL: process.env['FEDERATION_CALLBACK_URL'] || '',
+  // path prefixes a sign-in may send the person back to (same origin only)
+  FEDERATION_RETURN_TO_ALLOWLIST: (process.env['FEDERATION_RETURN_TO_ALLOWLIST'] || '/dashboard').split(',').map((s) => s.trim()).filter(Boolean),
+  FEDERATION_STATE_COOKIE: 'iris_fed_state',
   SESSION_COOKIE: 'iris_session',
   REFRESH_COOKIE: 'iris_refresh',
   CSRF_HEADER: 'x-iris-csrf',

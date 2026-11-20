@@ -13,6 +13,8 @@ export const ROUTE_PATHS = {
   LOGIN_CLIENTS: 'login-clients',
   /** Usuarios y su acceso a las aplicaciones. */
   USERS: 'users',
+  /** Mi cuenta: cuentas externas enlazadas (Google, Microsoft…). */
+  ACCOUNT: 'account',
   /** Plantillas por aplicación: `templates`, `templates/:applicationId`, `templates/:applicationId/new` y `templates/:applicationId/:id`. */
   TEMPLATES: 'templates',
   /** Gestión de campañas: lista, `campaigns/new`, `campaigns/:id` y `campaigns/:id/edit`. */

@@ -2,16 +2,18 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { LOGIN_MESSAGES, LoginPageComponent, safeReturnUrl } from './login-page.component';
-import { fakeAuth } from '../../../core/testing/auth.testing';
+import { fakeAuth, fakeFederation } from '../../../core/testing/auth.testing';
 
-function render(returnUrl?: string) {
+function render(returnUrl?: string, options: { providers?: Array<{ provider: string; displayName: string }>; error?: string } = {}) {
   localStorage.clear();
   const auth = fakeAuth();
-  TestBed.configureTestingModule({ providers: [provideRouter([]), auth.provider] });
+  const federation = fakeFederation(options.providers ?? []);
+  TestBed.configureTestingModule({ providers: [provideRouter([]), auth.provider, federation.provider] });
   const router = TestBed.inject(Router);
   const navigate = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
   const fixture = TestBed.createComponent(LoginPageComponent);
   if (returnUrl !== undefined) fixture.componentRef.setInput('returnUrl', returnUrl);
+  if (options.error !== undefined) fixture.componentRef.setInput('error', options.error);
   fixture.detectChanges();
   const el = fixture.nativeElement as HTMLElement;
   const email = el.querySelector<HTMLInputElement>('#login-email')!;
@@ -25,7 +27,7 @@ function render(returnUrl?: string) {
     await fixture.whenStable();
     fixture.detectChanges();
   };
-  return { fixture, el, auth, navigate, email, password, type, submit };
+  return { fixture, el, auth, federation, navigate, email, password, type, submit };
 }
 
 const httpError = (status: number) => new HttpErrorResponse({ status });
@@ -230,5 +232,45 @@ describe('safeReturnUrl', () => {
     ['/a\\b', '/dashboard'],
   ])('%s → %s', (value, expected) => {
     expect(safeReturnUrl(value)).toBe(expected);
+  });
+
+  describe('acceso con proveedores', () => {
+    const PROVIDERS = [{ provider: 'google', displayName: 'Google' }, { provider: 'github', displayName: 'GitHub' }];
+
+    it('sin proveedores no muestra la sección y pide la lista al abrir', () => {
+      const { el, federation } = render();
+
+      expect(federation.service.loadProviders).toHaveBeenCalled();
+      expect(el.querySelector('[data-testid="federation"]')).toBeNull();
+    });
+
+    it('muestra un botón por proveedor y al pulsarlo navega con la ruta de vuelta segura', () => {
+      const { el, federation } = render('/dashboard/campaigns', { providers: PROVIDERS });
+
+      const buttons = el.querySelectorAll<HTMLButtonElement>('[data-testid="federation"] button');
+      expect(Array.from(buttons).map((b) => b.textContent!.trim())).toEqual(['Continuar con Google', 'Continuar con GitHub']);
+      buttons[1].click();
+
+      expect(federation.service.signIn).toHaveBeenCalledWith('github', '/dashboard/campaigns');
+    });
+
+    it('una ruta de vuelta ajena se cambia por el dashboard', () => {
+      const { el, federation } = render('//evil.example', { providers: PROVIDERS });
+
+      el.querySelector<HTMLButtonElement>('[data-provider="google"]')!.click();
+
+      expect(federation.service.signIn).toHaveBeenCalledWith('google', '/dashboard');
+    });
+
+    it('el código de error del BFF se muestra como mensaje', () => {
+      const { el } = render(undefined, { error: 'not_registered' });
+      expect(el.querySelector('[role="alert"]')!.textContent).toContain('no está registrada');
+    });
+
+    it('un código desconocido muestra el mensaje genérico y ninguno no muestra nada', () => {
+      expect(render(undefined, { error: 'raro' }).el.querySelector('[role="alert"]')!.textContent).toContain('No pudimos verificar');
+      TestBed.resetTestingModule();
+      expect(render().el.querySelector('[role="alert"]')).toBeNull();
+    });
   });
 });
