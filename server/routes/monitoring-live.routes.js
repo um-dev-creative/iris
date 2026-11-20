@@ -17,6 +17,10 @@ const { MONITORED_APPLICATION_ID, MERCURY_BASE_URL, MERCURY_API_PREFIX, SESSION_
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const VALUE = /^[A-Za-z0-9_:.+-]{1,40}$/;
 const RANGES = new Set(['1h', '24h', '7d', '30d']);
+/** A search typed by the person: up to 100 printable characters, no control characters. Mercury escapes it for its LIKE. */
+const SEARCH = /^[^\p{Cc}]{1,100}$/u;
+/** `2026-11-16T10:00:00` (UTC, ISO without zone): what Mercury reads for a window of its own. */
+const DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/;
 const MESSAGES_PATH = 'messages';
 
 /** What the browser may ask for in each view; any other parameter is dropped. */
@@ -28,6 +32,7 @@ const QUERY_FIELDS = {
   [MESSAGES_PATH]: ['channel', 'status', 'kind', 'templateDefinedId', 'from', 'to', 'page', 'size'],
   stream: ['range'],
   alerts: ['range'],
+  outages: ['range', 'from', 'to', 'q', 'service', 'status', 'page', 'size'],
   export: ['format', 'channel', 'status', 'kind', 'templateDefinedId', 'from', 'to'],
 };
 
@@ -37,7 +42,14 @@ function cleanQuery(view, query) {
   for (const field of QUERY_FIELDS[view] ?? ['range']) {
     const value = query[field];
     if (value === undefined || value === '') continue;
+    if (field === 'q') {
+      if (typeof value !== 'string' || !SEARCH.test(value)) return { error: 'Invalid q: up to 100 characters' };
+      out.q = value;
+      continue;
+    }
     if (typeof value !== 'string' || !VALUE.test(value)) return { error: `Invalid ${field}` };
+    if (view === 'outages' && (field === 'from' || field === 'to') && !DATE_TIME.test(value)) return { error: `Invalid ${field}: use 2026-11-16T10:00:00` };
+    if (view === 'outages' && field === 'status' && !['DOWN', 'DEGRADED'].includes(value)) return { error: 'Invalid status: use DOWN or DEGRADED' };
     if (field === 'range' && !RANGES.has(value)) return { error: 'Invalid range: use 1h, 24h, 7d or 30d' };
     if (field === 'format' && !['csv', 'json'].includes(value)) return { error: 'Invalid format: use csv or json' };
     if (field === 'templateDefinedId' && !UUID.test(value)) return { error: 'Invalid templateDefinedId' };

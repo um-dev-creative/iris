@@ -5,7 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { API_BASE_URL } from '../../../core/config';
 import { NotificationService } from '../../../core/services/notification.service';
 import {
-  AlertRuleRequest, AlertRule, ApplicationsResponse, AlertRulesResponse, AlertsResponse, Connection, FailuresResponse, HealthResponse, MessageItem, MessagePage, MessageStatus, MonitoringRange, OutagesResponse, SeriesPoint, SeriesResponse,
+  AlertRuleRequest, AlertRule, ApplicationsResponse, AlertRulesResponse, AlertsResponse, Connection, FailuresResponse, HealthResponse, MessageItem, MessagePage, MessageStatus, MonitoringRange, OutageFilter, OutagesResponse, SeriesPoint, SeriesResponse,
   SummaryResponse, VerificationCodeStats,
 } from '../models/monitoring-live.model';
 import { bucketWindow, downloadName, saveBlob } from '../utils/monitoring-live';
@@ -21,6 +21,12 @@ const POLL_MS = 30_000;
 const FALLBACK_POLL_MS = 15_000;
 const REOPEN_MS = 60_000;
 const PAGE_SIZE = 20;
+/** Caídas por página del historial. */
+export const OUTAGE_PAGE_SIZE = 10;
+const DAY_MS = 86_400_000;
+/** Lo que Mercury guarda del historial (`umdc.monitoring.retention-days`). */
+export const OUTAGE_RETENTION_DAYS = 90;
+const EMPTY_OUTAGE_FILTER: OutageFilter = { period: 'page', from: '', to: '', q: '', status: '', page: 0 };
 const RANGE_MS: Record<MonitoringRange, number> = { '1h': 3_600_000, '24h': 86_400_000, '7d': 7 * 86_400_000, '30d': 30 * 86_400_000 };
 
 /**
@@ -55,6 +61,11 @@ export class MonitoringLiveService {
   readonly service = this._service.asReadonly();
   readonly page = this._page.asReadonly();
   readonly application = this._application.asReadonly();
+  /** Periodo, texto, estado y página del historial de caídas; el servicio es `service` (el mismo filtro que las tarjetas de salud). */
+  private readonly _outageFilter = signal<OutageFilter>({ ...EMPTY_OUTAGE_FILTER });
+  readonly outageFilter = this._outageFilter.asReadonly();
+  /** Qué está mal en un periodo propio, o null. Con un problema no se pide nada. */
+  readonly outageWindowProblem = computed(() => windowProblem(this._outageFilter()));
 
   // ── datos ──
   readonly summary = signal<SummaryResponse | null>(null);
@@ -79,10 +90,13 @@ export class MonitoringLiveService {
   readonly lastUpdate = this._lastUpdate.asReadonly();
 
   readonly hasFilters = computed(() => !!(this._channel() || this._kind() || this._status() || this._bucket() || this._service()));
-  readonly visibleOutages = computed(() => {
-    const service = this._service();
-    const all = this.outages()?.outages ?? [];
-    return service ? all.filter((o) => o.service === service) : all;
+  /** La página del historial; Mercury ya la filtró por periodo, texto, servicio y estado. */
+  readonly visibleOutages = computed(() => this.outages()?.outages ?? []);
+  readonly outageTotal = computed(() => this.outages()?.total ?? this.visibleOutages().length);
+  readonly outagePages = computed(() => Math.max(1, Math.ceil(this.outageTotal() / (this.outages()?.size || OUTAGE_PAGE_SIZE))));
+  readonly outageFiltered = computed(() => {
+    const f = this._outageFilter();
+    return !!(this._service() || f.q.trim() || f.status || f.period !== 'page');
   });
   readonly totalPages = computed(() => {
     const page = this.messages();
@@ -100,6 +114,7 @@ export class MonitoringLiveService {
     this._range.set(range);
     this._bucket.set(null);
     this._page.set(0);
+    if (this._outageFilter().period === 'page') this._outageFilter.update((f) => ({ ...f, page: 0 }));
     this.reconnect();
     void this.refreshAll();
   }
@@ -127,9 +142,41 @@ export class MonitoringLiveService {
     void this.loadMessages();
   }
 
-  /** Elegir un servicio filtra el historial de caídas a ese servicio. */
+  /** Elegir un servicio filtra el historial de caídas a ese servicio (Mercury lo filtra, en todas las páginas). */
   toggleService(service: string): void {
     this._service.set(this._service() === service ? null : service);
+    this.outagesChanged();
+  }
+
+  /** Cambia el periodo, el texto o el estado del historial; vuelve a la primera página. */
+  setOutageFilter(patch: Partial<Omit<OutageFilter, 'page'>>): void {
+    this._outageFilter.update((f) => ({ ...f, ...patch, page: 0 }));
+    void this.loadOutages();
+  }
+
+  /** Elige el servicio del historial ('' es cualquiera); es el mismo filtro que pulsar una tarjeta de salud. */
+  setOutageService(service: string): void {
+    this._service.set(service || null);
+    this.outagesChanged();
+  }
+
+  goToOutagePage(page: number): void {
+    const next = Math.min(Math.max(0, page), this.outagePages() - 1);
+    if (next === this._outageFilter().page) return;
+    this._outageFilter.update((f) => ({ ...f, page: next }));
+    void this.loadOutages();
+  }
+
+  /** Vuelve el historial a lo de siempre: el periodo de la página, sin texto, servicio ni estado. */
+  clearOutageFilter(): void {
+    this._outageFilter.set({ ...EMPTY_OUTAGE_FILTER });
+    this._service.set(null);
+    void this.loadOutages();
+  }
+
+  private outagesChanged(): void {
+    this._outageFilter.update((f) => ({ ...f, page: 0 }));
+    void this.loadOutages();
   }
 
   /** Una causa de fallo lleva a los mensajes fallidos de su canal. */
@@ -147,6 +194,7 @@ export class MonitoringLiveService {
     this._bucket.set(null);
     this._service.set(null);
     this.filtersChanged();
+    this.outagesChanged();
   }
 
   goToPage(page: number): void {
@@ -216,12 +264,31 @@ export class MonitoringLiveService {
   loadFailures = () => this.load<FailuresResponse>('failures', this.params(), this.failures);
   loadCodes = () => this.load<VerificationCodeStats>('verification-codes', this.params(), this.codes);
   loadHealth = () => this.load<HealthResponse>('health', new HttpParams(), this.health);
-  loadOutages = () => this.load<OutagesResponse>('outages', this.params(), this.outages);
+  /** Una página del historial con su periodo y sus filtros. Un periodo propio que no vale no se pide. */
+  loadOutages = async (): Promise<void> => {
+    if (this.outageWindowProblem()) return;
+    await this.load<OutagesResponse>('outages', new HttpParams({ fromObject: this.outageQuery() }), this.outages);
+  };
   loadAlerts = () => this.load<AlertsResponse>('alerts', this.params(), this.alerts);
   loadRules = () => this.load<AlertRulesResponse>('alerts/rules', this.params(), this.rules);
   loadApplications = () => this.load<ApplicationsResponse>('applications', new HttpParams(), this.applications);
 
   loadMessages = () => this.load<MessagePage>('messages', new HttpParams({ fromObject: this.messageQuery(this.messageWindow()) }), this.messages);
+
+  private outageQuery(): Record<string, string> {
+    const f = this._outageFilter();
+    const query: Record<string, string> = { page: String(f.page), size: String(OUTAGE_PAGE_SIZE) };
+    if (f.period === 'page') query['range'] = this._range();
+    else if (f.period === '90d') query['from'] = utcIso(new Date(Date.now() - OUTAGE_RETENTION_DAYS * DAY_MS));
+    else if (f.period === 'custom') {
+      query['from'] = f.from.length === 16 ? `${f.from}:00` : f.from;
+      if (f.to) query['to'] = f.to.length === 16 ? `${f.to}:00` : f.to;
+    } else query['range'] = f.period;
+    if (f.q.trim()) query['q'] = f.q.trim();
+    if (f.status) query['status'] = f.status;
+    if (this._service()) query['service'] = this._service()!;
+    return query;
+  }
 
   /** El intervalo de la tabla: el de la barra elegida o, sin barra, el periodo elegido, como el resto de las vistas. */
   private messageWindow(): { from: string; to: string | null } {
@@ -416,4 +483,19 @@ export class MonitoringLiveService {
     }
     await this.refreshAll();
   }
+}
+
+/** `2026-11-16T10:00:00`: ISO en UTC sin zona ni milisegundos, como lee Mercury. */
+const utcIso = (date: Date) => date.toISOString().slice(0, 19);
+
+/** Qué está mal en un periodo propio: falta el inicio, el fin no es posterior, o empieza antes de lo que Mercury guarda. */
+export function windowProblem(f: OutageFilter, now = Date.now()): string | null {
+  if (f.period !== 'custom') return null;
+  if (!f.from) return 'Elige desde cuándo.';
+  const from = Date.parse(`${f.from}Z`);
+  const to = f.to ? Date.parse(`${f.to}Z`) : now;
+  if (Number.isNaN(from) || Number.isNaN(to)) return 'La fecha no es válida.';
+  if (from >= to) return '«Desde» debe ser anterior a «Hasta».';
+  if (from < now - (OUTAGE_RETENTION_DAYS + 1) * DAY_MS) return `Mercury guarda ${OUTAGE_RETENTION_DAYS} días de historial: elige una fecha más reciente.`;
+  return null;
 }

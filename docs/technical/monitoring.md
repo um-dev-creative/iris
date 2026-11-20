@@ -31,7 +31,7 @@ sequenceDiagram
 | `/monitoring/verification-codes` | `.../verification-codes` | `range` |
 | `/monitoring/messages` | `.../messages` | `channel`, `status`, `kind`, `templateDefinedId`, `from`, `to`, `page`, `size` |
 | `/monitoring/health` | `/monitoring/health` | — |
-| `/monitoring/outages` | `/monitoring/health/outages` | `range` |
+| `/monitoring/outages` | `/monitoring/health/outages` | `range`, `from`, `to` (`2026-11-16T10:00:00`, UTC), `q` (hasta 100 caracteres, sin caracteres de control), `service`, `status` (`DOWN`, `DEGRADED`), `page`, `size` |
 | `/monitoring/stream` | `.../stream` (SSE) | `range` |
 
 - **El monitoreo es de Mercury, no de un cliente:** sin elegir otra, las vistas cubren **todas las aplicaciones** (el BFF manda a Mercury el UUID nulo `00000000-0000-0000-0000-000000000000`); no hace falta `MONITORED_APPLICATION_ID`. La persona puede acotar a una aplicación con `applicationId` (ver más abajo); un valor que no es UUID es `400` y una aplicación que no puede mirar es `403`.
@@ -81,7 +81,7 @@ flowchart LR
     H[Servicios] -->|clic en un servicio| O[Historial de caídas]
 ```
 
-- **Enlazadas:** elegir un canal, un tipo, «Enviados/Fallidos», una barra de la gráfica o una causa de fallo filtra las demás vistas y la tabla; elegirlo otra vez lo quita, y los chips de «Filtros activos» también. Elegir un servicio filtra el historial de caídas. Cambiar el periodo quita la barra elegida (ya no existe en la serie nueva). La tabla de mensajes cubre el periodo elegido, o el intervalo de la barra.
+- **Enlazadas:** elegir un canal, un tipo, «Enviados/Fallidos», una barra de la gráfica o una causa de fallo filtra las demás vistas y la tabla; elegirlo otra vez lo quita, y los chips de «Filtros activos» también. Elegir un servicio filtra el historial de caídas (en Mercury, en todas sus páginas). Cambiar el periodo quita la barra elegida (ya no existe en la serie nueva). La tabla de mensajes cubre el periodo elegido, o el intervalo de la barra.
 - **En vivo:** `EventSource` (con cookies) recibe `summary` y `health` cada 10 s. El resto (serie, fallos, códigos, caídas, mensajes) se consulta cada 30 s, y no se consulta con la pestaña oculta. Si el stream es rechazado, o `EventSource` no existe, se consulta todo cada 15 s y se reintenta el stream cada minuto. Mercury cierra el stream a los 15 min y el navegador reconecta solo (eso vuelve a validar la sesión).
 - **Honestidad:** sin datos no hay cifras (marcadores de carga); sin envíos no hay tasa («Sin datos»); un canal sin proveedor (SMS, WhatsApp, Push) se muestra «En cola, sin proveedor»; si una consulta falla aparece el aviso «los datos pueden estar desactualizados» y el indicador pasa a «Sin conexión». El estado de un servicio siempre lleva texto además del color.
 - **Fechas:** Mercury las envía en UTC sin zona; la página las lee como UTC y las muestra así (`Fecha (UTC)`).
@@ -130,8 +130,36 @@ flowchart LR
 - **Precisión:** Mercury devuelve todos los intervalos del periodo (también los vacíos), así que el eje de tiempo no se comprime; el eje de cantidades usa un máximo redondo por encima del mayor valor.
 - **El inicio** (`/dashboard/home`) conserva sus tarjetas de campañas y enlaza a esta sección.
 
+## Historial de caídas
+
+El historial crece con el tiempo, así que se pagina en Mercury (`GET /monitoring/health/outages` devuelve una página y el total) y nunca se trae entero. Tiene su propia sección, debajo del estado de los servicios.
+
+| Control | Qué envía | Notas |
+|---|---|---|
+| Buscar | `q` | Servicio, código de causa o descripción; se pide 300 ms después de la última tecla. |
+| Servicio | `service` | Es el mismo filtro que pulsar una tarjeta de salud (y su chip en «Filtros activos»). |
+| Estado | `status` | Caído (`DOWN`) o Degradado (`DEGRADED`). |
+| Periodo | `range`, o `from`/`to` | *El periodo de la página* (por defecto, sigue al selector de arriba), 24 h, 7 o 30 días (`range`), *90 días* (`from` = hace 90 días: lo que Mercury guarda) o *Elegir fechas…* (`from` y, si se da, `to`, en UTC). |
+| Anterior / Siguiente | `page` (`size` = 10) | Cada cambio de filtro vuelve a la primera página. |
+
+```mermaid
+flowchart LR
+    U[Búsqueda, servicio, estado, periodo] --> F[outageFilter, página 0]
+    F --> V{¿periodo propio válido?}
+    V -->|no| E[Aviso; no se pide nada]
+    V -->|sí| R[GET /monitoring/outages con page y size=10]
+    R --> T[Tabla, total y «Página X de Y»]
+    P[Anterior / Siguiente] --> R
+    S[Selector de periodo de la página] -->|si el historial lo sigue| F
+```
+
+- `MonitoringLiveService` guarda `outageFilter` (periodo, desde, hasta, texto, estado, página); el servicio es `service`. `windowProblem` revisa un periodo propio: falta el inicio, el fin no es posterior, o empieza antes de los 90 días que Mercury guarda; con un problema la página lo dice y no pide nada.
+- El historial no depende de la aplicación elegida (la salud es de Mercury), así que no lleva `applicationId`.
+- Las actualizaciones periódicas vuelven a pedir la página actual con sus filtros; cambiar el periodo de la página vuelve el historial a su primera página solo si lo sigue.
+- **Requiere** Mercury con el historial paginado (PR um-dev-creative/mercury#111). Contra un Mercury anterior, `range` sigue funcionando pero llega todo en una página y los demás filtros se ignoran.
+
 ## Pruebas
 
 - BFF: `server/test/monitoring-actions.spec.js` (exportar, reintentar, reglas), `server/test/monitoring-live*.spec.js` (rutas, parámetros, aplicación fija, credenciales, stream real con eventos escritos después de abrirlo, cierre en ambos sentidos, rechazos, Mercury caído, cliente rechazado, sin aplicación). El doble de Mercury del `harness.js` tiene `state.live`.
-- Frontend: specs de `monitoring-live.service`, `monitoring-page`, `time-series-chart` (tamaño fijo, líneas exactas, columnas, escala de la tasa, cursor, puntero, teclado, intervalo en curso, tabla, tipo recordado), `trend-spark`, `ratio-bar` (fina y alta, etiquetas que caben), `animated-number`, `utils/chart-geometry` (curva monótona sin rebotes, columnas, `observeWidth`), `utils/chart-scale` y `utils/monitoring-live`; `FakeEventSource` en `monitoring-live.testing.ts`.
+- Frontend: specs de `monitoring-live.service` (consulta del historial por periodo, filtros, páginas y `windowProblem`), `monitoring-page` (búsqueda con espera, filtros, fechas propias, páginas, vacíos), `time-series-chart` (tamaño fijo, líneas exactas, columnas, escala de la tasa, cursor, puntero, teclado, intervalo en curso, tabla, tipo recordado), `trend-spark`, `ratio-bar` (fina y alta, etiquetas que caben), `animated-number`, `utils/chart-geometry` (curva monótona sin rebotes, columnas, `observeWidth`), `utils/chart-scale` y `utils/monitoring-live`; `FakeEventSource` en `monitoring-live.testing.ts`.
 - Revisión visual: capturas en Chrome sin interfaz (claro/oscuro, líneas/columnas, 1 h/24 h/30 días, escritorio y 390 px) contra datos simulados, con el cursor, el clic y el teclado probados y sin errores en la consola.
