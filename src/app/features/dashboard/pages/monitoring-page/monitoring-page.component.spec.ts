@@ -122,7 +122,9 @@ describe('MonitoringPageComponent', () => {
     button(el, 'Campaña').click();
     button(el, 'Fallidos').click();
     button(el, 'SMTP · Degradado').click();
-    (el.querySelector('g[role="button"]') as SVGGElement).dispatchEvent(new Event('click'));
+    const plot = el.querySelector('[data-testid="trend-plot"]')!;
+    plot.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home' }));
+    plot.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
     answerAll(http);
     fixture.detectChanges();
 
@@ -438,16 +440,31 @@ describe('formulario de reglas', () => {
       const summary = { range: '24h', generatedAt: '', totals, channels: [], kinds: [] };
       expect(page.volumeShare(summary, 25)).toBeCloseTo(0.25);
       expect(page.volumeShare({ ...summary, totals: { ...totals, sent: 0, failed: 0 } }, 0)).toBeNull();
-      expect(page.maxCause([{ cause: 'a', channel: 'EMAIL', total: 3 }, { cause: 'b', channel: 'SMS', total: 7 }])).toBe(7);
-      expect(page.maxCause([])).toBe(1);
+      const causes = [{ cause: 'a', channel: 'EMAIL', total: 3 }, { cause: 'b', channel: 'SMS', total: 6 }];
+      expect(page.causeShare(6, causes)).toBe(100);
+      expect(page.causeShare(3, causes)).toBe(50);
+      expect(page.causeShare(0, [])).toBe(0);
+      expect(page.ratePercent(null)).toBe(0);
+      expect(page.ratePercent(0.9234)).toBe(92.3);
+      expect(page.ratePercent(1.4)).toBe(100);
+      expect(page.health(null)).toBeNull();
+      expect(page.health(0.97)!.label).toBe('Saludable');
+      expect(page.health(0.85)!.label).toBe('Atención');
+      expect(page.health(0.5)!.label).toBe('Crítico');
     });
 
-    it('dibuja barras de proporción en el resumen, los canales, las causas y los códigos', async () => {
-      const { el } = await open();
+    it('dibuja la cifra principal, las tendencias y las barras de canales, tipos y códigos', async () => {
+      const { el, fixture } = await open();
+      const page = (_: HTMLElement) => fixture.componentInstance;
 
       expect(el.querySelectorAll('app-ratio-bar').length).toBeGreaterThan(3);
       expect(el.querySelector('[data-testid="codes-bar"]')).not.toBeNull();
-      expect(el.querySelector('[data-testid="ring-detail"]')?.textContent).toContain('de');
+      expect(el.querySelector('[data-testid="hero-detail"]')?.textContent).toContain('90 de 100 entregados');
+      expect(el.querySelector('[data-testid="success-rate"]')?.textContent).toContain('90.0 %');
+      expect(el.querySelector('[data-testid="hero-status"]')?.textContent).toContain('Atención');
+      expect(el.querySelector('[role="meter"]')?.getAttribute('aria-valuenow')).toBe('90');
+      expect(el.querySelectorAll('app-trend-spark')).toHaveLength(2);
+      expect(page(el).sentTrend()).toEqual([10, 20]);
     });
   });
 });

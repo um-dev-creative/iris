@@ -69,68 +69,102 @@
   </div>
 }
 
-<!-- Resumen -->
-<section aria-label="Resumen" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+<!-- Resumen: la tasa de éxito manda; las demás cifras con su tendencia del periodo -->
+<section aria-label="Resumen" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
   @if (live.summary(); as s) {
-    <div class="md:col-span-1 bg-card rounded-xl border border-border p-5 flex items-center justify-center"><app-success-ring [rate]="s.totals.successRate" [sent]="s.totals.sent" [failed]="s.totals.failed" /></div>
-    <button type="button" class="kpi" (click)="live.toggleStatus('SENT')" [attr.aria-pressed]="live.status() === 'SENT'">
-      <span class="text-xs text-muted-foreground">Enviados</span><app-animated-number class="text-2xl font-bold self-start" data-testid="sent" [value]="s.totals.sent" />
-      <app-ratio-bar [segments]="[{ label: 'Enviados', value: s.totals.sent, color: 'var(--chart-2)' }, { label: 'Fallidos', value: s.totals.failed, color: 'var(--chart-5)' }]" />
+    <div class="tile sm:col-span-2 xl:col-span-1" data-testid="hero">
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-sm text-muted-foreground">Tasa de éxito</span>
+        @if (health(s.totals.successRate); as h) {
+          <span class="status" [class]="h.css" data-testid="hero-status"><lucide-icon [img]="h.icon" [size]="14" strokeWidth="2" />{{ h.label }}</span>
+        }
+      </div>
+      <p class="hero-figure" data-testid="success-rate">{{ percent(s.totals.successRate) }}</p>
+      <div class="meter" role="meter" aria-label="Tasa de éxito" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="ratePercent(s.totals.successRate)" [attr.aria-valuetext]="percent(s.totals.successRate)"
+           [style.--meter-color]="health(s.totals.successRate)?.color ?? 'var(--muted-foreground)'">
+        <span [style.width.%]="ratePercent(s.totals.successRate)"></span>
+      </div>
+      <p class="mt-2 text-xs text-muted-foreground" data-testid="hero-detail">
+        @if (s.totals.sent + s.totals.failed > 0) { {{ formatNumber(s.totals.sent) }} de {{ formatNumber(s.totals.sent + s.totals.failed) }} entregados } @else { Sin envíos en este periodo }
+      </p>
+    </div>
+    <button type="button" class="tile tile-button" (click)="live.toggleStatus('SENT')" [attr.aria-pressed]="live.status() === 'SENT'">
+      <span class="flex items-center gap-2 text-sm text-muted-foreground"><span class="swatch" style="background: var(--viz-sent)"></span>Enviados</span>
+      <app-animated-number class="stat-figure" data-testid="sent" [value]="s.totals.sent" />
+      <app-trend-spark [values]="sentTrend()" color="var(--viz-sent)" />
     </button>
-    <button type="button" class="kpi" (click)="live.toggleStatus('FAILED')" [attr.aria-pressed]="live.status() === 'FAILED'">
-      <span class="text-xs text-muted-foreground">Fallidos</span><app-animated-number class="text-2xl font-bold text-destructive self-start" data-testid="failed" tone="inverse" [value]="s.totals.failed" />
-      <span class="text-xs text-muted-foreground">{{ percent(failureRate(s.totals)) }} de los intentos</span>
+    <button type="button" class="tile tile-button" (click)="live.toggleStatus('FAILED')" [attr.aria-pressed]="live.status() === 'FAILED'">
+      <span class="flex items-center gap-2 text-sm text-muted-foreground"><span class="swatch" style="background: var(--viz-failed)"></span>Fallidos
+        <span class="ml-auto text-xs">{{ percent(failureRate(s.totals)) }} de los intentos</span></span>
+      <app-animated-number class="stat-figure" data-testid="failed" tone="inverse" [value]="s.totals.failed" />
+      <app-trend-spark [values]="failedTrend()" color="var(--viz-failed)" />
     </button>
-    <div class="kpi"><span class="text-xs text-muted-foreground">En cola</span><app-animated-number class="text-2xl font-bold self-start" data-testid="queued" tone="inverse" [value]="s.totals.queued" />
-    <span class="text-xs text-muted-foreground">Esperando a su proveedor</span></div>
+    <div class="tile">
+      <span class="flex items-center gap-2 text-sm text-muted-foreground"><span class="swatch" style="background: var(--viz-waiting)"></span>En cola</span>
+      <app-animated-number class="stat-figure" data-testid="queued" tone="inverse" [value]="s.totals.queued" />
+      <p class="text-xs text-muted-foreground mt-auto">Esperando a su proveedor; no cuentan en la tasa</p>
+    </div>
   } @else {
-    @for (n of [1, 2, 3, 4]; track n) { <div class="h-28 rounded-xl border border-border bg-card animate-pulse" aria-hidden="true"></div> }
+    @for (n of [1, 2, 3, 4]; track n) { <div class="h-36 rounded-xl border border-border bg-card animate-pulse" aria-hidden="true"></div> }
   }
 </section>
 
-<!-- Canales y tipos -->
-@if (live.summary(); as s) {
-  <section aria-label="Canales" class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-3">
-    @for (c of s.channels; track c.channel) {
-      <button type="button" class="kpi text-left" [class.ring-2]="live.channel() === c.channel" [class.ring-primary]="live.channel() === c.channel" [attr.aria-pressed]="live.channel() === c.channel" (click)="live.toggleChannel(c.channel)">
-        <span class="text-sm font-medium">{{ channelLabel(c.channel) }}</span>
-        @if (c.providerConnected) {
-          <span class="text-xs text-muted-foreground">{{ formatNumber(c.sent) }} enviados · {{ formatNumber(c.failed) }} fallidos</span>
-          <span class="text-xs text-muted-foreground">{{ percent(c.successRate) }} · {{ formatNumber(c.queued) }} en cola</span>
-          <app-ratio-bar class="mt-1" [segments]="[{ label: 'Enviados', value: c.sent, color: 'var(--chart-2)' }, { label: 'Fallidos', value: c.failed, color: 'var(--chart-5)' }, { label: 'En cola', value: c.queued, color: 'var(--chart-3)' }]" />
-          <span class="text-[11px] text-muted-foreground">{{ percent(volumeShare(s, c.sent + c.failed)) }} del volumen</span>
-        } @else {
-          <span class="text-xs text-muted-foreground">En cola, sin proveedor: {{ formatNumber(c.queued) }}</span>
-        }
-      </button>
-    }
-  </section>
-  <section aria-label="Tipos" class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-    @for (k of s.kinds; track k.kind) {
-      <button type="button" class="kpi text-left" [class.ring-2]="live.kind() === k.kind" [class.ring-primary]="live.kind() === k.kind" [attr.aria-pressed]="live.kind() === k.kind" (click)="live.toggleKind(k.kind)">
-        <span class="text-sm font-medium">{{ kindLabel(k.kind) }}</span>
-        <span class="text-xs text-muted-foreground">{{ formatNumber(k.sent) }} enviados · {{ formatNumber(k.failed) }} fallidos · {{ percent(k.successRate) }}</span>
-        <app-ratio-bar class="mt-1" [segments]="[{ label: 'Enviados', value: k.sent, color: 'var(--chart-2)' }, { label: 'Fallidos', value: k.failed, color: 'var(--chart-5)' }]" />
-      </button>
-    }
-  </section>
-}
-
 <!-- Serie -->
 <section aria-label="Envíos en el tiempo" class="bg-card rounded-xl border border-border p-5 mb-6">
-  <h3 class="text-sm font-semibold mb-3">Envíos en el tiempo <span class="font-normal text-muted-foreground">(elige una barra para ver sus mensajes)</span></h3>
-  <app-time-series-chart [points]="live.series()?.points ?? []" [unit]="live.series()?.unit ?? 'hour'" [selected]="selectedBucket()" (bucketSelected)="live.toggleBucket($event)" />
+  <div class="mb-3">
+    <h3 class="text-base font-semibold">Envíos en el tiempo</h3>
+    <p class="text-xs text-muted-foreground">Pasa el puntero para ver cada intervalo; haz clic para ver sus mensajes.</p>
+  </div>
+  <app-time-series-chart [points]="live.series()?.points ?? []" [unit]="live.series()?.unit ?? 'hour'" [selected]="selectedBucket()" [loading]="live.loading()" (bucketSelected)="live.toggleBucket($event)" />
 </section>
 
+<!-- Canales y tipos: una fila por cada uno, con su reparto -->
+@if (live.summary(); as s) {
+  <div class="grid grid-cols-1 xl:grid-cols-5 gap-6 mb-6">
+    <section aria-label="Canales" class="xl:col-span-3 bg-card rounded-xl border border-border p-5">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+        <h3 class="text-base font-semibold">Por canal</h3>
+        <ul class="flex gap-4 text-xs text-muted-foreground" aria-label="Leyenda">
+          <li class="flex items-center gap-1.5"><span class="swatch" style="background: var(--viz-sent)"></span>Enviados</li>
+          <li class="flex items-center gap-1.5"><span class="swatch" style="background: var(--viz-failed)"></span>Fallidos</li>
+          <li class="flex items-center gap-1.5"><span class="swatch" style="background: var(--viz-waiting)"></span>En cola</li>
+        </ul>
+      </div>
+      @for (c of s.channels; track c.channel) {
+        <button type="button" class="meter-row" [class.is-active]="live.channel() === c.channel" [attr.aria-pressed]="live.channel() === c.channel" (click)="live.toggleChannel(c.channel)">
+          <span class="font-medium">{{ channelLabel(c.channel) }}</span>
+          <app-ratio-bar [segments]="[{ label: 'Enviados', value: c.sent, color: 'var(--viz-sent)' }, { label: 'Fallidos', value: c.failed, color: 'var(--viz-failed)' }, { label: 'En cola', value: c.queued, color: 'var(--viz-waiting)' }]" />
+          @if (c.providerConnected) {
+            <span class="figures"><strong>{{ percent(c.successRate) }}</strong> · {{ formatNumber(c.sent) }} enviados · {{ formatNumber(c.failed) }} fallidos · {{ formatNumber(c.queued) }} en cola
+              <span class="block text-[11px]">{{ percent(volumeShare(s, c.sent + c.failed)) }} del volumen</span></span>
+          } @else {
+            <span class="figures">En cola, sin proveedor: {{ formatNumber(c.queued) }}</span>
+          }
+        </button>
+      }
+    </section>
+    <section aria-label="Tipos" class="xl:col-span-2 bg-card rounded-xl border border-border p-5">
+      <h3 class="text-base font-semibold mb-2">Por tipo de mensaje</h3>
+      @for (k of s.kinds; track k.kind) {
+        <button type="button" class="meter-row" [class.is-active]="live.kind() === k.kind" [attr.aria-pressed]="live.kind() === k.kind" (click)="live.toggleKind(k.kind)">
+          <span class="font-medium">{{ kindLabel(k.kind) }}</span>
+          <app-ratio-bar [segments]="[{ label: 'Enviados', value: k.sent, color: 'var(--viz-sent)' }, { label: 'Fallidos', value: k.failed, color: 'var(--viz-failed)' }]" />
+          <span class="figures"><strong>{{ percent(k.successRate) }}</strong> · {{ formatNumber(k.sent) }} enviados · {{ formatNumber(k.failed) }} fallidos</span>
+        </button>
+      }
+    </section>
+  </div>
+}
+
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-  <!-- Fallos -->
+  <!-- Fallos: barras ordenadas, de la causa más frecuente a la menos -->
   <section aria-label="Fallos" class="bg-card rounded-xl border border-border p-5">
-    <h3 class="text-sm font-semibold mb-3">Causas de fallo</h3>
+    <h3 class="text-base font-semibold mb-3">Causas de fallo</h3>
     @if (live.failures(); as f) {
       @for (cause of f.causes; track cause.cause + cause.channel) {
-        <button type="button" class="w-full text-left text-sm py-1.5 hover:bg-muted rounded px-2" (click)="live.drillIntoFailure(cause.channel)">
-          <span class="flex justify-between gap-3"><span>{{ cause.cause }} <span class="text-muted-foreground">· {{ channelLabel(cause.channel) }}</span></span><span class="font-medium tabular-nums">{{ formatNumber(cause.total) }}</span></span>
-          <app-ratio-bar class="mt-1 block" [height]="4" [total]="maxCause(f.causes)" [segments]="[{ label: cause.cause, value: cause.total, color: 'var(--chart-5)' }]" />
+        <button type="button" class="cause-row" (click)="live.drillIntoFailure(cause.channel)" [attr.aria-label]="cause.cause + ', ' + channelLabel(cause.channel) + ': ' + formatNumber(cause.total) + ' fallos. Ver esos mensajes'">
+          <span class="text-sm truncate">{{ cause.cause }} <span class="text-muted-foreground">· {{ channelLabel(cause.channel) }}</span></span>
+          <span class="cause-track"><span class="cause-bar" [style.width.%]="causeShare(cause.total, f.causes)"></span><span class="cause-value">{{ formatNumber(cause.total) }}</span></span>
         </button>
       } @empty { <p class="text-sm text-muted-foreground">Sin fallos en este periodo.</p> }
       @if (f.stuck.length > 0) {
@@ -142,25 +176,23 @@
     }
   </section>
 
-  <!-- Códigos -->
+  <!-- Códigos: de los generados, cuántos se confirmaron, vencieron o siguen pendientes -->
   <section aria-label="Códigos de verificación" class="bg-card rounded-xl border border-border p-5">
-    <h3 class="text-sm font-semibold mb-3">Códigos de verificación</h3>
+    <div class="flex items-baseline justify-between gap-2 mb-3">
+      <h3 class="text-base font-semibold">Códigos de verificación</h3>
+      @if (live.codes(); as c) { <span class="text-sm text-muted-foreground"><strong class="text-foreground text-lg font-semibold">{{ percent(c.confirmationRate) }}</strong> confirmados</span> }
+    </div>
     @if (live.codes(); as c) {
-      <dl class="grid grid-cols-2 gap-2 text-sm">
-        <dt class="text-muted-foreground">Generados</dt><dd class="text-right font-medium" data-testid="codes-generated">{{ formatNumber(c.generated) }}</dd>
-        <dt class="text-muted-foreground">Confirmados</dt><dd class="text-right font-medium">{{ formatNumber(c.confirmed) }}</dd>
-        <dt class="text-muted-foreground">Vencidos</dt><dd class="text-right font-medium">{{ formatNumber(c.expired) }}</dd>
-        <dt class="text-muted-foreground">Pendientes</dt><dd class="text-right font-medium">{{ formatNumber(c.pending) }}</dd>
-        <dt class="text-muted-foreground">Envíos fallidos</dt><dd class="text-right font-medium">{{ formatNumber(c.failedSends) }}</dd>
-        <dt class="text-muted-foreground">Tasa de confirmación</dt><dd class="text-right font-medium">{{ percent(c.confirmationRate) }}</dd>
+      <app-ratio-bar variant="tall" [total]="c.generated" data-testid="codes-bar"
+        [segments]="[{ label: 'Confirmados', value: c.confirmed, color: 'var(--viz-sent)' }, { label: 'Vencidos', value: c.expired, color: 'var(--viz-failed)' }, { label: 'Pendientes', value: c.pending, color: 'var(--viz-waiting)' }]" />
+      <dl class="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+        <div class="fig"><dt><span class="swatch" style="background: var(--viz-sent)"></span>Confirmados</dt><dd>{{ formatNumber(c.confirmed) }}</dd></div>
+        <div class="fig"><dt><span class="swatch" style="background: var(--viz-failed)"></span>Vencidos</dt><dd>{{ formatNumber(c.expired) }}</dd></div>
+        <div class="fig"><dt><span class="swatch" style="background: var(--viz-waiting)"></span>Pendientes</dt><dd>{{ formatNumber(c.pending) }}</dd></div>
+        <div class="fig"><dt>Generados</dt><dd data-testid="codes-generated">{{ formatNumber(c.generated) }}</dd></div>
+        <div class="fig"><dt>Envíos fallidos</dt><dd>{{ formatNumber(c.failedSends) }}</dd></div>
+        <div class="fig"><dt>Tasa de confirmación</dt><dd>{{ percent(c.confirmationRate) }}</dd></div>
       </dl>
-      <app-ratio-bar class="mt-4 block" [height]="10" [total]="c.generated" data-testid="codes-bar"
-        [segments]="[{ label: 'Confirmados', value: c.confirmed, color: 'var(--chart-2)' }, { label: 'Pendientes', value: c.pending, color: 'var(--chart-1)' }, { label: 'Vencidos', value: c.expired, color: 'var(--chart-3)' }]" />
-      <div class="flex flex-wrap gap-3 text-xs text-muted-foreground mt-2">
-        <span class="inline-flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-sm" style="background: var(--chart-2)"></span>Confirmados</span>
-        <span class="inline-flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-sm" style="background: var(--chart-1)"></span>Pendientes</span>
-        <span class="inline-flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-sm" style="background: var(--chart-3)"></span>Vencidos</span>
-      </div>
     }
   </section>
 </div>

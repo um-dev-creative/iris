@@ -57,6 +57,11 @@
   --chart-3: oklch(0.45 0.11 50);
   --chart-4: oklch(0.46 0.20 300);
   --chart-5: oklch(0.46 0.18 25);
+  /* Series de los gráficos de monitoreo (validadas: banda de luminosidad, croma, daltonismo y contraste sobre la tarjeta).
+     Orden fijo: enviados, fallidos, en espera; azul y violeta nunca van juntos. */
+  --viz-sent: #2a78d6;
+  --viz-failed: #e34948;
+  --viz-waiting: #6250d6;
   --radius: 0.5rem;
   --sidebar: oklch(0.99 0.002 250);
   --sidebar-foreground: oklch(0.15 0.01 250);
@@ -98,6 +103,9 @@
   --chart-3: oklch(0.78 0.13 60);
   --chart-4: oklch(0.76 0.14 300);
   --chart-5: oklch(0.74 0.16 25);
+  --viz-sent: #3987e5;
+  --viz-failed: #e66767;
+  --viz-waiting: #9085e9;
   --sidebar: oklch(0.15 0.012 250);
   --sidebar-foreground: oklch(0.93 0.005 250);
   --sidebar-primary: oklch(0.75 0.13 250);
@@ -282,10 +290,6 @@
   0% { box-shadow: 0 0 0 0 color-mix(in oklab, currentColor 55%, transparent); }
   70%, 100% { box-shadow: 0 0 0 6px transparent; }
 }
-@keyframes iris-bar-grow {
-  from { transform: scaleY(0); }
-  to { transform: scaleY(1); }
-}
 @keyframes iris-ratio-grow {
   from { transform: scaleX(0); }
   to { transform: scaleX(1); }
@@ -312,20 +316,7 @@
   .iris-live-dot.bg-success { color: var(--success); }
   .iris-live-dot.bg-destructive { color: var(--destructive); }
 
-  /* Barras del gráfico de envíos: crecen desde la base al aparecer y cambian de altura con suavidad */
-  .iris-bar {
-    transform-box: fill-box;
-    transform-origin: bottom;
-    animation: iris-bar-grow 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
-    transition: y 450ms cubic-bezier(0.16, 1, 0.3, 1), height 450ms cubic-bezier(0.16, 1, 0.3, 1), fill 200ms ease;
-  }
-  .iris-bar-group:focus-visible .iris-bar { stroke: var(--ring); stroke-width: 1.5; }
-  .iris-hatch {
-    background: repeating-linear-gradient(45deg, color-mix(in oklab, var(--chart-2) 55%, transparent) 0 3px, transparent 3px 5px);
-  }
-
-  /* Anillo de éxito y barras de proporción: siguen al dato con una transición */
-  .iris-ring-arc { transition: stroke-dasharray 700ms cubic-bezier(0.16, 1, 0.3, 1), stroke 400ms ease; }
+  /* Barras de proporción: crecen al aparecer y siguen al dato con una transición */
   .iris-ratio-part {
     transform-origin: left;
     animation: iris-ratio-grow 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -383,15 +374,12 @@
     transform: none;
   }
   .iris-live-dot,
-  .iris-bar,
   .iris-ratio-part,
   .iris-skeleton,
   .iris-row-new,
   .iris-progress::after {
     animation: none;
   }
-  .iris-bar,
-  .iris-ring-arc,
   .iris-ratio-part {
     transition: none;
   }

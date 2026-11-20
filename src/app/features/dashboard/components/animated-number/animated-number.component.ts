@@ -16,7 +16,7 @@ const FLASH_MS = 1200;
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[class.iris-flash-good]': "flashClass() === 'iris-flash-good'", '[class.iris-flash-bad]': "flashClass() === 'iris-flash-bad'" },
   template: `<span class="sr-only">{{ label() }}</span><span aria-hidden="true">{{ text() }}</span>`,
-  styles: `:host { display: inline-block; border-radius: 0.375rem; transition: background-color 600ms ease, color 600ms ease; font-variant-numeric: tabular-nums; }`,
+  styles: `:host { display: inline-block; border-radius: 0.375rem; transition: background-color 600ms ease, color 600ms ease; }`,
 })
 export class AnimatedNumberComponent {
   readonly value = input.required<number>();
