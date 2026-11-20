@@ -1,15 +1,19 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { LucideAngularModule, RefreshCw, TriangleAlert, X } from 'lucide-angular';
+import { CircleCheck, CircleX, LucideAngularModule, RefreshCw, TriangleAlert, X } from 'lucide-angular';
 import { AnimatedNumberComponent } from '../../components/animated-number/animated-number.component';
 import { RatioBarComponent } from '../../components/ratio-bar/ratio-bar.component';
-import { SuccessRingComponent } from '../../components/success-ring/success-ring.component';
 import { TimeSeriesChartComponent } from '../../components/time-series-chart/time-series-chart.component';
+import { TrendSparkComponent } from '../../components/trend-spark/trend-spark.component';
 import { MonitoringLiveService } from '../../services/monitoring-live.service';
 import { AlertRule, AlertRuleRequest, AlertType, FailureCause, MessageItem, MonitoringRange, SummaryResponse, Totals } from '../../models/monitoring-live.model';
 import {
   ALERT_TYPES, OVERALL_LABELS, RANGES, SERVICES, STATE_DOT, STATE_LABELS, channelLabel, duration, formatNumber, kindLabel, parseUtc, percent, ruleLabel,
 } from '../../utils/monitoring-live';
+
+/** Desde aquí la tasa de éxito es sana o, por debajo de `WATCH`, crítica. */
+const HEALTHY = 0.95;
+const WATCH = 0.8;
 
 const CONNECTION_LABELS = { connecting: 'Conectando…', live: 'En vivo', polling: 'Actualizando cada 15 s', offline: 'Sin conexión' } as const;
 
@@ -22,7 +26,7 @@ const EMPTY_DRAFT: RuleDraft = { type: 'FAILURE_RATE', threshold: '20', windowMi
 @Component({
   selector: 'app-monitoring-page',
   standalone: true,
-  imports: [LucideAngularModule, DatePipe, SuccessRingComponent, TimeSeriesChartComponent, AnimatedNumberComponent, RatioBarComponent],
+  imports: [LucideAngularModule, DatePipe, TimeSeriesChartComponent, TrendSparkComponent, AnimatedNumberComponent, RatioBarComponent],
   providers: [MonitoringLiveService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './monitoring-page.component.html',
@@ -52,6 +56,9 @@ export class MonitoringPageComponent {
   readonly overallLabel = computed(() => OVERALL_LABELS[this.live.health()?.overall ?? 'UNKNOWN']);
   readonly pages = computed(() => `Página ${(this.live.messages()?.page ?? 0) + 1} de ${this.live.totalPages()}`);
   readonly selectedBucket = computed(() => this.live.bucket()?.bucket ?? null);
+  /** Enviados y fallidos de cada intervalo del periodo, para la tendencia de las tarjetas. */
+  readonly sentTrend = computed(() => (this.live.series()?.points ?? []).map((p) => p.sent));
+  readonly failedTrend = computed(() => (this.live.series()?.points ?? []).map((p) => p.failed));
 
   readonly draft = signal<RuleDraft>({ ...EMPTY_DRAFT });
   readonly saving = signal(false);
@@ -86,9 +93,23 @@ export class MonitoringPageComponent {
     return total > 0 ? attempts / total : null;
   }
 
-  /** La causa más frecuente da la escala de las barras de causas. */
-  maxCause(causes: FailureCause[]): number {
-    return Math.max(1, ...causes.map((c) => c.total));
+  /** El ancho de la barra de una causa, en % de la más frecuente (que llena la pista). */
+  causeShare(total: number, causes: FailureCause[]): number {
+    const top = Math.max(1, ...causes.map((c) => c.total));
+    return (Math.max(0, total) / top) * 100;
+  }
+
+  /** La tasa como número de 0 a 100 para el medidor; 0 sin datos. */
+  ratePercent(rate: number | null): number {
+    return rate === null ? 0 : Math.round(Math.min(1, Math.max(0, rate)) * 1000) / 10;
+  }
+
+  /** El estado de la tasa de éxito, con icono y texto (el color nunca va solo); null sin envíos. */
+  health(rate: number | null): { label: string; css: string; color: string; icon: typeof CircleCheck } | null {
+    if (rate === null) return null;
+    if (rate >= HEALTHY) return { label: 'Saludable', css: 'is-good', color: 'var(--success)', icon: CircleCheck };
+    if (rate >= WATCH) return { label: 'Atención', css: 'is-warn', color: 'var(--warning)', icon: TriangleAlert };
+    return { label: 'Crítico', css: 'is-bad', color: 'var(--destructive)', icon: CircleX };
   }
 
   setRange(range: MonitoringRange): void {

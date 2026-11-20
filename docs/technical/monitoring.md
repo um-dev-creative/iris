@@ -77,7 +77,7 @@ flowchart LR
     F --> M[Tabla de mensajes]
     R[Resumen y canales] -->|clic en un canal| F
     K[Causas de fallo] -->|clic en una causa| F
-    G[Gráfica] -->|clic en una barra| F
+    G[Gráfico de envíos] -->|clic o Enter en un intervalo| F
     H[Servicios] -->|clic en un servicio| O[Historial de caídas]
 ```
 
@@ -85,32 +85,53 @@ flowchart LR
 - **En vivo:** `EventSource` (con cookies) recibe `summary` y `health` cada 10 s. El resto (serie, fallos, códigos, caídas, mensajes) se consulta cada 30 s, y no se consulta con la pestaña oculta. Si el stream es rechazado, o `EventSource` no existe, se consulta todo cada 15 s y se reintenta el stream cada minuto. Mercury cierra el stream a los 15 min y el navegador reconecta solo (eso vuelve a validar la sesión).
 - **Honestidad:** sin datos no hay cifras (marcadores de carga); sin envíos no hay tasa («Sin datos»); un canal sin proveedor (SMS, WhatsApp, Push) se muestra «En cola, sin proveedor»; si una consulta falla aparece el aviso «los datos pueden estar desactualizados» y el indicador pasa a «Sin conexión». El estado de un servicio siempre lleva texto además del color.
 - **Fechas:** Mercury las envía en UTC sin zona; la página las lee como UTC y las muestra así (`Fecha (UTC)`).
-- **Gráfica:** SVG propio (`time-series-chart`, `success-ring`, `ratio-bar`, `animated-number`), sin librería: barras apiladas enviados/fallidos, cada barra es un botón con texto accesible. Se eligió SVG propio por el tamaño del paquete y porque los gráficos son pocos y sencillos.
+- **Gráficos:** SVG propio (`time-series-chart`, `trend-spark`, `ratio-bar`, `animated-number`, geometría en `utils/chart-geometry.ts`), sin librería, por el tamaño del paquete y porque los gráficos son pocos; ver *Diseño de los gráficos*.
 
-### Gráficos vivos y precisos
+### Diseño de los gráficos
 
-| Pieza | Qué hace |
-|---|---|
-| `time-series-chart` | Eje de cantidades con marcas «redondas» (`niceScale`: pasos de 1, 2 o 5 por potencia de diez) y líneas guía; resumen del periodo (total, enviados, fallidos y pico); detalle al pasar el puntero o enfocar una barra (intervalo `dd/MM HH:mm–HH:mm` UTC, enviados, fallidos, tasa de fallos), que no se sale por los lados; el **intervalo en curso** (el último, si aún no termina) va rayado, lo dice su texto accesible y la leyenda, para no leer como caída lo que solo está incompleto. Las barras crecen desde la base al aparecer y cambian de altura con transición (`y`/`height` como propiedades CSS) cuando llegan datos. |
-| `success-ring` | El arco sigue a la tasa con transición y cambia de color: verde desde 95 %, ámbar desde 80 %, rojo por debajo; debajo dice «N de M entregados». El texto del porcentaje sigue ahí: el color no es la única señal. |
-| `animated-number` | Las cifras del resumen cuentan hasta el valor nuevo (650 ms, `requestAnimationFrame`) y destellan en verde si mejoran o en rojo si empeoran (`tone="inverse"` para fallidos y en cola). El lector de pantalla recibe solo el valor exacto. |
-| `ratio-bar` | Barra apilada de proporción con texto accesible («Enviados: 90 (90.0 %), …»): resumen (enviados/fallidos), cada canal (enviados/fallidos/en cola y su parte del volumen), cada tipo, cada causa de fallo (frente a la más frecuente) y los códigos de verificación (confirmados/pendientes/vencidos). |
+Rediseñados con un método fijo: primero la forma según lo que el dato tiene que decir, después el color (validado con un script, no a ojo), marcas finas, cursor con lectura por defecto, tabla equivalente y modo oscuro con sus propios tonos.
+
+| Dato | Forma | Pieza |
+|---|---|---|
+| La tasa de éxito (la cifra que manda) | Cifra principal de 48 px + **medidor** cuya pista es el mismo color más claro; estado con icono y texto (*Saludable* ≥ 95 %, *Atención* ≥ 80 %, *Crítico*) | `monitoring-page` |
+| Enviados, fallidos, en cola | **Tarjetas** con la cifra (cuenta hasta el valor nuevo y destella) y la **tendencia** del periodo | `animated-number`, `trend-spark` |
+| Envíos en el tiempo | **Líneas** suaves (monótonas: pasan exactamente por cada valor, sin rebotes por debajo de 0 ni picos inventados) con velo del 10 %, o **columnas apiladas** (≤ 24 px, punta redondeada de 4 px, base recta, 2 px de aire entre enviados y fallidos); se elige y se recuerda (`localStorage`) | `time-series-chart` |
+| Tasa de fallos en el tiempo | **Gráfico aparte**, alineado debajo y con su propia escala (0 a un máximo redondo, como mucho 100 %): nunca dos ejes en un mismo gráfico | `time-series-chart` |
+| Reparto por canal y por tipo | **Lista de medidores**: nombre, barra segmentada fina (8 px, extremos redondos) y cifras alineadas; clic filtra | `ratio-bar` (`thin`) |
+| Causas de fallo | **Barras horizontales ordenadas**, una sola tinta, valor en la punta | `monitoring-page` |
+| Códigos de verificación | **Barra segmentada alta** (28 px): confirmados, vencidos y pendientes, con su porcentaje dentro solo donde cabe; leyenda y cifras debajo | `ratio-bar` (`tall`) |
+
+**Gráfico de envíos (`time-series-chart`)**
+
+- **Tamaño:** se dibuja en píxeles reales (`observeWidth`, con `ResizeObserver`): gana ancho en pantallas grandes pero su alto es fijo (~270 px). Antes se estiraba con `viewBox` y en una pantalla ancha crecía hasta ocupar casi toda la vista.
+- **Cursor:** una línea vertical sigue al puntero y se ajusta al intervalo más cercano en los dos gráficos (el de envíos y el de tasa), con puntos en cada serie y una lectura con el intervalo (`dd/MM HH:mm–HH:mm` UTC), enviados, fallidos y tasa de fallos; la leyenda pasa a mostrar los valores de ese intervalo. Sin cursor, la leyenda muestra el total del periodo.
+- **Teclado:** el gráfico recibe el foco; flechas, Inicio y Fin recorren los intervalos, Enter o espacio filtran por el intervalo, Escape suelta. Un texto oculto (`aria-live`) anuncia cada intervalo.
+- **Elegir:** clic o Enter filtra la página por el intervalo, que queda sombreado en los dos gráficos y en la tabla.
+- **Intervalo en curso:** el último tramo va punteado y rotulado *en curso* (en columnas, atenuado): aún está incompleto, no es una caída.
+- **Valores al final de cada línea** solo si no se pisan; si no, la leyenda los dice.
+- **Tabla:** *Ver tabla* muestra los mismos datos por intervalo (accesible sin el gráfico).
+- **Actualización:** mientras llegan datos el gráfico se queda y se atenúa (sin esqueleto ni saltos); las líneas se trazan al cambiar el periodo o el tipo y se deforman con suavidad cuando cambian los valores (`d` como propiedad CSS).
 
 ```mermaid
 flowchart LR
-    D[Datos nuevos: stream o consulta] --> N[animated-number: cuenta y destella]
-    D --> B[time-series-chart: barras cambian de altura]
-    D --> R[success-ring: arco y color]
-    D --> P[ratio-bar: anchos]
-    M{prefers-reduced-motion} -->|sí| X[Sin animación: valor final al instante]
+    P[Puntero o teclado] --> H[Intervalo señalado]
+    H --> T[Lectura: enviados, fallidos, tasa]
+    H --> L[Leyenda con sus valores]
+    H --> A[Anuncio aria-live]
+    H -->|clic o Enter| F[Filtro de intervalo en toda la página]
+    D[Datos nuevos] --> M[Líneas o columnas se deforman]
+    R{prefers-reduced-motion} -->|sí| X[Sin animación]
 ```
 
-- **Movimiento responsable:** con `prefers-reduced-motion: reduce` (o sin `matchMedia`/`requestAnimationFrame`, como en las pruebas) no hay animaciones ni transiciones: se muestra el valor final. Los estilos (`iris-bar`, `iris-ratio-part`, `iris-ring-arc`, `iris-live-dot`, `iris-flash-*`) están en `src/styles.css`.
+**Color.** Tres tonos propios de los datos, en `src/styles.css`, con un valor para claro y otro para oscuro: `--viz-sent` (azul), `--viz-failed` (rojo) y `--viz-waiting` (violeta, en cola o pendientes). Pasan el validador de paleta (banda de luminosidad, croma mínimo, separación para daltonismo ≥ 8 y visión normal ≥ 15 entre vecinos, contraste ≥ 3:1 sobre la tarjeta) en los dos modos; los `--chart-2`/`--chart-5` anteriores no lo pasaban. El orden es siempre enviados, fallidos, en espera: azul y violeta nunca quedan juntos, porque juntos no se distinguen. El texto nunca lleva el color de la serie (la marca de al lado lo lleva). Los estados (Saludable/Atención/Crítico) usan los colores de estado con icono y texto.
+
+- **Movimiento responsable:** con `prefers-reduced-motion: reduce` (o sin `matchMedia`/`requestAnimationFrame`, como en las pruebas) no hay animaciones ni transiciones.
 - **Indicadores que laten:** el punto «En vivo» y el de un servicio **Caído** laten (`iris-live-dot`).
-- **Precisión:** Mercury ya devuelve todos los intervalos del periodo (también los vacíos), así que el eje de tiempo no se comprime; el eje de cantidades usa un máximo redondo por encima del mayor intervalo para leer valores exactos contra las líneas guía.
+- **Precisión:** Mercury devuelve todos los intervalos del periodo (también los vacíos), así que el eje de tiempo no se comprime; el eje de cantidades usa un máximo redondo por encima del mayor valor.
 - **El inicio** (`/dashboard/home`) conserva sus tarjetas de campañas y enlaza a esta sección.
 
 ## Pruebas
 
 - BFF: `server/test/monitoring-actions.spec.js` (exportar, reintentar, reglas), `server/test/monitoring-live*.spec.js` (rutas, parámetros, aplicación fija, credenciales, stream real con eventos escritos después de abrirlo, cierre en ambos sentidos, rechazos, Mercury caído, cliente rechazado, sin aplicación). El doble de Mercury del `harness.js` tiene `state.live`.
-- Frontend: specs de `monitoring-live.service`, `monitoring-page`, `time-series-chart` (escala, detalle, intervalo en curso), `success-ring` (color), `ratio-bar`, `animated-number` (con `requestAnimationFrame` simulado), `utils/chart-scale` y `utils/monitoring-live`; `FakeEventSource` en `monitoring-live.testing.ts`.
+- Frontend: specs de `monitoring-live.service`, `monitoring-page`, `time-series-chart` (tamaño fijo, líneas exactas, columnas, escala de la tasa, cursor, puntero, teclado, intervalo en curso, tabla, tipo recordado), `trend-spark`, `ratio-bar` (fina y alta, etiquetas que caben), `animated-number`, `utils/chart-geometry` (curva monótona sin rebotes, columnas, `observeWidth`), `utils/chart-scale` y `utils/monitoring-live`; `FakeEventSource` en `monitoring-live.testing.ts`.
+- Revisión visual: capturas en Chrome sin interfaz (claro/oscuro, líneas/columnas, 1 h/24 h/30 días, escritorio y 390 px) contra datos simulados, con el cursor, el clic y el teclado probados y sin errores en la consola.
