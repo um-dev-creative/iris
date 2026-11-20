@@ -20,6 +20,7 @@ const {
 const { traceMiddleware } = require('./shared/trace');
 const { requireCsrfHeader } = require('./shared/csrf');
 const authRoutes = require('./routes/auth.routes');
+const federationRoutes = require('./routes/federation.routes');
 const mercuryRoutes = require('./routes/mercury.routes');
 const mediaRoutes = require('./routes/media.routes');
 const monitoringRoutes = require('./routes/monitoring.routes');
@@ -52,6 +53,10 @@ function createApp({ distPath = path.join(__dirname, '../dist/dashboard/browser'
   app.use(traceMiddleware({ enabled: TRACING_ENABLED, sampleRate: TRACE_SAMPLE_RATE }));
 
   app.get('/health', (_req, res) => res.json({ status: 'UP' }));
+
+  // Apple answers the sign-in with a cross-site form POST, which cannot carry the CSRF header: it is bound to the browser by the
+  // state cookie and by backbone's single-use state instead (see docs/technical/social-federation.md)
+  app.post('/mrc/api/v1/auth/federation/callback', express.urlencoded({ extended: false, limit: '16kb' }), federationRoutes.handleCallback);
 
   app.use(API_PREFIXES, requireCsrfHeader);
   app.use('/mrc/api/v1/auth', authRoutes);

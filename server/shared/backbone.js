@@ -24,6 +24,13 @@ const post = (path, data, headers = {}) =>
     ...upstreamTls,
   });
 
+const get = (path, headers = {}) =>
+  axios.get(`${BACKBONE_BASE_URL}${BACKBONE_API_PREFIX}${path}`, {
+    headers: { Accept: 'application/json', ...headers },
+    validateStatus: () => true,
+    ...upstreamTls,
+  });
+
 /** Thrown when backbone does not accept this front end's application client: a configuration error, never the user's. */
 class ApplicationClientError extends Error {}
 
@@ -58,10 +65,11 @@ async function applicationClientToken() {
 }
 
 /** A session call made on behalf of the Iris application: carries the application client as the Bearer. */
-async function asApplication(path, data, headers = {}) {
+async function asApplication(path, data, headers = {}, method = 'post') {
   const send = async () => {
     const token = await applicationClientToken();
-    return post(path, data, { ...headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) });
+    const all = { ...headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+    return method === 'get' ? get(path, all) : post(path, data, all);
   };
   let r = await send();
   if (clientToken && r.status === 401 && CLIENT_TOKEN_REJECTED.includes(r.data?.error)) {
@@ -69,7 +77,9 @@ async function asApplication(path, data, headers = {}) {
     clientToken = null;
     r = await send();
   }
-  if (r.status === 403 || (r.status === 401 && CLIENT_TOKEN_REJECTED.includes(r.data?.error))) {
+  // a federation 403 (user not registered, e-mail not allowed...) is about the person; only the client's own refusal is configuration
+  const aboutThePerson = typeof r.data?.error === 'string' && r.data.error.startsWith('federation_') && r.data.error !== 'federation_client_rejected';
+  if ((r.status === 403 && !aboutThePerson) || (r.status === 401 && CLIENT_TOKEN_REJECTED.includes(r.data?.error))) {
     throw new ApplicationClientError(
       `backbone does not let this application client act for application ${BACKBONE_APPLICATION_ID} (${r.status}): the client must be active and registered for that application`
     );
@@ -141,6 +151,50 @@ async function refresh(refreshToken) {
   return { status: r.status, token: r.data?.token, refreshToken: r.data?.refreshToken || refreshToken };
 }
 
+const FEDERATION = '/federation';
+
+/** @returns {Promise<{status:number, providers:Array<{provider:string, displayName:string}>}>} the providers Iris offers */
+async function federationProviders() {
+  const r = await asApplication(`${FEDERATION}/providers?applicationId=${encodeURIComponent(BACKBONE_APPLICATION_ID)}`, undefined, {}, 'get');
+  return { status: r.status, providers: Array.isArray(r.data) ? r.data : [] };
+}
+
+/** Starts a sign-in (or, with `sessionToken`, a link): backbone answers the provider's authorization URL and the state. */
+async function federationAuthorize({ provider, redirectUri, link = false, sessionToken }) {
+  const r = await asApplication(
+    `${FEDERATION}/authorize`,
+    { applicationId: BACKBONE_APPLICATION_ID, provider, redirectUri, intent: link ? 'LINK' : 'LOGIN' },
+    sessionToken ? { 'session-token': sessionToken } : {},
+  );
+  return { status: r.status, error: r.data?.error, authorizationUrl: r.data?.authorizationUrl, state: r.data?.state };
+}
+
+/** Completes a sign-in (tokens) or a link (the linked identity). */
+async function federationCallback({ state, code, sessionToken }) {
+  const r = await asApplication(`${FEDERATION}/callback`, { state, code }, sessionToken ? { 'session-token': sessionToken } : {});
+  return { status: r.status, error: r.data?.error, token: r.data?.token, refreshToken: r.data?.refreshToken, identity: r.data?.provider ? r.data : undefined };
+}
+
+/** The identities linked to a user; backbone reads the session of this resource only from `Authorization: Bearer`. */
+async function federationIdentities(userId, sessionToken) {
+  const r = await asUser('get', `/users/${encodeURIComponent(userId)}/federated-identities`, sessionToken);
+  return { status: r.status, identities: Array.isArray(r.data) ? r.data : [] };
+}
+
+async function federationUnlink(userId, identityId, sessionToken) {
+  const r = await asUser('delete', `/users/${encodeURIComponent(userId)}/federated-identities/${encodeURIComponent(identityId)}`, sessionToken);
+  return { status: r.status };
+}
+
+const asUser = (method, path, sessionToken) =>
+  axios({
+    method,
+    url: `${BACKBONE_BASE_URL}${BACKBONE_API_PREFIX}${path}`,
+    headers: { Accept: 'application/json', Authorization: `Bearer ${sessionToken}` },
+    validateStatus: () => true,
+    ...upstreamTls,
+  });
+
 /**
  * Whether backbone itself still considers the session active (its public `GET /session/validate`, the same call mercury makes).
  * Tells an expired session apart from mercury refusing one backbone accepts, which is mercury's configuration, not the person's.
@@ -180,4 +234,4 @@ async function logout(sessionToken, refreshToken) {
   }
 }
 
-module.exports = { applicationClientToken, isTaken, findUserByAlias, createInactiveUser, activateUser, login, refresh, logout, isSessionActive, ApplicationClientError };
+module.exports = { federationProviders, federationAuthorize, federationCallback, federationIdentities, federationUnlink, applicationClientToken, isTaken, findUserByAlias, createInactiveUser, activateUser, login, refresh, logout, isSessionActive, ApplicationClientError };

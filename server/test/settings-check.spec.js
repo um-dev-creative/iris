@@ -60,3 +60,18 @@ test('names the settings sign-up still needs', () => {
 test('production refuses session cookies without Secure', () => {
   assert.deepEqual(settingsProblems({ ...complete, COOKIE_SECURE: false }), ['COOKIE_SECURE must be true in production: Iris runs on HTTPS']);
 });
+
+test('social sign-in needs its callback URL, the application and the client', () => {
+  const on = { ...complete, FEDERATION_ENABLED: true, FEDERATION_CALLBACK_URL: 'https://iris.example/mrc/api/v1/auth/federation/callback' };
+  assert.deepEqual(settingsProblems(on), []);
+  assert.deepEqual(settingsProblems({ ...on, FEDERATION_ENABLED: false, FEDERATION_CALLBACK_URL: '' }), []);
+
+  assert.deepEqual(settingsProblems({ ...on, FEDERATION_CALLBACK_URL: '' }), ['FEDERATION_CALLBACK_URL is required when FEDERATION_ENABLED=true']);
+  assert.deepEqual(settingsProblems({ ...on, FEDERATION_CALLBACK_URL: 'http://iris.example/cb' }),
+    ['FEDERATION_CALLBACK_URL must be an https URL (http only for localhost)']);
+  assert.deepEqual(settingsProblems({ ...on, NODE_ENV: 'development', FEDERATION_CALLBACK_URL: 'http://localhost:4000/cb' }), []);
+  assert.deepEqual(settingsProblems({ ...on, NODE_ENV: 'development', BACKBONE_CLIENT_ID: '', BACKBONE_CLIENT_SECRET: '', BACKBONE_APPLICATION_ID: '' }), [
+    'FEDERATION_ENABLED=true needs the application client (BACKBONE_CLIENT_ID)',
+    'FEDERATION_ENABLED=true needs BACKBONE_APPLICATION_ID',
+  ]);
+});

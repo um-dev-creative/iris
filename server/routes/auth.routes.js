@@ -101,6 +101,7 @@ router.post('/logout', logout);
 router.delete('/session-end', logout); // legacy name of the logout
 router.get('/me', me);
 
+router.use('/federation', require('./federation.routes'));
 router.use(require('./registration.routes'));
 
 module.exports = router;

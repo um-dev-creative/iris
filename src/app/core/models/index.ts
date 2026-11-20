@@ -10,3 +10,4 @@ export * from './login-client.model';
 export * from './campaign.model';
 export * from './template.model';
 export * from './access.model';
+export * from './federation.model';

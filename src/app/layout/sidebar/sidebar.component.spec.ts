@@ -27,8 +27,8 @@ describe('SidebarComponent', () => {
     const { el } = render();
 
     expect(el.textContent).toContain('Iris');
-    ['Inicio', 'Monitoreo', 'Campañas', 'Plantillas', 'Explorador', 'Ajustes', 'Clientes de login', 'Showcase'].forEach((label) => expect(el.textContent).toContain(label));
-    expect(el.querySelectorAll('nav a')).toHaveLength(9);
+    ['Inicio', 'Monitoreo', 'Campañas', 'Plantillas', 'Explorador', 'Ajustes', 'Clientes de login', 'Mi cuenta', 'Showcase'].forEach((label) => expect(el.textContent).toContain(label));
+    expect(el.querySelectorAll('nav a')).toHaveLength(10);
     expect(el.querySelector('aside')!.className).toContain('w-64');
   });
 
@@ -36,14 +36,14 @@ describe('SidebarComponent', () => {
     const { el } = render({ production: true });
 
     expect(el.textContent).not.toContain('Showcase');
-    expect(el.querySelectorAll('nav a')).toHaveLength(8);
+    expect(el.querySelectorAll('nav a')).toHaveLength(9);
   });
 
   it('los enlaces apuntan a las rutas del dashboard', () => {
     const { el } = render();
 
     const hrefs = Array.from(el.querySelectorAll('nav a')).map((a) => a.getAttribute('href'));
-    expect(hrefs).toEqual(['/dashboard', '/dashboard/monitoring', '/dashboard/campaigns', '/dashboard/templates', '/dashboard/data', '/dashboard/settings', '/dashboard/login-clients', '/dashboard/users', '/dashboard/showcase']);
+    expect(hrefs).toEqual(['/dashboard', '/dashboard/monitoring', '/dashboard/campaigns', '/dashboard/templates', '/dashboard/data', '/dashboard/settings', '/dashboard/login-clients', '/dashboard/account', '/dashboard/users', '/dashboard/showcase']);
   });
 
   it('colapsada: oculta las etiquetas y se estrecha', () => {

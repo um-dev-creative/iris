@@ -42,6 +42,15 @@ function settingsProblems(settings) {
   if (settings.NODE_ENV === 'production' && settings.BACKBONE_TLS_INSECURE) {
     problems.push('BACKBONE_TLS_INSECURE must not be set in production');
   }
+  if (settings.FEDERATION_ENABLED) {
+    if (!settings.FEDERATION_CALLBACK_URL) {
+      problems.push('FEDERATION_CALLBACK_URL is required when FEDERATION_ENABLED=true');
+    } else if (!/^https:\/\/|^http:\/\/(localhost|127\.)/.test(settings.FEDERATION_CALLBACK_URL)) {
+      problems.push('FEDERATION_CALLBACK_URL must be an https URL (http only for localhost)');
+    }
+    if (!settings.BACKBONE_CLIENT_ID) problems.push('FEDERATION_ENABLED=true needs the application client (BACKBONE_CLIENT_ID)');
+    if (!settings.BACKBONE_APPLICATION_ID) problems.push('FEDERATION_ENABLED=true needs BACKBONE_APPLICATION_ID');
+  }
   if (settings.TRUST_PROXY === true) {
     problems.push('TRUST_PROXY=true trusts any X-Forwarded-For; set the number of proxies in front (1 behind nginx) or their addresses');
   }
