@@ -6,7 +6,7 @@ import { RatioBarComponent } from '../../components/ratio-bar/ratio-bar.componen
 import { TimeSeriesChartComponent } from '../../components/time-series-chart/time-series-chart.component';
 import { TrendSparkComponent } from '../../components/trend-spark/trend-spark.component';
 import { MonitoringLiveService } from '../../services/monitoring-live.service';
-import { AlertRule, AlertRuleRequest, AlertType, FailureCause, MessageItem, MonitoringRange, SummaryResponse, Totals } from '../../models/monitoring-live.model';
+import { AlertRule, AlertRuleRequest, AlertType, FailureCause, MessageItem, MonitoringRange, OutagePeriod, SummaryResponse, Totals } from '../../models/monitoring-live.model';
 import {
   ALERT_TYPES, OVERALL_LABELS, RANGES, SERVICES, STATE_DOT, STATE_LABELS, channelLabel, duration, formatNumber, kindLabel, parseUtc, percent, ruleLabel,
 } from '../../utils/monitoring-live';
@@ -14,6 +14,18 @@ import {
 /** Desde aquí la tasa de éxito es sana o, por debajo de `WATCH`, crítica. */
 const HEALTHY = 0.95;
 const WATCH = 0.8;
+
+const SEARCH_DELAY_MS = 300;
+/** Los periodos del historial: el de la página o uno propio; 90 días es todo lo que Mercury guarda. */
+export const OUTAGE_PERIODS: { value: OutagePeriod; label: string }[] = [
+  { value: 'page', label: 'El periodo de la página' },
+  { value: '24h', label: 'Últimas 24 h' },
+  { value: '7d', label: 'Últimos 7 días' },
+  { value: '30d', label: 'Últimos 30 días' },
+  { value: '90d', label: 'Últimos 90 días' },
+  { value: 'custom', label: 'Elegir fechas…' },
+];
+const RANGE_WORDS: Record<MonitoringRange, string> = { '1h': 'última hora', '24h': 'últimas 24 h', '7d': 'últimos 7 días', '30d': 'últimos 30 días' };
 
 const CONNECTION_LABELS = { connecting: 'Conectando…', live: 'En vivo', polling: 'Actualizando cada 15 s', offline: 'Sin conexión' } as const;
 
@@ -60,6 +72,22 @@ export class MonitoringPageComponent {
   readonly sentTrend = computed(() => (this.live.series()?.points ?? []).map((p) => p.sent));
   readonly failedTrend = computed(() => (this.live.series()?.points ?? []).map((p) => p.failed));
 
+  readonly outagePeriods = OUTAGE_PERIODS;
+  /** Lo escrito en la búsqueda del historial; se pide a Mercury un momento después de la última tecla. */
+  readonly outageSearch = signal('');
+  readonly outagesLoading = signal(false);
+  private searchTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Qué ventana muestra el historial, en palabras. */
+  readonly outageWindowLabel = computed(() => {
+    const f = this.live.outageFilter();
+    if (f.period === 'page') return RANGE_WORDS[this.live.range()];
+    if (f.period === 'custom') {
+      const r = this.live.outages();
+      return r?.from ? `del ${this.shortDate(r.from)} al ${r.to ? this.shortDate(r.to) : 'ahora'} (UTC)` : 'periodo propio';
+    }
+    return OUTAGE_PERIODS.find((p) => p.value === f.period)!.label.toLowerCase();
+  });
+
   readonly draft = signal<RuleDraft>({ ...EMPTY_DRAFT });
   readonly saving = signal(false);
   /** Las alertas que están sonando ahora. */
@@ -78,7 +106,35 @@ export class MonitoringPageComponent {
   readonly storage = computed(() => this.live.health()?.storage ?? null);
 
   constructor() {
-    this.live.start(inject(DestroyRef));
+    const destroyRef = inject(DestroyRef);
+    this.live.start(destroyRef);
+    destroyRef.onDestroy(() => {
+      if (this.searchTimer) clearTimeout(this.searchTimer);
+    });
+  }
+
+  /** El texto se busca en Mercury (en todas las páginas), 300 ms después de la última tecla. */
+  onOutageSearch(value: string): void {
+    this.outageSearch.set(value);
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => this.live.setOutageFilter({ q: value }), SEARCH_DELAY_MS);
+  }
+
+  clearOutages(): void {
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.outageSearch.set('');
+    this.live.clearOutageFilter();
+  }
+
+  /** Ahora en UTC, como valor de `<input type="datetime-local">`: no se puede pedir el futuro. */
+  nowInput(): string {
+    return new Date().toISOString().slice(0, 16);
+  }
+
+  private shortDate(value: string): string {
+    const d = parseUtc(value);
+    const two = (n: number) => String(n).padStart(2, '0');
+    return `${two(d.getUTCDate())}/${two(d.getUTCMonth() + 1)}/${String(d.getUTCFullYear()).slice(2)} ${two(d.getUTCHours())}:${two(d.getUTCMinutes())}`;
   }
 
   /** La parte de los intentos (enviados + fallidos) que falló, o null sin intentos. */

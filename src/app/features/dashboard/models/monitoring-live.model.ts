@@ -40,7 +40,16 @@ export interface ApplicationsResponse { applications: ApplicationChoice[]; avail
 export interface Outage {
   id: string; service: string; status: ServiceState; cause: string; causeText: string; startedAt: string; endedAt: string | null; durationSeconds: number; ongoing: boolean;
 }
-export interface OutagesResponse { range: string; outages: Outage[] }
+/** Una página del historial: la ventana consultada (`range` es `custom` si se eligió una propia), la página y cuántas caídas hay en total. */
+export interface OutagesResponse {
+  range: string; outages: Outage[]; from?: string | null; to?: string | null; page?: number; size?: number; total?: number; totalPages?: number;
+}
+
+/** El periodo del historial: el de la página, uno fijo o uno propio (`from`/`to`, UTC). */
+export type OutagePeriod = 'page' | '24h' | '7d' | '30d' | '90d' | 'custom';
+
+/** Lo que se busca en el historial de caídas. `from`/`to` son valores de `<input type="datetime-local">` leídos como UTC. */
+export interface OutageFilter { period: OutagePeriod; from: string; to: string; q: string; status: '' | 'DOWN' | 'DEGRADED'; page: number }
 
 /** Cómo llegan los datos: por el stream, por consultas periódicas, o no llegan. */
 export type Connection = 'connecting' | 'live' | 'polling' | 'offline';

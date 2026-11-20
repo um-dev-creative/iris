@@ -211,14 +211,73 @@
       }
     </div>
   }
-  <h4 class="text-xs font-semibold mt-5 mb-2">Historial de caídas</h4>
-  @for (o of live.visibleOutages(); track o.id) {
-    <p class="text-sm py-1 border-b border-border last:border-0">
-      <span class="font-medium">{{ o.service }}</span> · {{ stateLabels[o.status] }} · {{ utc(o.startedAt) | date: 'dd/MM HH:mm' : 'UTC' }}
-      @if (o.ongoing) { · en curso } @else { · duró {{ duration(o.durationSeconds) }} }
-      <span class="text-muted-foreground"> — {{ o.causeText }}</span>
-    </p>
-  } @empty { <p class="text-sm text-muted-foreground">Sin caídas en este periodo.</p> }
+</section>
+
+<!-- Historial de caídas: paginado en Mercury, con búsqueda, servicio, estado y periodo propio -->
+<section aria-label="Historial de caídas" class="bg-card rounded-xl border border-border p-5 mb-6">
+  <div class="flex flex-wrap items-baseline justify-between gap-2 mb-3">
+    <h3 class="text-base font-semibold">Historial de caídas</h3>
+    <span class="text-xs text-muted-foreground" data-testid="outage-count">{{ formatNumber(live.outageTotal()) }} {{ live.outageTotal() === 1 ? 'caída' : 'caídas' }} · {{ outageWindowLabel() }}</span>
+  </div>
+  <form class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] gap-3 text-sm mb-3" aria-label="Buscar en el historial" (submit)="$event.preventDefault()">
+    <label class="flex flex-col gap-1">Buscar
+      <input class="field" type="search" maxlength="100" placeholder="Servicio, causa o descripción" [value]="outageSearch()" (input)="onOutageSearch($any($event.target).value)" data-testid="outage-search" />
+    </label>
+    <label class="flex flex-col gap-1">Servicio
+      <select class="field" [value]="live.service() ?? ''" (change)="live.setOutageService($any($event.target).value)" data-testid="outage-service">
+        <option value="" [selected]="!live.service()">Todos</option>
+        @for (svc of services; track svc) { <option [value]="svc" [selected]="svc === live.service()">{{ svc }}</option> }
+      </select>
+    </label>
+    <label class="flex flex-col gap-1">Estado
+      <select class="field" [value]="live.outageFilter().status" (change)="live.setOutageFilter({ status: $any($event.target).value })" data-testid="outage-status">
+        <option value="">Todos</option><option value="DOWN">Caído</option><option value="DEGRADED">Degradado</option>
+      </select>
+    </label>
+    <label class="flex flex-col gap-1">Periodo
+      <select class="field" [value]="live.outageFilter().period" (change)="live.setOutageFilter({ period: $any($event.target).value })" data-testid="outage-period">
+        @for (p of outagePeriods; track p.value) { <option [value]="p.value" [selected]="p.value === live.outageFilter().period">{{ p.label }}</option> }
+      </select>
+    </label>
+    @if (live.outageFilter().period === 'custom') {
+      <label class="flex flex-col gap-1">Desde (UTC)
+        <input class="field" type="datetime-local" [value]="live.outageFilter().from" [max]="nowInput()" (change)="live.setOutageFilter({ from: $any($event.target).value })" data-testid="outage-from" />
+      </label>
+      <label class="flex flex-col gap-1">Hasta (UTC, vacío es ahora)
+        <input class="field" type="datetime-local" [value]="live.outageFilter().to" [max]="nowInput()" (change)="live.setOutageFilter({ to: $any($event.target).value })" data-testid="outage-to" />
+      </label>
+    }
+  </form>
+  @if (live.outageWindowProblem(); as problem) {
+    <p role="alert" class="mb-3 text-sm text-warning" data-testid="outage-window-problem">{{ problem }}</p>
+  }
+
+  <div class="overflow-x-auto transition-opacity" [class.opacity-60]="outagesLoading()">
+    <table class="w-full text-sm">
+      <thead><tr class="text-left text-muted-foreground"><th class="py-2 pr-3 font-medium">Servicio</th><th class="pr-3 font-medium">Estado</th><th class="pr-3 font-medium">Inicio (UTC)</th><th class="pr-3 font-medium">Duración</th><th class="font-medium">Causa</th></tr></thead>
+      <tbody>
+        @for (o of live.visibleOutages(); track o.id) {
+          <tr class="border-t border-border" data-testid="outage-row">
+            <td class="py-2 pr-3 font-medium">{{ o.service }}</td>
+            <td class="pr-3 whitespace-nowrap"><span class="inline-flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-full" [class]="stateDot[o.status]"></span>{{ stateLabels[o.status] }}</span></td>
+            <td class="pr-3 whitespace-nowrap">{{ utc(o.startedAt) | date: 'dd/MM/yy HH:mm' : 'UTC' }}</td>
+            <td class="pr-3 whitespace-nowrap">@if (o.ongoing) { <span class="font-medium text-destructive">en curso</span> · {{ duration(o.durationSeconds) }} } @else { {{ duration(o.durationSeconds) }} }</td>
+            <td class="text-muted-foreground">{{ o.causeText }}</td>
+          </tr>
+        } @empty {
+          <tr><td colspan="5" class="py-6 text-center text-muted-foreground" data-testid="outage-empty">{{ live.outageFiltered() ? 'Ninguna caída coincide con la búsqueda.' : 'Sin caídas en este periodo.' }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="flex flex-wrap items-center justify-between gap-2 mt-3 text-sm">
+    <span class="text-muted-foreground" data-testid="outage-pages">Página {{ live.outageFilter().page + 1 }} de {{ live.outagePages() }}</span>
+    <span class="flex gap-2">
+      @if (live.outageFiltered()) { <button type="button" class="px-3 py-1 rounded border border-border" (click)="clearOutages()" data-testid="outage-clear">Quitar filtros</button> }
+      <button type="button" class="px-3 py-1 rounded border border-border disabled:opacity-50" [disabled]="live.outageFilter().page === 0" (click)="live.goToOutagePage(live.outageFilter().page - 1)" data-testid="outage-prev">Anterior</button>
+      <button type="button" class="px-3 py-1 rounded border border-border disabled:opacity-50" [disabled]="live.outageFilter().page + 1 >= live.outagePages()" (click)="live.goToOutagePage(live.outageFilter().page + 1)" data-testid="outage-next">Siguiente</button>
+    </span>
+  </div>
 </section>
 
 <!-- Alertas -->

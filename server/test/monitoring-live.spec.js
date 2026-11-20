@@ -22,6 +22,8 @@ describe('las vistas de monitoreo', () => {
     ['/messages?status=FAILED&page=1&size=20', `/mercury/api/v1/monitoring/applications/${APP}/messages?status=FAILED&page=1&size=20`],
     ['/health', '/mercury/api/v1/monitoring/health'],
     ['/outages?range=30d', '/mercury/api/v1/monitoring/health/outages?range=30d'],
+    ['/outages?from=2026-10-01T00:00&to=2026-10-15T06:30:00&q=se%20cay%C3%B3%2050%25&service=SMTP&status=DOWN&page=2&size=10&x=1',
+      '/mercury/api/v1/monitoring/health/outages?from=2026-10-01T00:00&to=2026-10-15T06:30:00&q=se+cay%C3%B3+50%25&service=SMTP&status=DOWN&page=2&size=10'],
   ])('%s llega a Mercury con el Bearer del cliente y la sesión de la persona', async (path, upstream) => {
     const res = await get(path);
 
@@ -54,6 +56,12 @@ describe('las vistas de monitoreo', () => {
     '/messages?page=abc',
     '/messages?size=99999',
     '/messages?status[]=a',
+    '/outages?from=ayer',
+    '/outages?to=2026-10-15',
+    '/outages?status=UP',
+    `/outages?q=${'x'.repeat(101)}`,
+    '/outages?q=a%0Ab',
+    '/outages?q[]=a',
   ])('rechaza con 400 un parámetro inválido: %s', async (path) => {
     assert.equal((await get(path)).status, 400);
     assert.equal(bff.state.live.calls.length, 0);

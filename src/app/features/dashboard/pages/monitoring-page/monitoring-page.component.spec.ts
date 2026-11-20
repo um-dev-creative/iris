@@ -4,7 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { API_BASE_URL } from '../../../../core/config';
 import { MonitoringPageComponent, RuleDraft, draftProblem, toRequest } from './monitoring-page.component';
 import { EVENT_SOURCE_FACTORY } from '../../services/monitoring-live.service';
-import { FakeEventSource, OTHER_APP, answerAll, healthFixture } from '../../services/monitoring-live.testing';
+import { FakeEventSource, OTHER_APP, answerAll, healthFixture, outagesFixture } from '../../services/monitoring-live.testing';
 
 async function open() {
   const fixture = TestBed.createComponent(MonitoringPageComponent);
@@ -43,7 +43,7 @@ describe('MonitoringPageComponent', () => {
     expect(el.textContent).toContain('The sending limit of the account was exceeded');
     expect(el.textContent).toContain('Degradación parcial');
     expect(el.textContent).toContain('en curso');
-    expect(el.textContent).toContain('duró 10 min');
+    expect(el.querySelectorAll('[data-testid="outage-row"]')[1].textContent).toContain('10 min');
     expect(el.textContent).toContain('j***@e***.com');
     expect(el.querySelector('[data-testid="pages"]')!.textContent).toContain('Página 1 de 3');
     expect(el.textContent).toContain('hace 1 h 30 min');
@@ -125,12 +125,13 @@ describe('MonitoringPageComponent', () => {
     const plot = el.querySelector('[data-testid="trend-plot"]')!;
     plot.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home' }));
     plot.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
-    answerAll(http);
+    const requests = answerAll(http);
     fixture.detectChanges();
+    expect(requests.find((r) => r.request.url.endsWith('/outages'))!.request.params.get('service')).toBe('SMTP');
 
     const chips = el.querySelector('[aria-label="Filtros activos"]')!.textContent!;
     for (const text of ['Tipo: Campaña', 'Estado: Fallidos', 'Servicio: SMTP', 'Intervalo: 17/11 06:00']) expect(chips).toContain(text);
-    expect(live.visibleOutages().map((o) => o.service)).toEqual(['SMTP']);
+    expect(live.service()).toBe('SMTP');
 
     for (const text of ['Tipo:', 'Estado:', 'Servicio:', 'Intervalo:']) {
       button(el, text).click();
@@ -163,14 +164,15 @@ describe('MonitoringPageComponent', () => {
 
   it('la paginación avanza y retrocede, y se desactiva en los extremos', async () => {
     const { fixture, el, http, live } = await open();
-    expect(button(el, 'Anterior').disabled).toBe(true);
+    const messages = el.querySelector('[aria-label="Mensajes"]') as HTMLElement;
+    expect(button(messages, 'Anterior').disabled).toBe(true);
 
-    button(el, 'Siguiente').click();
+    button(messages, 'Siguiente').click();
     answerAll(http);
     fixture.detectChanges();
     expect(live.page()).toBe(1);
 
-    button(el, 'Anterior').click();
+    button(messages, 'Anterior').click();
     answerAll(http);
     expect(live.page()).toBe(0);
   });
@@ -465,6 +467,143 @@ describe('formulario de reglas', () => {
       expect(el.querySelector('[role="meter"]')?.getAttribute('aria-valuenow')).toBe('90');
       expect(el.querySelectorAll('app-trend-spark')).toHaveLength(2);
       expect(page(el).sentTrend()).toEqual([10, 20]);
+    });
+  });
+
+  describe('historial de caídas', () => {
+    beforeEach(() => {
+      FakeEventSource.instances.length = 0;
+      TestBed.configureTestingModule({
+        providers: [
+          provideHttpClient(), provideHttpClientTesting(), { provide: API_BASE_URL, useValue: '/mrc/api/v1' },
+          { provide: EVENT_SOURCE_FACTORY, useValue: (url: string) => new FakeEventSource(url) },
+        ],
+      });
+    });
+    afterEach(() => vi.useRealTimers());
+
+    const outageRequest = (http: HttpTestingController) => {
+      const requests = answerAll(http);
+      return requests.find((r) => r.request.url.endsWith('/outages'))?.request.params;
+    };
+    const change = (el: HTMLElement, testid: string, value: string) => {
+      const field = el.querySelector(`[data-testid="${testid}"]`) as HTMLInputElement | HTMLSelectElement;
+      field.value = value;
+      field.dispatchEvent(new Event(field.tagName === 'INPUT' && (field as HTMLInputElement).type === 'search' ? 'input' : 'change'));
+    };
+
+    it('lista las caídas en una tabla, dice cuántas hay y en qué periodo', async () => {
+      const { el } = await open();
+
+      expect(el.querySelectorAll('[data-testid="outage-row"]')).toHaveLength(2);
+      expect(el.querySelector('[data-testid="outage-count"]')?.textContent).toContain('2 caídas · últimas 24 h');
+      expect(el.querySelector('[data-testid="outage-pages"]')?.textContent).toContain('Página 1 de 1');
+      expect((el.querySelector('[data-testid="outage-prev"]') as HTMLButtonElement).disabled).toBe(true);
+      expect((el.querySelector('[data-testid="outage-next"]') as HTMLButtonElement).disabled).toBe(true);
+      expect(el.querySelector('[data-testid="outage-clear"]')).toBeNull();
+    });
+
+    it('la búsqueda se pide a Mercury un momento después de la última tecla', async () => {
+      const { fixture, el, http } = await open();
+      vi.useFakeTimers();
+
+      change(el, 'outage-search', 'tim');
+      change(el, 'outage-search', 'timeout');
+      vi.advanceTimersByTime(299);
+      expect(http.match((r) => r.url.endsWith('/outages'))).toHaveLength(0);
+      vi.advanceTimersByTime(1);
+      expect(outageRequest(http)?.get('q')).toBe('timeout');
+      fixture.detectChanges();
+      expect(fixture.componentInstance.outageSearch()).toBe('timeout');
+    });
+
+    it('servicio, estado y periodo filtran; elegir fechas muestra sus campos', async () => {
+      const { fixture, el, http, live } = await open();
+
+      change(el, 'outage-service', 'SMTP');
+      expect(outageRequest(http)?.get('service')).toBe('SMTP');
+      change(el, 'outage-status', 'DOWN');
+      expect(outageRequest(http)?.get('status')).toBe('DOWN');
+      change(el, 'outage-period', '30d');
+      expect(outageRequest(http)?.get('range')).toBe('30d');
+      fixture.detectChanges();
+      expect(el.querySelector('[data-testid="outage-count"]')?.textContent).toContain('últimos 30 días');
+      expect(el.querySelector('[data-testid="outage-from"]')).toBeNull();
+
+      change(el, 'outage-period', 'custom');
+      fixture.detectChanges();
+      expect(el.querySelector('[data-testid="outage-window-problem"]')?.textContent).toContain('Elige desde cuándo');
+      change(el, 'outage-from', '2026-11-18T00:00');
+      const params = outageRequest(http);
+      expect(params?.get('from')).toBe('2026-11-18T00:00:00');
+      expect(live.outageFilter().period).toBe('custom');
+      fixture.detectChanges();
+      expect(el.querySelector('[data-testid="outage-window-problem"]')).toBeNull();
+      expect((el.querySelector('[data-testid="outage-to"]') as HTMLInputElement).max).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+      change(el, 'outage-to', '2026-11-19T00:00');
+      expect(outageRequest(http)?.get('to')).toBe('2026-11-19T00:00:00');
+    });
+
+    it('el periodo propio se describe con sus fechas', async () => {
+      const { fixture, live } = await open();
+      live.setOutageFilter({ period: 'custom', from: '2026-11-18T00:00' });
+      live.outages.set({ range: 'custom', outages: [], from: '2026-11-18T00:00:00', to: '2026-11-19T06:30:00', page: 0, size: 10, total: 0 });
+      expect(fixture.componentInstance.outageWindowLabel()).toBe('del 18/11/26 00:00 al 19/11/26 06:30 (UTC)');
+
+      live.outages.set({ range: 'custom', outages: [], from: '2026-11-18T00:00:00', to: null });
+      expect(fixture.componentInstance.outageWindowLabel()).toBe('del 18/11/26 00:00 al ahora (UTC)');
+      live.outages.set(null);
+      expect(fixture.componentInstance.outageWindowLabel()).toBe('periodo propio');
+    });
+
+    it('pagina en Mercury y quitar los filtros vuelve a todo, también el texto escrito', async () => {
+      const { fixture, el, http, live } = await open();
+      live.outages.set({ ...outagesFixture(), page: 0, size: 10, total: 23 });
+      fixture.detectChanges();
+
+      (el.querySelector('[data-testid="outage-next"]') as HTMLButtonElement).click();
+      expect(outageRequest(http)?.get('page')).toBe('1');
+      live.outages.set({ ...outagesFixture(), page: 1, size: 10, total: 23 });
+      fixture.detectChanges();
+      expect(el.querySelector('[data-testid="outage-pages"]')?.textContent).toContain('Página 2 de 3');
+      (el.querySelector('[data-testid="outage-prev"]') as HTMLButtonElement).click();
+      expect(outageRequest(http)?.get('page')).toBe('0');
+
+      fixture.componentInstance.onOutageSearch('smtp');
+      change(el, 'outage-status', 'DEGRADED');
+      answerAll(http);
+      fixture.detectChanges();
+      (el.querySelector('[data-testid="outage-clear"]') as HTMLButtonElement).click();
+      const params = outageRequest(http);
+      expect(params?.has('status')).toBe(false);
+      expect(params?.has('q')).toBe(false);
+      expect(fixture.componentInstance.outageSearch()).toBe('');
+    });
+
+    it('sin resultados distingue «no hubo caídas» de «nada coincide»', async () => {
+      const { fixture, el, live } = await open();
+      live.outages.set({ range: '24h', outages: [], page: 0, size: 10, total: 0 });
+      fixture.detectChanges();
+      expect(el.querySelector('[data-testid="outage-empty"]')?.textContent).toContain('Sin caídas en este periodo');
+
+      live.setOutageService('SMTP');
+      live.outages.set({ range: '24h', outages: [], page: 0, size: 10, total: 0 });
+      fixture.detectChanges();
+      expect(el.querySelector('[data-testid="outage-empty"]')?.textContent).toContain('Ninguna caída coincide');
+      expect(el.querySelector('[data-testid="outage-count"]')?.textContent).toContain('0 caídas');
+    });
+
+    it('una sola caída se nombra en singular, y al salir no queda una búsqueda pendiente', async () => {
+      const { fixture, el, live, http } = await open();
+      live.outages.set({ range: '24h', outages: [outagesFixture().outages[0]], page: 0, size: 10, total: 1 });
+      fixture.detectChanges();
+      expect(el.querySelector('[data-testid="outage-count"]')?.textContent).toContain('1 caída ·');
+
+      vi.useFakeTimers();
+      fixture.componentInstance.onOutageSearch('x');
+      fixture.destroy();
+      vi.advanceTimersByTime(500);
+      expect(http.match((r) => r.url.endsWith('/outages'))).toHaveLength(0);
     });
   });
 });

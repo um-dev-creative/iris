@@ -4,7 +4,7 @@ import { HttpTestingController } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../../../core/config';
-import { EVENT_SOURCE_FACTORY, MonitoringLiveService } from './monitoring-live.service';
+import { EVENT_SOURCE_FACTORY, MonitoringLiveService, windowProblem } from './monitoring-live.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { FakeEventSource, OTHER_APP, answerAll, healthFixture, messagesFixture, paths, summaryFixture } from './monitoring-live.testing';
 
@@ -155,14 +155,16 @@ describe('MonitoringLiveService', () => {
       expect(paths(requests)).toEqual(['messages', 'series']);
     });
 
-    it('elegir un servicio filtra el historial de caídas sin pedir nada', async () => {
+    it('elegir un servicio pide a Mercury el historial de ese servicio, desde la primera página', async () => {
       await started();
 
       service.toggleService('SMTP');
-      expect(service.visibleOutages().map((o) => o.service)).toEqual(['SMTP']);
-      expect(http.match(() => true)).toHaveLength(0);
+      const [request] = answerAll(http);
+      expect(paths([request])).toEqual(['outages']);
+      expect(request.request.params.get('service')).toBe('SMTP');
+      expect(request.request.params.get('page')).toBe('0');
       service.toggleService('SMTP');
-      expect(service.visibleOutages()).toHaveLength(2);
+      expect(answerAll(http)[0].request.params.has('service')).toBe(false);
     });
 
     it('quitar los filtros los borra todos y vuelve a pedir', async () => {
@@ -552,8 +554,10 @@ describe('MonitoringLiveService', () => {
       expect(service.application()).toBe(OTHER_APP);
       expect(service.hasFilters()).toBe(false);
       const byPath = Object.fromEntries(requests.map((r) => [r.request.url.replace('/mrc/api/v1/monitoring/', ''), r.request.params.get('applicationId')]));
-      for (const path of ['summary', 'series', 'failures', 'verification-codes', 'messages', 'alerts', 'alerts/rules', 'outages']) expect(byPath[path]).toBe(OTHER_APP);
+      for (const path of ['summary', 'series', 'failures', 'verification-codes', 'messages', 'alerts', 'alerts/rules']) expect(byPath[path]).toBe(OTHER_APP);
+      // service health and its history are Mercury's own, not one application's
       expect(byPath['health']).toBeNull();
+      expect(byPath['outages']).toBeNull();
       expect(FakeEventSource.instances.at(-1)!.url).toBe(`/mrc/api/v1/monitoring/stream?range=24h&applicationId=${OTHER_APP}`);
       expect(FakeEventSource.instances[0].closed).toBe(true);
     });
@@ -599,5 +603,128 @@ describe('MonitoringLiveService', () => {
       http.match(() => true);
       vi.restoreAllMocks();
     });
+  });
+
+  describe('historial de caídas', () => {
+    const outageParams = () => {
+      const request = answerAll(http).find((r) => r.request.url.endsWith('/outages'))!;
+      return Object.fromEntries(request.request.params.keys().map((k) => [k, request.request.params.get(k)]));
+    };
+
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-11-20T12:00:00Z'));
+    });
+
+    it('sin elegir nada pide la primera página del periodo de la página, de 10 en 10', async () => {
+      service.start(destroyRef());
+
+      expect(outageParams()).toEqual({ range: '24h', page: '0', size: '10' });
+    });
+
+    it('cada periodo se pide como Mercury lo entiende: fijo, 90 días como ventana, o fechas propias', () => {
+      service.setOutageFilter({ period: '7d' });
+      expect(outageParams()).toEqual({ range: '7d', page: '0', size: '10' });
+
+      service.setOutageFilter({ period: '90d' });
+      expect(outageParams()).toEqual({ from: '2026-08-22T12:00:00', page: '0', size: '10' });
+
+      service.setOutageFilter({ period: 'custom', from: '2026-11-01T08:30', to: '2026-11-02T00:00' });
+      expect(outageParams()).toEqual({ from: '2026-11-01T08:30:00', to: '2026-11-02T00:00:00', page: '0', size: '10' });
+
+      service.setOutageFilter({ to: '' });
+      expect(outageParams()).toEqual({ from: '2026-11-01T08:30:00', page: '0', size: '10' });
+
+      service.setOutageFilter({ from: '2026-11-01T08:30:15' });
+      expect(outageParams()['from']).toBe('2026-11-01T08:30:15');
+    });
+
+    it('el texto, el estado y el servicio viajan a Mercury y cada cambio vuelve a la primera página', () => {
+      service.setOutageFilter({ q: '  time out ', status: 'DOWN' });
+      answerAll(http);
+      service.outages.set({ range: '24h', outages: [], page: 0, size: 10, total: 35 });
+      service.goToOutagePage(2);
+      expect(outageParams()['page']).toBe('2');
+
+      service.setOutageService('SMTP');
+      expect(outageParams()).toEqual({ range: '24h', q: 'time out', status: 'DOWN', service: 'SMTP', page: '0', size: '10' });
+      expect(service.outageFiltered()).toBe(true);
+    });
+
+    it('la página no pasa de los extremos y no pide la misma otra vez', () => {
+      service.outages.set({ range: '24h', outages: [], page: 0, size: 10, total: 25 });
+      expect(service.outagePages()).toBe(3);
+
+      service.goToOutagePage(-1);
+      service.goToOutagePage(0);
+      expect(http.match(() => true)).toHaveLength(0);
+      service.goToOutagePage(99);
+      expect(outageParams()['page']).toBe('2');
+      expect(service.outageFilter().page).toBe(2);
+    });
+
+    it('sin total cuenta lo que llegó; vacío es una página', () => {
+      expect(service.outagePages()).toBe(1);
+      service.outages.set({ range: '24h', outages: [{ id: 'o', service: 'SMTP', status: 'DOWN', cause: 'X', causeText: 'x', startedAt: '2026-11-20T00:00:00', endedAt: null, durationSeconds: 1, ongoing: true }] });
+      expect(service.outageTotal()).toBe(1);
+    });
+
+    it('un periodo propio que no vale no se pide y dice por qué', async () => {
+      service.setOutageFilter({ period: 'custom' });
+      expect(service.outageWindowProblem()).toBe('Elige desde cuándo.');
+      expect(http.match(() => true)).toHaveLength(0);
+
+      service.setOutageFilter({ from: '2026-11-10T00:00', to: '2026-11-09T00:00' });
+      expect(service.outageWindowProblem()).toContain('anterior');
+      await service.loadOutages();
+      expect(http.match(() => true)).toHaveLength(0);
+    });
+
+    it('quitar los filtros del historial vuelve al periodo de la página, sin servicio', () => {
+      service.setOutageFilter({ period: '30d', q: 'x', status: 'DEGRADED' });
+      service.setOutageService('KAFKA');
+      answerAll(http);
+
+      service.clearOutageFilter();
+
+      expect(outageParams()).toEqual({ range: '24h', page: '0', size: '10' });
+      expect(service.service()).toBeNull();
+      expect(service.outageFiltered()).toBe(false);
+    });
+
+    it('cambiar el periodo de la página vuelve el historial a su primera página si lo sigue', async () => {
+      service.outages.set({ range: '24h', outages: [], page: 0, size: 10, total: 30 });
+      service.goToOutagePage(1);
+      answerAll(http);
+
+      service.setRange('7d');
+      expect(outageParams()).toEqual({ range: '7d', page: '0', size: '10' });
+
+      service.setOutageFilter({ period: '30d' });
+      answerAll(http);
+      service.outages.set({ range: '30d', outages: [], page: 0, size: 10, total: 30 });
+      service.goToOutagePage(1);
+      answerAll(http);
+      service.setRange('1h');
+      expect(outageParams()).toEqual({ range: '30d', page: '1', size: '10' });
+    });
+  });
+});
+
+describe('windowProblem', () => {
+  const now = Date.parse('2026-11-20T12:00:00Z');
+  const custom = (from: string, to = '') => ({ period: 'custom' as const, from, to, q: '', status: '' as const, page: 0 });
+
+  it('solo revisa periodos propios', () => {
+    expect(windowProblem({ ...custom(''), period: '7d' }, now)).toBeNull();
+  });
+
+  it('pide un inicio válido, anterior al fin y dentro de lo que Mercury guarda', () => {
+    expect(windowProblem(custom(''), now)).toBe('Elige desde cuándo.');
+    expect(windowProblem(custom('no-es-fecha'), now)).toBe('La fecha no es válida.');
+    expect(windowProblem(custom('2026-11-20T13:00'), now)).toContain('anterior');
+    expect(windowProblem(custom('2026-08-01T00:00'), now)).toContain('90 días');
+    expect(windowProblem(custom('2026-11-19T00:00'), now)).toBeNull();
+    expect(windowProblem(custom('2026-11-19T00:00', '2026-11-19T06:00'), now)).toBeNull();
   });
 });
