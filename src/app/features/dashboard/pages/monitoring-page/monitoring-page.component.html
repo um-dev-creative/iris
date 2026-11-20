@@ -5,7 +5,7 @@
   </div>
   <div class="flex flex-wrap items-center gap-3">
     <output class="inline-flex items-center gap-2 text-xs text-muted-foreground" data-testid="connection">
-      <span class="inline-block w-2 h-2 rounded-full" [class.bg-success]="live.connection() === 'live'" [class.bg-warning]="live.connection() === 'polling' || live.connection() === 'connecting'" [class.bg-destructive]="live.connection() === 'offline'"></span>
+      <span class="inline-block w-2 h-2 rounded-full" [class.iris-live-dot]="live.connection() === 'live'" [class.bg-success]="live.connection() === 'live'" [class.bg-warning]="live.connection() === 'polling' || live.connection() === 'connecting'" [class.bg-destructive]="live.connection() === 'offline'"></span>
       {{ connectionLabel() }}
       @if (live.lastUpdate(); as updated) { · {{ updated | date: 'HH:mm:ss' }} }
     </output>
@@ -72,14 +72,17 @@
 <!-- Resumen -->
 <section aria-label="Resumen" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
   @if (live.summary(); as s) {
-    <div class="md:col-span-1 bg-card rounded-xl border border-border p-5 flex items-center justify-center"><app-success-ring [rate]="s.totals.successRate" /></div>
+    <div class="md:col-span-1 bg-card rounded-xl border border-border p-5 flex items-center justify-center"><app-success-ring [rate]="s.totals.successRate" [sent]="s.totals.sent" [failed]="s.totals.failed" /></div>
     <button type="button" class="kpi" (click)="live.toggleStatus('SENT')" [attr.aria-pressed]="live.status() === 'SENT'">
-      <span class="text-xs text-muted-foreground">Enviados</span><span class="text-2xl font-bold" data-testid="sent">{{ formatNumber(s.totals.sent) }}</span>
+      <span class="text-xs text-muted-foreground">Enviados</span><app-animated-number class="text-2xl font-bold self-start" data-testid="sent" [value]="s.totals.sent" />
+      <app-ratio-bar [segments]="[{ label: 'Enviados', value: s.totals.sent, color: 'var(--chart-2)' }, { label: 'Fallidos', value: s.totals.failed, color: 'var(--chart-5)' }]" />
     </button>
     <button type="button" class="kpi" (click)="live.toggleStatus('FAILED')" [attr.aria-pressed]="live.status() === 'FAILED'">
-      <span class="text-xs text-muted-foreground">Fallidos</span><span class="text-2xl font-bold text-destructive" data-testid="failed">{{ formatNumber(s.totals.failed) }}</span>
+      <span class="text-xs text-muted-foreground">Fallidos</span><app-animated-number class="text-2xl font-bold text-destructive self-start" data-testid="failed" tone="inverse" [value]="s.totals.failed" />
+      <span class="text-xs text-muted-foreground">{{ percent(failureRate(s.totals)) }} de los intentos</span>
     </button>
-    <div class="kpi"><span class="text-xs text-muted-foreground">En cola</span><span class="text-2xl font-bold" data-testid="queued">{{ formatNumber(s.totals.queued) }}</span></div>
+    <div class="kpi"><span class="text-xs text-muted-foreground">En cola</span><app-animated-number class="text-2xl font-bold self-start" data-testid="queued" tone="inverse" [value]="s.totals.queued" />
+    <span class="text-xs text-muted-foreground">Esperando a su proveedor</span></div>
   } @else {
     @for (n of [1, 2, 3, 4]; track n) { <div class="h-28 rounded-xl border border-border bg-card animate-pulse" aria-hidden="true"></div> }
   }
@@ -94,6 +97,8 @@
         @if (c.providerConnected) {
           <span class="text-xs text-muted-foreground">{{ formatNumber(c.sent) }} enviados · {{ formatNumber(c.failed) }} fallidos</span>
           <span class="text-xs text-muted-foreground">{{ percent(c.successRate) }} · {{ formatNumber(c.queued) }} en cola</span>
+          <app-ratio-bar class="mt-1" [segments]="[{ label: 'Enviados', value: c.sent, color: 'var(--chart-2)' }, { label: 'Fallidos', value: c.failed, color: 'var(--chart-5)' }, { label: 'En cola', value: c.queued, color: 'var(--chart-3)' }]" />
+          <span class="text-[11px] text-muted-foreground">{{ percent(volumeShare(s, c.sent + c.failed)) }} del volumen</span>
         } @else {
           <span class="text-xs text-muted-foreground">En cola, sin proveedor: {{ formatNumber(c.queued) }}</span>
         }
@@ -105,6 +110,7 @@
       <button type="button" class="kpi text-left" [class.ring-2]="live.kind() === k.kind" [class.ring-primary]="live.kind() === k.kind" [attr.aria-pressed]="live.kind() === k.kind" (click)="live.toggleKind(k.kind)">
         <span class="text-sm font-medium">{{ kindLabel(k.kind) }}</span>
         <span class="text-xs text-muted-foreground">{{ formatNumber(k.sent) }} enviados · {{ formatNumber(k.failed) }} fallidos · {{ percent(k.successRate) }}</span>
+        <app-ratio-bar class="mt-1" [segments]="[{ label: 'Enviados', value: k.sent, color: 'var(--chart-2)' }, { label: 'Fallidos', value: k.failed, color: 'var(--chart-5)' }]" />
       </button>
     }
   </section>
@@ -122,8 +128,9 @@
     <h3 class="text-sm font-semibold mb-3">Causas de fallo</h3>
     @if (live.failures(); as f) {
       @for (cause of f.causes; track cause.cause + cause.channel) {
-        <button type="button" class="w-full flex justify-between text-sm py-1.5 hover:bg-muted rounded px-2" (click)="live.drillIntoFailure(cause.channel)">
-          <span>{{ cause.cause }} <span class="text-muted-foreground">· {{ channelLabel(cause.channel) }}</span></span><span class="font-medium">{{ formatNumber(cause.total) }}</span>
+        <button type="button" class="w-full text-left text-sm py-1.5 hover:bg-muted rounded px-2" (click)="live.drillIntoFailure(cause.channel)">
+          <span class="flex justify-between gap-3"><span>{{ cause.cause }} <span class="text-muted-foreground">· {{ channelLabel(cause.channel) }}</span></span><span class="font-medium tabular-nums">{{ formatNumber(cause.total) }}</span></span>
+          <app-ratio-bar class="mt-1 block" [height]="4" [total]="maxCause(f.causes)" [segments]="[{ label: cause.cause, value: cause.total, color: 'var(--chart-5)' }]" />
         </button>
       } @empty { <p class="text-sm text-muted-foreground">Sin fallos en este periodo.</p> }
       @if (f.stuck.length > 0) {
@@ -147,6 +154,13 @@
         <dt class="text-muted-foreground">Envíos fallidos</dt><dd class="text-right font-medium">{{ formatNumber(c.failedSends) }}</dd>
         <dt class="text-muted-foreground">Tasa de confirmación</dt><dd class="text-right font-medium">{{ percent(c.confirmationRate) }}</dd>
       </dl>
+      <app-ratio-bar class="mt-4 block" [height]="10" [total]="c.generated" data-testid="codes-bar"
+        [segments]="[{ label: 'Confirmados', value: c.confirmed, color: 'var(--chart-2)' }, { label: 'Pendientes', value: c.pending, color: 'var(--chart-1)' }, { label: 'Vencidos', value: c.expired, color: 'var(--chart-3)' }]" />
+      <div class="flex flex-wrap gap-3 text-xs text-muted-foreground mt-2">
+        <span class="inline-flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-sm" style="background: var(--chart-2)"></span>Confirmados</span>
+        <span class="inline-flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-sm" style="background: var(--chart-1)"></span>Pendientes</span>
+        <span class="inline-flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-sm" style="background: var(--chart-3)"></span>Vencidos</span>
+      </div>
     }
   </section>
 </div>
@@ -158,7 +172,7 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
       @for (svc of h.services; track svc.service) {
         <button type="button" class="kpi text-left" [class.ring-2]="live.service() === svc.service" [class.ring-primary]="live.service() === svc.service" [attr.aria-pressed]="live.service() === svc.service" (click)="live.toggleService(svc.service)">
-          <span class="flex items-center gap-2 text-sm font-medium"><span class="inline-block w-2.5 h-2.5 rounded-full" [class]="stateDot[svc.status]"></span>{{ svc.service }} · {{ stateLabels[svc.status] }}</span>
+          <span class="flex items-center gap-2 text-sm font-medium"><span class="inline-block w-2.5 h-2.5 rounded-full" [class]="stateDot[svc.status]" [class.iris-live-dot]="svc.status === 'DOWN'"></span>{{ svc.service }} · {{ stateLabels[svc.status] }}</span>
           @if (svc.causeText) { <span class="text-xs text-muted-foreground">{{ svc.causeText }}</span> }
           @if (svc.latencyMs !== null) { <span class="text-xs text-muted-foreground">{{ svc.latencyMs }} ms</span> }
         </button>

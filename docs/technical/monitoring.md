@@ -85,10 +85,32 @@ flowchart LR
 - **En vivo:** `EventSource` (con cookies) recibe `summary` y `health` cada 10 s. El resto (serie, fallos, códigos, caídas, mensajes) se consulta cada 30 s, y no se consulta con la pestaña oculta. Si el stream es rechazado, o `EventSource` no existe, se consulta todo cada 15 s y se reintenta el stream cada minuto. Mercury cierra el stream a los 15 min y el navegador reconecta solo (eso vuelve a validar la sesión).
 - **Honestidad:** sin datos no hay cifras (marcadores de carga); sin envíos no hay tasa («Sin datos»); un canal sin proveedor (SMS, WhatsApp, Push) se muestra «En cola, sin proveedor»; si una consulta falla aparece el aviso «los datos pueden estar desactualizados» y el indicador pasa a «Sin conexión». El estado de un servicio siempre lleva texto además del color.
 - **Fechas:** Mercury las envía en UTC sin zona; la página las lee como UTC y las muestra así (`Fecha (UTC)`).
-- **Gráfica:** SVG propio (`time-series-chart`, `success-ring`), sin librería: barras apiladas enviados/fallidos, cada barra es un botón con texto accesible. Se eligió SVG propio por el tamaño del paquete y porque solo hacen falta estos dos gráficos.
+- **Gráfica:** SVG propio (`time-series-chart`, `success-ring`, `ratio-bar`, `animated-number`), sin librería: barras apiladas enviados/fallidos, cada barra es un botón con texto accesible. Se eligió SVG propio por el tamaño del paquete y porque los gráficos son pocos y sencillos.
+
+### Gráficos vivos y precisos
+
+| Pieza | Qué hace |
+|---|---|
+| `time-series-chart` | Eje de cantidades con marcas «redondas» (`niceScale`: pasos de 1, 2 o 5 por potencia de diez) y líneas guía; resumen del periodo (total, enviados, fallidos y pico); detalle al pasar el puntero o enfocar una barra (intervalo `dd/MM HH:mm–HH:mm` UTC, enviados, fallidos, tasa de fallos), que no se sale por los lados; el **intervalo en curso** (el último, si aún no termina) va rayado, lo dice su texto accesible y la leyenda, para no leer como caída lo que solo está incompleto. Las barras crecen desde la base al aparecer y cambian de altura con transición (`y`/`height` como propiedades CSS) cuando llegan datos. |
+| `success-ring` | El arco sigue a la tasa con transición y cambia de color: verde desde 95 %, ámbar desde 80 %, rojo por debajo; debajo dice «N de M entregados». El texto del porcentaje sigue ahí: el color no es la única señal. |
+| `animated-number` | Las cifras del resumen cuentan hasta el valor nuevo (650 ms, `requestAnimationFrame`) y destellan en verde si mejoran o en rojo si empeoran (`tone="inverse"` para fallidos y en cola). El lector de pantalla recibe solo el valor exacto. |
+| `ratio-bar` | Barra apilada de proporción con texto accesible («Enviados: 90 (90.0 %), …»): resumen (enviados/fallidos), cada canal (enviados/fallidos/en cola y su parte del volumen), cada tipo, cada causa de fallo (frente a la más frecuente) y los códigos de verificación (confirmados/pendientes/vencidos). |
+
+```mermaid
+flowchart LR
+    D[Datos nuevos: stream o consulta] --> N[animated-number: cuenta y destella]
+    D --> B[time-series-chart: barras cambian de altura]
+    D --> R[success-ring: arco y color]
+    D --> P[ratio-bar: anchos]
+    M{prefers-reduced-motion} -->|sí| X[Sin animación: valor final al instante]
+```
+
+- **Movimiento responsable:** con `prefers-reduced-motion: reduce` (o sin `matchMedia`/`requestAnimationFrame`, como en las pruebas) no hay animaciones ni transiciones: se muestra el valor final. Los estilos (`iris-bar`, `iris-ratio-part`, `iris-ring-arc`, `iris-live-dot`, `iris-flash-*`) están en `src/styles.css`.
+- **Indicadores que laten:** el punto «En vivo» y el de un servicio **Caído** laten (`iris-live-dot`).
+- **Precisión:** Mercury ya devuelve todos los intervalos del periodo (también los vacíos), así que el eje de tiempo no se comprime; el eje de cantidades usa un máximo redondo por encima del mayor intervalo para leer valores exactos contra las líneas guía.
 - **El inicio** (`/dashboard/home`) conserva sus tarjetas de campañas y enlaza a esta sección.
 
 ## Pruebas
 
 - BFF: `server/test/monitoring-actions.spec.js` (exportar, reintentar, reglas), `server/test/monitoring-live*.spec.js` (rutas, parámetros, aplicación fija, credenciales, stream real con eventos escritos después de abrirlo, cierre en ambos sentidos, rechazos, Mercury caído, cliente rechazado, sin aplicación). El doble de Mercury del `harness.js` tiene `state.live`.
-- Frontend: specs de `monitoring-live.service`, `monitoring-page`, `time-series-chart`, `success-ring` y `utils/monitoring-live`; `FakeEventSource` en `monitoring-live.testing.ts`.
+- Frontend: specs de `monitoring-live.service`, `monitoring-page`, `time-series-chart` (escala, detalle, intervalo en curso), `success-ring` (color), `ratio-bar`, `animated-number` (con `requestAnimationFrame` simulado), `utils/chart-scale` y `utils/monitoring-live`; `FakeEventSource` en `monitoring-live.testing.ts`.

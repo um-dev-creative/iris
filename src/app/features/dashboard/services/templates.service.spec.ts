@@ -213,5 +213,113 @@ describe('TemplatesService', () => {
       await done;
     });
   });
-});
 
+  describe('memoria de la sesión', () => {
+    const item = (id: string, extra: object = {}) => ({ id, description: id, location: `${id}.md`, fileFormat: 'MD', templateTypeId: 't', severityTypeId: 's', ...extra });
+    const content = (id: string, extra: object = {}) => ({ templateId: id, name: `${id}.md`, format: 'MARKDOWN', content: 'x', etag: 'e1', exists: true, system: false, parameters: [], ...extra });
+
+    it('peek devuelve datos y contenido solo cuando conoce los dos, con los ejemplos recordados', async () => {
+      const { service, http } = setup();
+      expect(service.peek('a')).toBeNull();
+
+      const got = service.get('a');
+      http.expectOne(`${URL}/a`).flush(item('a'));
+      await got;
+      expect(service.peek('a')).toBeNull();
+
+      const read = service.content('a');
+      http.expectOne(`${URL}/a/content`).flush(content('a'));
+      await read;
+      service.rememberSamples('a', 'name=Ana');
+
+      expect(service.peek('a')).toEqual({ summary: item('a'), content: content('a'), samples: 'name=Ana' });
+    });
+
+    it('guardar contenido o restaurar actualiza la memoria y marca la plantilla como recién guardada', async () => {
+      const { service, http } = setup();
+      expect(service.recentlySaved()).toBeNull();
+
+      const saved = service.saveContent('a', 'nuevo', 'e1');
+      http.expectOne(`${URL}/a/content`).flush(content('a', { content: 'nuevo', etag: 'e2' }));
+      await saved;
+      expect(service.recentlySaved()).toBe('a');
+
+      const restored = service.restore('b', 1, 'e1');
+      http.expectOne(`${URL}/b/versions/1/restore`).flush(content('b', { etag: 'e3' }));
+      await restored;
+      expect(service.recentlySaved()).toBe('b');
+
+      vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 10 * 60_000);
+      expect(service.recentlySaved()).toBeNull();
+      vi.restoreAllMocks();
+    });
+
+    it('recuerda cada búsqueda; editar una plantilla la cambia en las listas y crear o desactivar las olvida', async () => {
+      const { service, http } = setup();
+      const filters = { q: 'x', page: 0, templateTypeId: '' };
+
+      const listed = service.search(filters);
+      http.expectOne((r) => r.url === URL).flush({ items: [item('a'), item('b')], page: 0, size: 10, totalElements: 2, totalPages: 1 });
+      await listed;
+      expect(service.peekSearch({ page: 0, q: 'x' })?.items).toHaveLength(2);
+      expect(service.peekSearch({ q: 'otra' })).toBeNull();
+
+      const updated = service.update('a', { description: 'Cambiada' });
+      http.expectOne(`${URL}/a`).flush(item('a', { description: 'Cambiada' }));
+      await updated;
+      expect(service.peekSearch(filters)?.items[0].description).toBe('Cambiada');
+      expect(service.peekSearch(filters)?.items[1].description).toBe('b');
+
+      const created = service.create({ description: 'n', location: 'n.md', fileFormat: 'MD', templateTypeId: 't', severityTypeId: 's' });
+      http.expectOne(URL).flush(item('n'));
+      await created;
+      expect(service.peekSearch(filters)).toBeNull();
+      expect(service.recentlySaved()).toBe('n');
+
+      const again = service.search(filters);
+      http.expectOne((r) => r.url === URL).flush({ items: [item('a')], page: 0, size: 10, totalElements: 1, totalPages: 1 });
+      await again;
+      const removed = service.deactivate('a');
+      http.expectOne(`${URL}/a`).flush(null);
+      await removed;
+      expect(service.peekSearch(filters)).toBeNull();
+      expect(service.peek('a')).toBeNull();
+    });
+
+    it('recuerda la vista previa del mismo contenido un minuto, y solo las últimas veinte', async () => {
+      const { service, http } = setup();
+      const result = { ok: true, format: 'MARKDOWN', output: '<p>x</p>', problems: [], parameters: [] };
+
+      const done = service.preview('a.md', 'x', { b: '2', a: '1' });
+      http.expectOne(`${URL}/preview`).flush(result);
+      await done;
+      expect(service.peekPreview('a.md', 'x', { a: '1', b: '2' })).toEqual(result);
+      expect(service.peekPreview('a.md', 'y', { a: '1', b: '2' })).toBeNull();
+
+      for (let i = 0; i < 20; i++) {
+        const more = service.preview('a.md', `c${i}`, {});
+        http.expectOne(`${URL}/preview`).flush(result);
+        await more;
+      }
+      expect(service.peekPreview('a.md', 'x', { a: '1', b: '2' })).toBeNull();
+      expect(service.peekPreview('a.md', 'c19', {})).not.toBeNull();
+
+      vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 61_000);
+      expect(service.peekPreview('a.md', 'c19', {})).toBeNull();
+      vi.restoreAllMocks();
+    });
+
+    it('las aplicaciones se piden una vez; si fallan, se vuelven a pedir', async () => {
+      const { service, http } = setup();
+
+      const failed = service.applications();
+      http.expectOne(`${URL}/applications`).flush({}, { status: 500, statusText: 'Error' });
+      await expect(failed).rejects.toBeTruthy();
+
+      const first = service.applications();
+      const second = service.applications();
+      http.expectOne(`${URL}/applications`).flush([{ id: 'x', name: 'X' }]);
+      expect(await first).toBe(await second);
+    });
+  });
+});

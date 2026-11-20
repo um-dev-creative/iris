@@ -266,5 +266,63 @@ describe('TemplatesPageComponent (por aplicación)', () => {
 
     expect((fixture.nativeElement as HTMLElement).querySelectorAll('[data-testid="template-row"]')).toHaveLength(1);
   });
-});
 
+  describe('presentación y carga', () => {
+    async function renderWith(setup: (fake: ReturnType<typeof fakeTemplates>) => void, items = [summary('a')]) {
+      const fake = fakeTemplates(items);
+      setup(fake);
+      TestBed.configureTestingModule({ providers: [provideRouter([]), fake.provider, fakeReferences().provider] });
+      const fixture = TestBed.createComponent(TemplatesPageComponent);
+      fixture.detectChanges();
+      return { fixture, el: fixture.nativeElement as HTMLElement, fake };
+    }
+
+    it('mientras carga por primera vez muestra un esqueleto, no una tabla vacía', async () => {
+      const { el } = await renderWith((f) => f.service.search.mockReturnValue(new Promise(() => undefined)));
+
+      expect(el.querySelector('[data-testid="loading"]')?.textContent).toContain('Cargando plantillas');
+      expect(el.querySelectorAll('.iris-skeleton').length).toBeGreaterThan(0);
+    });
+
+    it('con la lista ya conocida la dibuja al instante y la actualiza en segundo plano', async () => {
+      const { el, fake } = await renderWith((f) => {
+        f.service.peekSearch.mockReturnValue(searchOf([summary('m', { description: 'De memoria' })]));
+        f.service.search.mockReturnValue(new Promise(() => undefined));
+      });
+
+      expect(rows(el)).toHaveLength(1);
+      expect(rows(el)[0].textContent).toContain('De memoria');
+      expect(el.querySelector('[data-testid="loading"]')).toBeNull();
+      expect(el.querySelector('[data-testid="refreshing"]')).not.toBeNull();
+      expect(fake.service.search).toHaveBeenCalled();
+    });
+
+    it('muestra el formato, el asunto y resalta la recién guardada', async () => {
+      const { fixture, el } = await renderWith(
+        (f) => f.service.recentlySaved.mockReturnValue('b'),
+        [summary('a'), summary('b', { location: 'b.html', subject: 'Hola ${name}' })],
+      );
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(rows(el)[0].querySelector('[data-testid="row-format"]')?.textContent).toContain('Markdown');
+      expect(rows(el)[1].querySelector('[data-testid="row-format"]')?.textContent).toContain('HTML');
+      expect(rows(el)[1].querySelector('[data-testid="row-subject"]')?.textContent).toContain('Hola ${name}');
+      expect(rows(el)[0].querySelector('[data-testid="recent"]')).toBeNull();
+      expect(rows(el)[1].querySelector('[data-testid="recent"]')).not.toBeNull();
+      expect(rows(el)[1].classList.contains('iris-row-new')).toBe(true);
+    });
+
+    it('dice hace cuánto se actualizó, y la fecha si pasó más de una semana', async () => {
+      const { fixture } = await renderWith(() => undefined);
+      const page = fixture.componentInstance;
+      const before = (minutes: number) => new Date(Date.now() - minutes * 60_000);
+
+      expect(page.ago(before(0))).toBe('hace un momento');
+      expect(page.ago(before(5))).toBe('hace 5 min');
+      expect(page.ago(before(180))).toBe('hace 3 h');
+      expect(page.ago(before(3 * 24 * 60))).toBe('hace 3 d');
+      expect(page.ago(new Date(2026, 0, 2))).toContain('2026');
+    });
+  });
+});

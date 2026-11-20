@@ -48,6 +48,11 @@ export function fakeTemplates(items: TemplateSummary[] = []) {
     versions: vi.fn().mockResolvedValue([versionOf(2), versionOf(1, { reason: 'BASELINE' })]),
     version: vi.fn().mockResolvedValue({ ...versionOf(1), content: 'uno\ndos' }),
     restore: vi.fn().mockResolvedValue(contentOf('a', { etag: 'etag-3', content: 'uno\ndos' })),
+    peek: vi.fn().mockReturnValue(null),
+    peekSearch: vi.fn().mockReturnValue(null),
+    peekPreview: vi.fn().mockReturnValue(null),
+    rememberSamples: vi.fn(),
+    recentlySaved: vi.fn().mockReturnValue(null),
   };
   return { service, provider: { provide: TemplatesService, useValue: service } as Provider };
 }

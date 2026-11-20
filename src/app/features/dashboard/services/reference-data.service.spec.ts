@@ -37,4 +37,27 @@ describe('ReferenceDataService', () => {
 
     await expect(done).rejects.toBeTruthy();
   });
+
+  it('tipos y severidades se piden una vez por sesión', async () => {
+    const { service, http } = setup();
+
+    const first = service.templateTypes();
+    const second = service.templateTypes();
+    http.expectOne('/test/api/v1/templates/types').flush([{ id: '1', name: 'x', description: 'x' }]);
+
+    expect(await first).toBe(await second);
+    expect(await service.templateTypes()).toHaveLength(1);
+  });
+
+  it('si la primera vez falla, la siguiente vuelve a pedir', async () => {
+    const { service, http } = setup();
+
+    const failed = service.severityTypes();
+    http.expectOne('/test/api/v1/templates/severities').flush({}, { status: 500, statusText: 'Error' });
+    await expect(failed).rejects.toBeTruthy();
+
+    const retry = service.severityTypes();
+    http.expectOne('/test/api/v1/templates/severities').flush([]);
+    expect(await retry).toEqual([]);
+  });
 });

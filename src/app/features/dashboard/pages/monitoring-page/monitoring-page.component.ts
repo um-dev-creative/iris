@@ -1,10 +1,12 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { LucideAngularModule, RefreshCw, TriangleAlert, X } from 'lucide-angular';
+import { AnimatedNumberComponent } from '../../components/animated-number/animated-number.component';
+import { RatioBarComponent } from '../../components/ratio-bar/ratio-bar.component';
 import { SuccessRingComponent } from '../../components/success-ring/success-ring.component';
 import { TimeSeriesChartComponent } from '../../components/time-series-chart/time-series-chart.component';
 import { MonitoringLiveService } from '../../services/monitoring-live.service';
-import { AlertRule, AlertRuleRequest, AlertType, MessageItem, MonitoringRange } from '../../models/monitoring-live.model';
+import { AlertRule, AlertRuleRequest, AlertType, FailureCause, MessageItem, MonitoringRange, SummaryResponse, Totals } from '../../models/monitoring-live.model';
 import {
   ALERT_TYPES, OVERALL_LABELS, RANGES, SERVICES, STATE_DOT, STATE_LABELS, channelLabel, duration, formatNumber, kindLabel, parseUtc, percent, ruleLabel,
 } from '../../utils/monitoring-live';
@@ -20,7 +22,7 @@ const EMPTY_DRAFT: RuleDraft = { type: 'FAILURE_RATE', threshold: '20', windowMi
 @Component({
   selector: 'app-monitoring-page',
   standalone: true,
-  imports: [LucideAngularModule, DatePipe, SuccessRingComponent, TimeSeriesChartComponent],
+  imports: [LucideAngularModule, DatePipe, SuccessRingComponent, TimeSeriesChartComponent, AnimatedNumberComponent, RatioBarComponent],
   providers: [MonitoringLiveService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './monitoring-page.component.html',
@@ -70,6 +72,23 @@ export class MonitoringPageComponent {
 
   constructor() {
     this.live.start(inject(DestroyRef));
+  }
+
+  /** La parte de los intentos (enviados + fallidos) que falló, o null sin intentos. */
+  failureRate(totals: Totals): number | null {
+    const attempts = totals.sent + totals.failed;
+    return attempts > 0 ? totals.failed / attempts : null;
+  }
+
+  /** La parte de todos los intentos del periodo que hizo un canal, o null sin intentos. */
+  volumeShare(summary: SummaryResponse, attempts: number): number | null {
+    const total = summary.totals.sent + summary.totals.failed;
+    return total > 0 ? attempts / total : null;
+  }
+
+  /** La causa más frecuente da la escala de las barras de causas. */
+  maxCause(causes: FailureCause[]): number {
+    return Math.max(1, ...causes.map((c) => c.total));
   }
 
   setRange(range: MonitoringRange): void {

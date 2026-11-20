@@ -6,11 +6,12 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ArrowLeft, ChevronLeft, ChevronRight, FileText, LucideAngularModule, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-angular';
 import { AppBadgeComponent, AppButtonComponent, AppCardComponent } from '../../../../shared/components';
 import { NotificationService } from '../../../../core/services';
-import { ReferenceItem, TemplateSearchResult, TemplateSummary } from '../../../../core/models';
+import { ReferenceItem, TemplateSearchParams, TemplateSearchResult, TemplateSummary } from '../../../../core/models';
 import { ROUTE_PATHS, routeUrl } from '../../../../core/routes';
 import { ReferenceDataService, TemplatesService } from '../../services';
 import { loadFailure, LoadFailure } from '../../utils/campaign-errors';
 import { toDate } from '../../utils/campaign-input';
+import { formatOfFile } from '../../utils/template-input';
 
 const PAGE_SIZE = 10;
 const base = routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.TEMPLATES);
@@ -79,8 +80,16 @@ const base = routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.TEMPLATES);
     </div>
 
     <app-card [noPadding]="true">
+      @if (loading() && items().length > 0) { <div class="iris-progress" aria-hidden="true" data-testid="refreshing"></div> }
       @if (loading() && items().length === 0) {
-        <p class="p-6 text-sm text-muted-foreground" data-testid="loading">Cargando plantillas…</p>
+        <div class="p-4 space-y-3" data-testid="loading" aria-busy="true">
+          <span class="sr-only">Cargando plantillas…</span>
+          @for (n of skeletonRows; track n) {
+            <div class="flex items-center gap-4" aria-hidden="true">
+              <div class="iris-skeleton h-4 flex-1"></div><div class="iris-skeleton h-4 w-24"></div><div class="iris-skeleton h-4 w-20"></div><div class="iris-skeleton h-4 w-28"></div>
+            </div>
+          }
+        </div>
       } @else if (loadError() === 'forbidden') {
         <div class="p-6" role="alert" data-testid="forbidden">
           <p class="font-medium text-foreground">No tienes permiso para administrar las plantillas.</p>
@@ -108,6 +117,7 @@ const base = routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.TEMPLATES);
               <tr>
                 <th class="px-4 py-3 font-semibold text-muted-foreground uppercase text-xs tracking-wider">Plantilla</th>
                 <th class="px-4 py-3 font-semibold text-muted-foreground uppercase text-xs tracking-wider">Archivo</th>
+                <th class="px-4 py-3 font-semibold text-muted-foreground uppercase text-xs tracking-wider">Formato</th>
                 <th class="px-4 py-3 font-semibold text-muted-foreground uppercase text-xs tracking-wider">Tipo</th>
                 <th class="px-4 py-3 font-semibold text-muted-foreground uppercase text-xs tracking-wider">Severidad</th>
                 <th class="px-4 py-3 font-semibold text-muted-foreground uppercase text-xs tracking-wider">Actualizada</th>
@@ -116,12 +126,19 @@ const base = routeUrl(ROUTE_PATHS.DASHBOARD, ROUTE_PATHS.TEMPLATES);
             </thead>
             <tbody class="divide-y divide-border">
               @for (template of items(); track template.id) {
-                <tr class="hover:bg-muted/50 transition-colors" data-testid="template-row">
-                  <td class="px-4 py-3 font-medium text-foreground"><a [routerLink]="editUrl(template.id)" class="hover:underline">{{ template.description }}</a></td>
+                <tr class="hover:bg-muted/50 transition-colors" [class.iris-row-new]="template.id === recent" data-testid="template-row">
+                  <td class="px-4 py-3">
+                    <a [routerLink]="editUrl(template.id)" class="font-medium text-foreground hover:underline">{{ template.description }}</a>
+                    @if (template.id === recent) { <app-badge color="primary" class="ml-2" data-testid="recent">Recién guardada</app-badge> }
+                    @if (template.subject) {
+                      <p class="mt-0.5 max-w-md truncate text-xs text-muted-foreground" [attr.title]="template.subject" data-testid="row-subject">Asunto: {{ template.subject }}</p>
+                    }
+                  </td>
                   <td class="px-4 py-3 text-muted-foreground"><code>{{ template.location }}</code></td>
+                  <td class="px-4 py-3"><app-badge [color]="formatOf(template) === 'MD' ? 'secondary' : 'outline'" data-testid="row-format">{{ formatOf(template) === 'MD' ? 'Markdown' : 'HTML' }}</app-badge></td>
                   <td class="px-4 py-3"><app-badge color="neutral">{{ template.templateTypeName || '—' }}</app-badge></td>
                   <td class="px-4 py-3 text-muted-foreground">{{ template.severityTypeName || '—' }}</td>
-                  <td class="px-4 py-3 text-muted-foreground">{{ updated(template) ? (updated(template) | date: 'short') : '—' }}</td>
+                  <td class="px-4 py-3 text-muted-foreground whitespace-nowrap" [attr.title]="updated(template) ? (updated(template) | date: 'medium') : null">{{ updated(template) ? ago(updated(template)!) : '—' }}</td>
                   <td class="px-4 py-3">
                     <div class="flex justify-end gap-1">
                       <a [routerLink]="editUrl(template.id)" class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm hover:bg-accent" [attr.aria-label]="'Editar ' + template.description">
@@ -181,6 +198,10 @@ export class TemplatesPageComponent implements OnInit {
   readonly severities = signal<ReferenceItem[]>([]);
   readonly pending = signal<TemplateSummary | null>(null);
   readonly busy = signal(false);
+  readonly skeletonRows = [1, 2, 3, 4, 5];
+  /** La plantilla que se acaba de guardar, para resaltarla al volver a la lista. */
+  readonly recent = this.templates.recentlySaved();
+  readonly formatOf = (template: TemplateSummary) => formatOfFile(template.location ?? '');
 
   readonly items = computed(() => this.result()?.items ?? []);
   readonly total = computed(() => this.result()?.totalElements ?? 0);
@@ -194,6 +215,9 @@ export class TemplatesPageComponent implements OnInit {
   ngOnInit(): void {
     this.references.templateTypes().then((list) => this.types.set(list), () => undefined);
     this.references.severityTypes().then((list) => this.severities.set(list), () => undefined);
+    // the last answer for this same list is drawn at once; the server's answer replaces it a moment later
+    const cached = this.templates.peekSearch(this.query());
+    if (cached) this.result.set(cached);
     void this.reload();
     this.nameApplication();
   }
@@ -226,17 +250,7 @@ export class TemplatesPageComponent implements OnInit {
     this.loading.set(true);
     this.loadError.set(null);
     try {
-      this.result.set(
-        await this.templates.search({
-          ...(this.applicationId ? { applicationId: this.applicationId } : {}),
-          q: this.search().trim(),
-          templateTypeId: this.typeId(),
-          severityTypeId: this.severityId(),
-          page: this.page(),
-          size: PAGE_SIZE,
-          sort: 'updatedAt,desc',
-        }),
-      );
+      this.result.set(await this.templates.search(this.query()));
     } catch (error) {
       this.loadError.set(loadFailure(error));
     } finally {
@@ -270,6 +284,28 @@ export class TemplatesPageComponent implements OnInit {
       (list) => this.applicationName.set(list.find((application) => application.id === this.applicationId)?.name ?? null),
       () => undefined,
     );
+  }
+
+  /** «hace 5 min», «hace 3 h», «hace 2 d»; más de una semana, la fecha. La fecha completa queda en el `title`. */
+  ago(date: Date): string {
+    const minutes = Math.floor((Date.now() - date.getTime()) / 60_000);
+    if (minutes < 1) return 'hace un momento';
+    if (minutes < 60) return `hace ${minutes} min`;
+    if (minutes < 24 * 60) return `hace ${Math.floor(minutes / 60)} h`;
+    if (minutes < 7 * 24 * 60) return `hace ${Math.floor(minutes / (24 * 60))} d`;
+    return date.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  private query(): TemplateSearchParams {
+    return {
+      ...(this.applicationId ? { applicationId: this.applicationId } : {}),
+      q: this.search().trim(),
+      templateTypeId: this.typeId(),
+      severityTypeId: this.severityId(),
+      page: this.page(),
+      size: PAGE_SIZE,
+      sort: 'updatedAt,desc',
+    };
   }
 
   private restart(): void {

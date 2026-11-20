@@ -32,4 +32,22 @@ describe('SuccessRingComponent', () => {
     expect(filled).toBeCloseTo(2 * Math.PI * 52, 1);
     expect(rest).toBeCloseTo(0, 1);
   });
+
+  it('el color sigue a la tasa: verde, ámbar o rojo', () => {
+    const color = (rate: number) => render(rate).querySelectorAll('circle')[1].getAttribute('stroke');
+
+    expect(color(0.99)).toBe('var(--success)');
+    expect(color(0.85)).toBe('var(--warning)');
+    expect(color(0.5)).toBe('var(--destructive)');
+  });
+
+  it('dice de cuántos intentos sale la tasa', () => {
+    const fixture = TestBed.createComponent(SuccessRingComponent);
+    fixture.componentRef.setInput('rate', 0.9);
+    fixture.componentRef.setInput('sent', 90);
+    fixture.componentRef.setInput('failed', 10);
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="ring-detail"]')?.textContent).toContain('90 de 100 entregados');
+  });
 });
