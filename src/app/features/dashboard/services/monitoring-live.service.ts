@@ -74,6 +74,10 @@ export class MonitoringLiveService {
   readonly codes = signal<VerificationCodeStats | null>(null);
   readonly health = signal<HealthResponse | null>(null);
   readonly outages = signal<OutagesResponse | null>(null);
+  /** Hay una página del historial de caídas en camino (cambio de página, filtro o periodo). */
+  private readonly _outagesLoading = signal(false);
+  readonly outagesLoading = this._outagesLoading.asReadonly();
+  private outageRequestId = 0;
   readonly messages = signal<MessagePage | null>(null);
   readonly alerts = signal<AlertsResponse | null>(null);
   readonly rules = signal<AlertRulesResponse | null>(null);
@@ -266,8 +270,20 @@ export class MonitoringLiveService {
   loadHealth = () => this.load<HealthResponse>('health', new HttpParams(), this.health);
   /** Una página del historial con su periodo y sus filtros. Un periodo propio que no vale no se pide. */
   loadOutages = async (): Promise<void> => {
-    if (this.outageWindowProblem()) return;
-    await this.load<OutagesResponse>('outages', new HttpParams({ fromObject: this.outageQuery() }), this.outages);
+    if (this.outageWindowProblem()) {
+      this.outageRequestId++;
+      this._outagesLoading.set(false);
+      return;
+    }
+    // Solo cuenta la última petición: una respuesta tardía de otra página no pisa la actual ni apaga el progreso.
+    const id = ++this.outageRequestId;
+    this._outagesLoading.set(true);
+    try {
+      const response = await this.get<OutagesResponse>('outages', new HttpParams({ fromObject: this.outageQuery() }));
+      if (id === this.outageRequestId) this.outages.set(response);
+    } finally {
+      if (id === this.outageRequestId) this._outagesLoading.set(false);
+    }
   };
   loadAlerts = () => this.load<AlertsResponse>('alerts', this.params(), this.alerts);
   loadRules = () => this.load<AlertRulesResponse>('alerts/rules', this.params(), this.rules);

@@ -6,7 +6,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../../../core/config';
 import { EVENT_SOURCE_FACTORY, MonitoringLiveService, windowProblem } from './monitoring-live.service';
 import { NotificationService } from '../../../core/services/notification.service';
-import { FakeEventSource, OTHER_APP, answerAll, healthFixture, messagesFixture, paths, summaryFixture } from './monitoring-live.testing';
+import { FakeEventSource, OTHER_APP, answerAll, healthFixture, messagesFixture, outagesFixture, paths, summaryFixture } from './monitoring-live.testing';
 
 const ALL = ['alerts', 'alerts/rules', 'applications', 'failures', 'health', 'messages', 'outages', 'series', 'summary', 'verification-codes'];
 const destroyRef = (): DestroyRef & { destroy: () => void } => {
@@ -661,6 +661,33 @@ describe('MonitoringLiveService', () => {
       service.goToOutagePage(99);
       expect(outageParams()['page']).toBe('2');
       expect(service.outageFilter().page).toBe(2);
+    });
+
+    it('mientras llega una página marca `outagesLoading` y lo apaga al responder, o al fallar', async () => {
+      service.outages.set({ range: '24h', outages: [], page: 0, size: 10, total: 35 });
+      void service.loadOutages();
+      expect(service.outagesLoading()).toBe(true);
+      const [first] = http.match((r) => r.url.endsWith('/outages'));
+      first.flush(outagesFixture());
+      await vi.waitFor(() => expect(service.outagesLoading()).toBe(false));
+
+      const failing = service.loadOutages().catch(() => undefined);
+      http.expectOne((r) => r.url.endsWith('/outages')).flush('x', { status: 500, statusText: 'Server Error' });
+      await failing;
+      expect(service.outagesLoading()).toBe(false);
+    });
+
+    it('una respuesta tardía de otra página no pisa la actual ni apaga el progreso', async () => {
+      service.outages.set({ range: '24h', outages: [], page: 0, size: 10, total: 35 });
+      service.goToOutagePage(1);
+      service.goToOutagePage(2);
+      const [old, latest] = http.match((r) => r.url.endsWith('/outages'));
+      latest.flush({ ...outagesFixture(), page: 2 });
+      await vi.waitFor(() => expect(service.outagesLoading()).toBe(false));
+      old.flush({ ...outagesFixture(), page: 1 });
+      await Promise.resolve();
+      expect(service.outages()?.page).toBe(2);
+      expect(service.outagesLoading()).toBe(false);
     });
 
     it('sin total cuenta lo que llegó; vacío es una página', () => {

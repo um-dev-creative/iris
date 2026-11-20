@@ -154,6 +154,24 @@ flowchart LR
 ```
 
 - `MonitoringLiveService` guarda `outageFilter` (periodo, desde, hasta, texto, estado, página); el servicio es `service`. `windowProblem` revisa un periodo propio: falta el inicio, el fin no es posterior, o empieza antes de los 90 días que Mercury guarda; con un problema la página lo dice y no pide nada.
+- **Progreso de carga:** `loadOutages` marca `outagesLoading` (señal de solo lectura) desde que pide la página hasta que responde o falla. Solo cuenta la última petición (`outageRequestId`): una respuesta tardía de otra página se descarta y no apaga el progreso. La tabla muestra una barra indeterminada (`.outage-progress`, `role="progressbar"`), se atenúa, lleva `aria-busy` y **Anterior**/**Siguiente** se deshabilitan mientras tanto; con `prefers-reduced-motion` la barra no se anima.
+
+```mermaid
+sequenceDiagram
+  participant U as Persona
+  participant P as Tabla de caídas
+  participant S as MonitoringLiveService
+  participant M as Mercury
+  U->>P: Siguiente
+  P->>S: goToOutagePage(n)
+  S->>S: outagesLoading = true
+  S->>M: GET /monitoring/outages?page=n
+  P-->>U: barra de progreso, botones deshabilitados
+  M-->>S: página n
+  S->>S: outages = página, outagesLoading = false
+  P-->>U: filas nuevas
+```
+
 - El historial no depende de la aplicación elegida (la salud es de Mercury), así que no lleva `applicationId`.
 - Las actualizaciones periódicas vuelven a pedir la página actual con sus filtros; cambiar el periodo de la página vuelve el historial a su primera página solo si lo sigue.
 - **Requiere** Mercury con el historial paginado (PR um-dev-creative/mercury#111). Contra un Mercury anterior, `range` sigue funcionando pero llega todo en una página y los demás filtros se ignoran.

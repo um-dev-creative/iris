@@ -75,7 +75,6 @@ export class MonitoringPageComponent {
   readonly outagePeriods = OUTAGE_PERIODS;
   /** Lo escrito en la búsqueda del historial; se pide a Mercury un momento después de la última tecla. */
   readonly outageSearch = signal('');
-  readonly outagesLoading = signal(false);
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
   /** Qué ventana muestra el historial, en palabras. */
   readonly outageWindowLabel = computed(() => {

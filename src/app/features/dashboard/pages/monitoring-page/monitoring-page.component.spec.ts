@@ -563,6 +563,7 @@ describe('formulario de reglas', () => {
 
       (el.querySelector('[data-testid="outage-next"]') as HTMLButtonElement).click();
       expect(outageRequest(http)?.get('page')).toBe('1');
+      await vi.waitFor(() => expect(live.outagesLoading()).toBe(false));
       live.outages.set({ ...outagesFixture(), page: 1, size: 10, total: 23 });
       fixture.detectChanges();
       expect(el.querySelector('[data-testid="outage-pages"]')?.textContent).toContain('Página 2 de 3');
@@ -578,6 +579,28 @@ describe('formulario de reglas', () => {
       expect(params?.has('status')).toBe(false);
       expect(params?.has('q')).toBe(false);
       expect(fixture.componentInstance.outageSearch()).toBe('');
+    });
+
+    it('al cambiar de página muestra un progreso infinito en la tabla hasta que llega la página', async () => {
+      const { fixture, el, http, live } = await open();
+      live.outages.set({ ...outagesFixture(), page: 0, size: 10, total: 23 });
+      fixture.detectChanges();
+      expect(el.querySelector('[data-testid="outage-loading"]')).toBeNull();
+
+      (el.querySelector('[data-testid="outage-next"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(el.querySelector('[data-testid="outage-loading"]')?.getAttribute('role')).toBe('progressbar');
+      expect(el.querySelector('[data-testid="outage-loading"]')?.parentElement?.getAttribute('aria-busy')).toBe('true');
+      expect((el.querySelector('[data-testid="outage-next"]') as HTMLButtonElement).disabled).toBe(true);
+      expect((el.querySelector('[data-testid="outage-prev"]') as HTMLButtonElement).disabled).toBe(true);
+
+      http.match((r) => r.url.endsWith('/outages')).forEach((r) => r.flush({ ...outagesFixture(), page: 1, size: 10, total: 23 }));
+      await vi.waitFor(() => expect(live.outagesLoading()).toBe(false));
+      fixture.detectChanges();
+      expect(el.querySelector('[data-testid="outage-loading"]')).toBeNull();
+      expect(el.querySelector('[data-testid="outage-pages"]')?.textContent).toContain('Página 2 de 3');
+      expect((el.querySelector('[data-testid="outage-prev"]') as HTMLButtonElement).disabled).toBe(false);
+      http.match(() => true);
     });
 
     it('sin resultados distingue «no hubo caídas» de «nada coincide»', async () => {
