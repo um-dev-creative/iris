@@ -252,7 +252,10 @@
     <p role="alert" class="mb-3 text-sm text-warning" data-testid="outage-window-problem">{{ problem }}</p>
   }
 
-  <div class="overflow-x-auto transition-opacity" [class.opacity-60]="outagesLoading()">
+  <div class="relative overflow-x-auto transition-opacity" [class.opacity-60]="live.outagesLoading()" [attr.aria-busy]="live.outagesLoading()">
+    @if (live.outagesLoading()) {
+      <div class="outage-progress" role="progressbar" aria-label="Cargando la página del historial" data-testid="outage-loading"><span></span></div>
+    }
     <table class="w-full text-sm">
       <thead><tr class="text-left text-muted-foreground"><th class="py-2 pr-3 font-medium">Servicio</th><th class="pr-3 font-medium">Estado</th><th class="pr-3 font-medium">Inicio (UTC)</th><th class="pr-3 font-medium">Duración</th><th class="font-medium">Causa</th></tr></thead>
       <tbody>
@@ -274,8 +277,8 @@
     <span class="text-muted-foreground" data-testid="outage-pages">Página {{ live.outageFilter().page + 1 }} de {{ live.outagePages() }}</span>
     <span class="flex gap-2">
       @if (live.outageFiltered()) { <button type="button" class="px-3 py-1 rounded border border-border" (click)="clearOutages()" data-testid="outage-clear">Quitar filtros</button> }
-      <button type="button" class="px-3 py-1 rounded border border-border disabled:opacity-50" [disabled]="live.outageFilter().page === 0" (click)="live.goToOutagePage(live.outageFilter().page - 1)" data-testid="outage-prev">Anterior</button>
-      <button type="button" class="px-3 py-1 rounded border border-border disabled:opacity-50" [disabled]="live.outageFilter().page + 1 >= live.outagePages()" (click)="live.goToOutagePage(live.outageFilter().page + 1)" data-testid="outage-next">Siguiente</button>
+      <button type="button" class="px-3 py-1 rounded border border-border disabled:opacity-50" [disabled]="live.outageFilter().page === 0 || live.outagesLoading()" (click)="live.goToOutagePage(live.outageFilter().page - 1)" data-testid="outage-prev">Anterior</button>
+      <button type="button" class="px-3 py-1 rounded border border-border disabled:opacity-50" [disabled]="live.outageFilter().page + 1 >= live.outagePages() || live.outagesLoading()" (click)="live.goToOutagePage(live.outageFilter().page + 1)" data-testid="outage-next">Siguiente</button>
     </span>
   </div>
 </section>
