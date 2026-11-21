@@ -66,6 +66,17 @@ Rutas de escritura y de archivo, en el mismo `server/routes/monitoring-live.rout
 - **Página:** un aviso rojo (`role="alert"`) lista las alertas que suenan; la sección «Alertas» muestra las reglas (activar/desactivar, eliminar), el formulario de una regla nueva (se valida en el navegador y Mercury vuelve a validar) y las últimas alertas resueltas; la tabla de mensajes tiene «Reintentar» (solo en un correo fallido con id) y «Exportar CSV/JSON». La exportación se descarga con `HttpClient` (así los errores pasan por el interceptor) y avisa si el archivo está incompleto.
 - **Servicios de una regla «servicio caído»:** `POSTGRESQL`, `MONGODB`, `KAFKA`, `SMTP`, `BACKBONE` y `TELEGRAM`, los mismos nombres que Mercury da en `/monitoring/health` (otro nombre es un `400`).
 - El reintento no reescribe la historia: el intento fallido sigue en la tabla y el nuevo se suma.
+- **Sin recargar la tabla:** `retry()` marca el id de la fila en `retrying` mientras dura el `POST` (botón «Reintentando…» deshabilitado, y un segundo clic no repite) y, si Mercury acepta, en `retried` (la fila muestra «Reintento en cola»). No vuelve a pedir `/messages`: el intento nuevo aparece en el siguiente sondeo, así la tabla no se mueve bajo la persona. Si falla, el botón vuelve.
+
+```mermaid
+stateDiagram-v2
+  [*] --> Fallido
+  Fallido --> Reintentando: clic en Reintentar
+  Reintentando --> EnCola: Mercury acepta (202)
+  Reintentando --> Fallido: error (el interceptor avisa)
+  EnCola --> [*]: el sondeo trae el intento nuevo
+```
+
 
 ## La página
 

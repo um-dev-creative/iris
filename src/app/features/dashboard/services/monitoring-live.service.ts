@@ -79,6 +79,11 @@ export class MonitoringLiveService {
   readonly outagesLoading = this._outagesLoading.asReadonly();
   private outageRequestId = 0;
   readonly messages = signal<MessagePage | null>(null);
+  /** Ids de las filas de la tabla de mensajes con un reintento en camino, y las que ya quedaron en cola. */
+  private readonly _retrying = signal<ReadonlySet<string>>(new Set());
+  private readonly _retried = signal<ReadonlySet<string>>(new Set());
+  readonly retrying = this._retrying.asReadonly();
+  readonly retried = this._retried.asReadonly();
   readonly alerts = signal<AlertsResponse | null>(null);
   readonly rules = signal<AlertRulesResponse | null>(null);
   readonly applications = signal<ApplicationsResponse | null>(null);
@@ -349,14 +354,23 @@ export class MonitoringLiveService {
   // ── acciones ──
   /** Vuelve a poner en cola un correo fallido. Los errores los avisa el interceptor; aquí solo se dice que no se hizo. */
   async retry(item: MessageItem): Promise<boolean> {
-    if (!item.messageId) return false;
+    if (!item.messageId || this._retrying().has(item.id)) return false;
+    this._retrying.update((set) => new Set(set).add(item.id));
     try {
       await firstValueFrom(this.http.post(`${this.base}/messages/${encodeURIComponent(item.messageId)}/retry`, {}, { params: this.applicationParams() }));
     } catch {
       return false;
+    } finally {
+      this._retrying.update((set) => {
+        const next = new Set(set);
+        next.delete(item.id);
+        return next;
+      });
     }
+    // La fila se queda donde está y pasa a «en cola»: no se vuelve a pedir la tabla (el intento nuevo
+    // se sumaría arriba y movería todo lo que la persona está mirando); el sondeo la actualiza solo.
+    this._retried.update((set) => new Set(set).add(item.id));
     this.notifications.success('Reintento en cola', 'El correo se enviará de nuevo en la próxima ronda.');
-    await this.loadMessages().catch(() => undefined);
     return true;
   }
 

@@ -321,6 +321,25 @@ describe('MonitoringPageComponent', () => {
       expect(fixture.componentInstance.canRetry({ ...withId, messageId: null })).toBe(false);
     });
 
+    it('tras reintentar, la fila se queda donde está: dice «Reintento en cola» y no se pide la tabla', async () => {
+      const { fixture, el, live, http } = await open();
+      const item = { ...live.messages()!.items[0], messageId: '3f0c1f4e-8b1e-4f7e-9d54-0c6f0d2a7b11' };
+      live.messages.set({ ...live.messages()!, items: [item, live.messages()!.items[1]] });
+      fixture.detectChanges();
+
+      button(el, 'Reintentar').click();
+      fixture.detectChanges();
+      expect(button(el, 'Reintentando…').disabled).toBe(true);
+      http.expectOne((r) => r.url.endsWith('/retry')).flush(null, { status: 202, statusText: 'Accepted' });
+      await vi.waitFor(() => expect(live.retried().has(item.id)).toBe(true));
+      fixture.detectChanges();
+
+      expect(el.querySelector('[data-testid="retry-queued"]')?.textContent).toContain('Reintento en cola');
+      expect(Array.from(el.querySelectorAll('button')).some((b) => b.textContent!.includes('Reintentar'))).toBe(false);
+      expect(http.match((r) => r.url.endsWith('/messages'))).toHaveLength(0);
+      expect(live.messages()!.items[0]).toBe(item);
+    });
+
     it('los botones de exportar piden CSV o JSON', async () => {
       const { el, live } = await open();
       const exportMessages = vi.spyOn(live, 'exportMessages').mockResolvedValue(true);
