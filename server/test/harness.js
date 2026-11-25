@@ -194,7 +194,8 @@ async function start({ env = {}, appOptions } = {}) {
     if (req.path === '/auth/token') {
       // the exchange: the Backbone M2M Bearer of the application client in, Mercury's M2M token out, no body
       flow.logins = (flow.logins ?? 0) + 1;
-      (flow.exchanges ??= []).push({ authorization: req.headers.authorization, body: req.body });
+      flow.exchanges ??= [];
+      flow.exchanges.push({ authorization: req.headers.authorization, body: req.body });
       const bearer = (req.headers.authorization ?? '').replace(/^Bearer /, '');
       if (!state.clientTokens.includes(bearer)) return res.status(401).json({});
       if (flow.exchangeStatus) return res.status(flow.exchangeStatus).json({});

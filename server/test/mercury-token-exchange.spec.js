@@ -4,26 +4,7 @@ const assert = require('node:assert/strict');
 const { start } = require('./harness');
 
 // Own file, own BFF: the Mercury token is cached for the life of the process, and every test here counts the exchanges.
-const CONFIG = {
-  REGISTRATION_ROLE_ID: 'role-viewer',
-  REGISTRATION_TEMPLATE_ES: 'tpl-es',
-  REGISTRATION_TEMPLATE_EN: 'tpl-en',
-  REGISTRATION_MAIL_FROM: 'no-reply@iris.test',
-  BACKBONE_CLIENT_ID: 'iris',
-  BACKBONE_CLIENT_SECRET: 'test-only', // gitleaks:allow
-  BACKBONE_CLIENT_SCOPES: 'session:manage,users:manage,mercury:message:write',
-  REGISTRATION_RATE_LIMIT_MAX: '1000',
-};
-const valid = {
-  alias: 'ana.rojas',
-  email: 'ana@example.com',
-  password: 'secret-pass', // gitleaks:allow
-  person: { firstName: 'Ana', lastName: 'Rojas', gender: 'F', birthdate: '1990-05-01' },
-  notificationEmail: true,
-  notificationSms: false,
-  privacyDataOutActive: false,
-  language: 'en',
-};
+const { CONFIG, valid } = require('./registration-fixtures');
 
 let bff;
 const flow = () => bff.state.registration;
