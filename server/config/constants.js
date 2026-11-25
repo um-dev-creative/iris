@@ -42,9 +42,6 @@ module.exports = {
   MERCURY_HEALTH_PATH: process.env['MERCURY_HEALTH_PATH'] || '/mercury/actuator/health',
   BACKBONE_HEALTH_PATH: process.env['BACKBONE_HEALTH_PATH'] || '/backbone/actuator/health/readiness',
   REGISTRATION_RATE_LIMIT_MAX: Number.parseInt(process.env['REGISTRATION_RATE_LIMIT_MAX'] || '5', 10),
-  // Iris as a Mercury login client (M2M): sends the verification code and checks it
-  MERCURY_LOGIN_ALIAS: process.env['MERCURY_LOGIN_ALIAS'] || '',
-  MERCURY_LOGIN_PASSWORD: process.env['MERCURY_LOGIN_PASSWORD'] || '',
   // Sign-up: the role a new user gets in backbone, and the Mercury template that mails the code. Empty = sign-up is off.
   REGISTRATION_ROLE_ID: process.env['REGISTRATION_ROLE_ID'] || '',
   REGISTRATION_TEMPLATE_ES: process.env['REGISTRATION_TEMPLATE_ES'] || '',

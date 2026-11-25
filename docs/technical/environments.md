@@ -32,7 +32,7 @@ El BFF no tiene archivos de configuración por entorno (no existen `server/confi
 | `qa`, `qa-cloud` | `production` recomendado | Igual que arriba con los servicios de QA |
 | `production` | `production` | Exige `BACKBONE_APPLICATION_ID`, `BACKBONE_CLIENT_ID` y `BACKBONE_CLIENT_SECRET`; prohíbe `BACKBONE_TLS_INSECURE` y `TRUST_PROXY=true`; `COOKIE_SECURE=true` si se sirve por HTTPS |
 
-Los secretos (`BACKBONE_CLIENT_SECRET`, `MERCURY_LOGIN_PASSWORD`) salen del gestor de secretos del entorno, nunca de git ni de `environment*.ts`. Si falta algo obligatorio el BFF termina con código 78 y la lista de problemas (`settings-check`).
+Los secretos (`BACKBONE_CLIENT_SECRET`) salen del gestor de secretos del entorno, nunca de git ni de `environment*.ts`. Si falta algo obligatorio el BFF termina con código 78 y la lista de problemas (`settings-check`).
 
 ## Dónde van las variables
 
@@ -63,7 +63,8 @@ flowchart TD
 ```
 
 - `VAULT_ENABLED=true` exige `VAULT_URI`, `VAULT_PATH` y `VAULT_TOKEN`. Si Vault no responde, el BFF termina con código 78 y no usa una configuración parcial.
-- La ruta es KV v2 con el segmento `data`, como en smartkin-frontend: `dev/data/iris/qa`.
+- La ruta es KV v2 con el segmento `data`, como en smartkin-frontend: `dev/data/iris/qa`. `VAULT_PATH` nunca es una URL (la dirección va en `VAULT_URI`): si lo es, el BFF termina con código 78 antes de llamar a Vault.
+- `VAULT_URI` y `VAULT_PATH` van en `config/local.env`. Si también están en `secrets/local.env`, esa copia gana: no las repitas allí.
 - `VAULT_TOKEN` se borra del entorno tras usarlo y no aparece en logs ni en errores.
 - En Kubernetes, `secrets/local.env` crea el Secret `iris-secrets`.
 - `.env` es opcional y no llega al BFF: Compose solo lo usa para sustituir `${ENVM}`, `${BFF_TLS_DIR}` y `${UMDC_GATEWAY_IP}`.
@@ -72,7 +73,7 @@ flowchart TD
 ## Certificados
 
 - **Iris corre en HTTPS.** En local, `pnpm start`, `pnpm start:bff` y `pnpm dev` generan con `scripts/dev-cert.mjs` un certificado autofirmado en `ssl/localhost.*` (fuera de git; necesita `openssl`). `ng serve` y el BFF lo usan; `SSL_CERT_PATH` y `SSL_KEY_PATH` están en `config/local.env`. En Docker nginx termina el TLS y compose vacía esas rutas. En producción el BFF no arranca sin `COOKIE_SECURE=true`.
-- **Backbone/Mercury con certificado autofirmado**: solo en desarrollo, `BACKBONE_TLS_INSECURE=true`.
+- **Backbone/Mercury con certificado autofirmado**: solo en desarrollo, `BACKBONE_TLS_INSECURE=true`. En Docker `docker-compose.yml` lo fija en `"false"` (el `environment:` gana a `env_file`), así que un `secrets/local.env` de desarrollo no apaga la validación en el contenedor; en producción el BFF no arranca con ese valor.
 - **Backbone/Mercury con la CA interna, en Docker**: `NODE_EXTRA_CA_CERTS` apunta a `umdc-local-ca.crt`, montado por `docker-compose.yml`.
 - **`ng serve`**: el proxy de desarrollo acepta certificados autofirmados del BFF (`IRIS_BFF_URL=https://...`).
 

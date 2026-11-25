@@ -26,7 +26,10 @@ services:
       BACKBONE_BASE_URL: https://backbone-rest:8084
       BACKBONE_API_PREFIX: /api/v1
       BACKBONE_HEALTH_PATH: /actuator/health
-      CORS_ORIGIN: http://localhost:3000
+      # The public address nginx serves Iris at (nginx project: iris.tst); IRIS_PUBLIC_ORIGIN (shell or .env) overrides it
+      CORS_ORIGIN: ${IRIS_PUBLIC_ORIGIN:-https://iris.tst}
+      # Production refuses it, and a developer's secrets/local.env may carry it for a local run: the internal CA below is what validates
+      BACKBONE_TLS_INSECURE: "false"
       # nginx terminates TLS; the certificate paths of config/local.env only exist on a developer's machine
       SSL_CERT_PATH: ""
       SSL_KEY_PATH: ""

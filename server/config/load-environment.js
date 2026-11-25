@@ -47,6 +47,9 @@ async function loadEnvironment({ root = process.cwd(), env = process.env, read =
   }
   const missing = ['VAULT_URI', 'VAULT_PATH', 'VAULT_TOKEN'].filter((name) => !env[name]);
   if (missing.length > 0) throw new Error(`VAULT_ENABLED=true needs ${missing.join(', ')}`);
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(env.VAULT_PATH)) {
+    throw new Error('VAULT_PATH is a KV v2 path such as dev/data/iris/qa, not a URL: the address goes in VAULT_URI');
+  }
   const token = env.VAULT_TOKEN;
   delete env.VAULT_TOKEN;
   return fillEmpty(await read(env.VAULT_URI, token, env.VAULT_PATH), env);

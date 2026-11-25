@@ -11,7 +11,9 @@ sequenceDiagram
     N->>B: POST /mrc/api/v1/auth/register
     B->>K: ¿Correo o alias ocupados?
     B->>K: POST /users (active=false, rol configurado)
-    B->>M: POST /auth/token (cliente de login)
+    B->>K: Token M2M del cliente de aplicación (en caché)
+    B->>M: POST /auth/token (Bearer M2M, sin cuerpo)
+    M-->>B: Token M2M de Mercury (en caché)
     B->>M: POST /mail (plantilla, código)
     B-->>N: 202 PENDING_VERIFICATION
     N->>B: POST /mrc/api/v1/auth/verify-email
@@ -36,8 +38,7 @@ sequenceDiagram
 | `REGISTRATION_ROLE_ID` | Rol en backbone de las cuentas nuevas. Debe ser de solo lectura. |
 | `REGISTRATION_TEMPLATE_ES`, `REGISTRATION_TEMPLATE_EN` | `template_defined` de Mercury (`scripts/iris/seed-templates.sql`). |
 | `REGISTRATION_MAIL_FROM` | Remitente del correo. |
-| `MERCURY_LOGIN_ALIAS`, `MERCURY_LOGIN_PASSWORD` | Iris como cliente de login de Mercury. |
-| `BACKBONE_CLIENT_ID`, `BACKBONE_CLIENT_SECRET` | Cliente M2M. Debe estar registrado en backbone para la misma aplicación que `BACKBONE_APPLICATION_ID` y tener el scope `users:manage` (además pedido en `BACKBONE_CLIENT_SCOPES`). Si no, backbone responde 403 al comprobar el correo y registra `Managed client '…' may not administer users of application '…'` (`UserAdminGuard`). |
+| `BACKBONE_CLIENT_ID`, `BACKBONE_CLIENT_SECRET` | Cliente M2M, el mismo que inicia sesión y que Mercury reconoce como Iris. Debe estar registrado en backbone para la misma aplicación que `BACKBONE_APPLICATION_ID` y tener el scope `users:manage` (además pedido en `BACKBONE_CLIENT_SCOPES`). Si no, backbone responde 403 al comprobar el correo y registra `Managed client '…' may not administer users of application '…'` (`UserAdminGuard`). |
 
 # Datos de monitoreo
 
@@ -55,3 +56,27 @@ flowchart LR
 Mercury exige dos credenciales en `/campaigns`: el `Bearer` del cliente M2M, con el scope `mercury:message:read`, y el `session-token` del usuario. Por eso `BACKBONE_CLIENT_SCOPES` debe incluir ese scope.
 
 Mercury no tiene un registro por mensaje, así que el dashboard muestra campañas, no mensajes individuales. Si Mercury falla, la respuesta lleva `campaignsAvailable: false` y la interfaz lo indica: nunca muestra cifras inventadas.
+
+## Cómo obtiene Iris el token de Mercury
+
+Mercury ya no tiene clientes de login: no hay alias ni contraseña de Mercury en Iris. El BFF cambia el token M2M que Backbone emitió al cliente de aplicación por el token M2M de Mercury:
+
+```mermaid
+sequenceDiagram
+    participant B as BFF
+    participant K as Backbone
+    participant M as Mercury
+    B->>K: POST /managed-clients/token (BACKBONE_CLIENT_ID y SECRET)
+    K-->>B: accessToken (Bearer M2M)
+    B->>M: POST /auth/token con Authorization: Bearer, sin cuerpo
+    M->>K: Introspección del Bearer (activo, scopes, aplicación)
+    M-->>B: token de Mercury (sub, aid, scopes mercury:*)
+    B->>M: POST /mail y POST /verification-code con session-token
+```
+
+- `/mail` y `/verification-code` cambian estado: el cliente debe pedir `mercury:message:write` en `BACKBONE_CLIENT_SCOPES` y tenerlo registrado en Backbone. Sin él Mercury responde 403 al cambio de token.
+- Mercury ata el token a la aplicación que Backbone registra para el cliente; no hace falta enviarla.
+- El token se guarda en memoria y se renueva un minuto antes de caducar; si Mercury responde 401 se pide uno nuevo una sola vez.
+- Si el cambio falla, la cuenta queda creada e inactiva, el correo no se encola y el BFF lo registra como aviso (`The verification mail could not be queued`): la persona puede pedir otro código con `resend-verification`.
+- Al arrancar, el BFF avisa del registro apagado y nombra lo que falta, incluido `BACKBONE_CLIENT_SCOPES (mercury:message:write)`.
+- **Retirado:** `MERCURY_LOGIN_ALIAS` y `MERCURY_LOGIN_PASSWORD`. Si siguen en tus archivos, se ignoran: bórralas.
