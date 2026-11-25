@@ -27,6 +27,9 @@ module.exports = {
   BACKBONE_CLIENT_SECRET: process.env['BACKBONE_CLIENT_SECRET'] || '',
   BACKBONE_CLIENT_SCOPES: (process.env['BACKBONE_CLIENT_SCOPES'] || 'session:manage').split(',').map((s) => s.trim()).filter(Boolean),
   BACKBONE_TLS_INSECURE: bool(process.env['BACKBONE_TLS_INSECURE']),
+  // PEM file of the internal CA that signed Backbone/Mercury (umdc-local-ca.crt): trusted in addition to the public roots, so a
+  // local run can reach QA without switching TLS validation off. In Docker NODE_EXTRA_CA_CERTS does the same.
+  UPSTREAM_CA_FILE: process.env['UPSTREAM_CA_FILE'] || '',
   COOKIE_SECURE: bool(process.env['COOKIE_SECURE']),
   PORT: parseInt(process.env['PORT'] || '4000', 10),
   NODE_ENV: process.env['NODE_ENV'] || 'development',

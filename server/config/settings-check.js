@@ -1,5 +1,7 @@
 'use strict';
 
+const { existsSync } = require('node:fs');
+
 const REQUIRED_IN_PRODUCTION = ['BACKBONE_APPLICATION_ID', 'BACKBONE_CLIENT_ID', 'BACKBONE_CLIENT_SECRET'];
 const REQUIRED_FOR_REGISTRATION = [
   'BACKBONE_APPLICATION_ID',
@@ -58,6 +60,9 @@ function settingsProblems(settings) {
     }
     if (!settings.BACKBONE_CLIENT_ID) problems.push('FEDERATION_ENABLED=true needs the application client (BACKBONE_CLIENT_ID)');
     if (!settings.BACKBONE_APPLICATION_ID) problems.push('FEDERATION_ENABLED=true needs BACKBONE_APPLICATION_ID');
+  }
+  if (settings.UPSTREAM_CA_FILE && !existsSync(settings.UPSTREAM_CA_FILE)) {
+    problems.push('UPSTREAM_CA_FILE does not point to a file: use the path of umdc-local-ca.crt');
   }
   if (settings.TRUST_PROXY === true) {
     problems.push('TRUST_PROXY=true trusts any X-Forwarded-For; set the number of proxies in front (1 behind nginx) or their addresses');

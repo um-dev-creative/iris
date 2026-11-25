@@ -17,6 +17,17 @@ El contenedor toma `config/local.env` y después `secrets/local.env`; `docker-co
 
 Para usar otro entorno de Angular: `ENVM=qa docker compose build`.
 
+### Equipo de desarrollo contra QA
+
+`pnpm dev` levanta `ng serve` (:4200, proxy hacia el BFF) y el BFF (:4000, HTTPS con `ssl/localhost.*`). El BFF llama a `https://api.umdc-qa.tst`, cuyo certificado firma la CA interna: pon `UPSTREAM_CA_FILE=<ruta>/umdc-local-ca.crt` en `secrets/local.env` ([entornos](environments.md#certificados)).
+
+```mermaid
+flowchart LR
+  N[Navegador] -->|https://localhost:4200| A[ng serve]
+  A -->|proxy /mrc /bkd| B[BFF :4000]
+  B -->|https, UPSTREAM_CA_FILE| Q[api.umdc-qa.tst]
+```
+
 ### Detrás de nginx (QA, `iris.tst`)
 
 nginx (proyecto `nginx`, host 192.168.50.49) termina el TLS de `iris.tst` y pasa a `http://iris:3000` por la red `nginx_umdc-net`. Compose fija `CORS_ORIGIN` a `https://iris.tst` (`IRIS_PUBLIC_ORIGIN` en el shell o en `.env` lo cambia) y `BACKBONE_TLS_INSECURE` a `"false"`.

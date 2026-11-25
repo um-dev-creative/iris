@@ -15,6 +15,7 @@ Copia `secrets/local.env.example` a `secrets/local.env` (ignorado por git) y com
 | `BACKBONE_CLIENT_ID` / `BACKBONE_CLIENT_SECRET` | Cliente M2M de Iris; el secreto viene del gestor de secretos, nunca de git |
 | `COOKIE_SECURE`, `CORS_ORIGIN`, `TRUST_PROXY` | Cookies, CORS y proxies de confianza |
 | `SSL_CERT_PATH` / `SSL_KEY_PATH` | Certificado del BFF (ambas juntas). En local lo genera `scripts/dev-cert.mjs` |
+| `UPSTREAM_CA_FILE` | Ruta de `umdc-local-ca.crt` (proyecto nginx, `config/ssl/`). Ponla en `secrets/local.env` para que `pnpm dev` llegue a QA con la validación TLS activa; sin ella el login falla con `unable to verify the first certificate` |
 
 Pruebas: `pnpm test:server` (BFF), `pnpm test` (frontend) y `pnpm test:all`; ver `docs/technical/testing.md`.
 
