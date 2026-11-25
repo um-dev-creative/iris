@@ -69,6 +69,12 @@ test('Vault enabled without its settings names what is missing', async () => {
   await assert.rejects(loadEnvironment({ root, env: { VAULT_ENABLED: 'TRUE', VAULT_URI: 'https://v' }, read: refuseVault }), /needs VAULT_PATH, VAULT_TOKEN/);
 });
 
+test('a Vault path written as a URL is refused before Vault is called, without the token in the message', async () => {
+  const env = { VAULT_ENABLED: 'true', VAULT_URI: 'https://v', VAULT_PATH: 'http://prx-qa.vault.tst', VAULT_TOKEN: 'secret-token' };
+
+  await assert.rejects(loadEnvironment({ root, env, read: refuseVault }), (error) => /KV v2 path.*VAULT_URI/.test(error.message) && !error.message.includes('secret-token'));
+});
+
 test('a Vault failure stops the start', async () => {
   const env = { VAULT_ENABLED: 'true', VAULT_URI: 'https://v', VAULT_PATH: 'p', VAULT_TOKEN: 't' };
 

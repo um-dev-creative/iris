@@ -6,11 +6,22 @@ const REQUIRED_FOR_REGISTRATION = [
   'REGISTRATION_ROLE_ID',
   'REGISTRATION_TEMPLATE_ES',
   'REGISTRATION_MAIL_FROM',
-  'MERCURY_LOGIN_ALIAS',
+  'BACKBONE_CLIENT_ID',
 ];
+// Mercury's /mail and /verification-code change state: the application client must hold this scope to exchange its token
+const MERCURY_WRITE_SCOPE = 'mercury:message:write';
 
-/** Names, never values, of the settings sign-up still needs. Sign-up is optional: they do not stop the BFF from starting. */
-const missingForRegistration = (settings) => REQUIRED_FOR_REGISTRATION.filter((name) => !settings[name]);
+/**
+ * Names, never values, of the settings sign-up still needs. Sign-up is optional: they do not stop the BFF from starting.
+ * The application client also has to ask for `mercury:message:write`, or Mercury refuses the code mail.
+ */
+const missingForRegistration = (settings) => {
+  const missing = REQUIRED_FOR_REGISTRATION.filter((name) => !settings[name]);
+  if (settings.BACKBONE_CLIENT_ID && !(settings.BACKBONE_CLIENT_SCOPES ?? []).includes(MERCURY_WRITE_SCOPE)) {
+    missing.push(`BACKBONE_CLIENT_SCOPES (${MERCURY_WRITE_SCOPE})`);
+  }
+  return missing;
+};
 
 /**
  * What stops the BFF from starting. In production a missing application or client is a deployment error, not
@@ -29,9 +40,6 @@ function settingsProblems(settings) {
   }
   if (Boolean(settings.BACKBONE_CLIENT_ID) !== Boolean(settings.BACKBONE_CLIENT_SECRET)) {
     problems.push('BACKBONE_CLIENT_ID and BACKBONE_CLIENT_SECRET must be set together');
-  }
-  if (Boolean(settings.MERCURY_LOGIN_ALIAS) !== Boolean(settings.MERCURY_LOGIN_PASSWORD)) {
-    problems.push('MERCURY_LOGIN_ALIAS and MERCURY_LOGIN_PASSWORD must be set together');
   }
   if (settings.BACKBONE_CLIENT_ID && settings.BACKBONE_CLIENT_SCOPES.length === 0) {
     problems.push('BACKBONE_CLIENT_SCOPES must name at least one scope');

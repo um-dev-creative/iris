@@ -8,8 +8,9 @@ const CONFIG = {
   REGISTRATION_TEMPLATE_ES: 'tpl-es',
   REGISTRATION_TEMPLATE_EN: 'tpl-en',
   REGISTRATION_MAIL_FROM: 'no-reply@iris.test',
-  MERCURY_LOGIN_ALIAS: 'iris',
-  MERCURY_LOGIN_PASSWORD: 'test-only', // gitleaks:allow
+  BACKBONE_CLIENT_ID: 'iris',
+  BACKBONE_CLIENT_SECRET: 'test-only', // gitleaks:allow
+  BACKBONE_CLIENT_SCOPES: 'session:manage,users:manage,mercury:message:write',
   REGISTRATION_RATE_LIMIT_MAX: '1000',
 };
 const person = { firstName: ' Ana ', lastName: 'Rojas', gender: 'F', birthdate: '1990-05-01' };

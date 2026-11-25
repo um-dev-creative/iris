@@ -50,11 +50,21 @@ test('the TLS certificate and its key come together', () => {
 test('names the settings sign-up still needs', () => {
   const full = {
     BACKBONE_APPLICATION_ID: 'app', REGISTRATION_ROLE_ID: 'role', REGISTRATION_TEMPLATE_ES: 'tpl',
-    REGISTRATION_MAIL_FROM: 'iris@test', MERCURY_LOGIN_ALIAS: 'iris',
+    REGISTRATION_MAIL_FROM: 'iris@test', BACKBONE_CLIENT_ID: 'iris', BACKBONE_CLIENT_SCOPES: ['session:manage', 'mercury:message:write'],
   };
 
   assert.deepEqual(missingForRegistration(full), []);
-  assert.deepEqual(missingForRegistration({ ...full, REGISTRATION_ROLE_ID: '', MERCURY_LOGIN_ALIAS: '' }), ['REGISTRATION_ROLE_ID', 'MERCURY_LOGIN_ALIAS']);
+  assert.deepEqual(missingForRegistration({ ...full, REGISTRATION_ROLE_ID: '', BACKBONE_CLIENT_ID: '' }), ['REGISTRATION_ROLE_ID', 'BACKBONE_CLIENT_ID']);
+});
+
+test('sign-up needs the Mercury write scope on the application client', () => {
+  const settings = {
+    BACKBONE_APPLICATION_ID: 'app', REGISTRATION_ROLE_ID: 'role', REGISTRATION_TEMPLATE_ES: 'tpl',
+    REGISTRATION_MAIL_FROM: 'iris@test', BACKBONE_CLIENT_ID: 'iris',
+  };
+
+  assert.deepEqual(missingForRegistration({ ...settings, BACKBONE_CLIENT_SCOPES: ['session:manage'] }), ['BACKBONE_CLIENT_SCOPES (mercury:message:write)']);
+  assert.deepEqual(missingForRegistration(settings), ['BACKBONE_CLIENT_SCOPES (mercury:message:write)']);
 });
 
 test('production refuses session cookies without Secure', () => {

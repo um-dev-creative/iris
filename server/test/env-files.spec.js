@@ -6,7 +6,7 @@ const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 
 const ROOT = join(__dirname, '..', '..');
-const CREDENTIALS = ['VAULT_TOKEN', 'BACKBONE_CLIENT_ID', 'BACKBONE_CLIENT_SECRET', 'MERCURY_LOGIN_ALIAS', 'MERCURY_LOGIN_PASSWORD'];
+const CREDENTIALS = ['VAULT_TOKEN', 'BACKBONE_CLIENT_ID', 'BACKBONE_CLIENT_SECRET'];
 
 const read = (file) => readFileSync(join(ROOT, file), 'utf8');
 const entries = (file) =>
@@ -59,4 +59,16 @@ test('pnpm start:bff is the one script that starts the BFF, config first and sec
 test('git tracks the templates and ignores what holds secrets', () => {
   ['.env', 'secrets/local.env', 'default.env', '.env.docker', '.env.secrets'].forEach((file) => assert.ok(isIgnored(file), `${file} must be ignored`));
   ['.env.example', 'config/local.env', 'secrets/local.env.example'].forEach((file) => assert.ok(!isIgnored(file), `${file} must be tracked`));
+});
+
+test('the container serves Iris at the nginx address and never trusts self-signed upstreams', () => {
+  const compose = read('docker-compose.yml');
+
+  assert.match(compose, /CORS_ORIGIN: \$\{IRIS_PUBLIC_ORIGIN:-https:\/\/iris\.tst\}/);
+  // environment: wins over env_file, so a developer's secrets/local.env cannot switch TLS validation off in the container
+  assert.match(compose, /BACKBONE_TLS_INSECURE: "false"/);
+});
+
+test('the templates no longer ask for a Mercury alias or password', () => {
+  [read('secrets/local.env.example'), read('config/local.env')].forEach((text) => assert.doesNotMatch(text, /MERCURY_LOGIN_/));
 });

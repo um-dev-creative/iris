@@ -17,6 +17,20 @@ El contenedor toma `config/local.env` y después `secrets/local.env`; `docker-co
 
 Para usar otro entorno de Angular: `ENVM=qa docker compose build`.
 
+### Detrás de nginx (QA, `iris.tst`)
+
+nginx (proyecto `nginx`, host 192.168.50.49) termina el TLS de `iris.tst` y pasa a `http://iris:3000` por la red `nginx_umdc-net`. Compose fija `CORS_ORIGIN` a `https://iris.tst` (`IRIS_PUBLIC_ORIGIN` en el shell o en `.env` lo cambia) y `BACKBONE_TLS_INSECURE` a `"false"`.
+
+```mermaid
+flowchart LR
+  N[Navegador] -->|https://iris.tst| X[nginx 192.168.50.49]
+  X -->|http iris:3000| I[contenedor iris]
+  I -->|https, CA interna| M[mercury:8118]
+  I -->|https, CA interna| K[backbone-rest:8084]
+```
+
+Para que el registro de usuarios funcione, el cliente de aplicación necesita `mercury:message:write` en `BACKBONE_CLIENT_SCOPES` ([registro](registration.md)).
+
 ## Kubernetes
 
 ```bash

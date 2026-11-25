@@ -10,6 +10,8 @@ _Pendiente — F2-04._ Usuario y contraseña, mensajes de error y qué hacer.
 ## 1 bis. Crear una cuenta
 En la pantalla de inicio de sesión pulsa **Crear una cuenta** y completa el formulario. Te enviaremos un código de 6 dígitos al correo, válido por 15 minutos; escríbelo para activar la cuenta. Si no te llega, pulsa **Enviar otro código**. Tienes 3 intentos por código.
 
+Si terminas el formulario pero el código no llega aunque pidas otro, la cuenta queda creada pero inactiva: avisa a quien administra Iris. Suele ser configuración del servicio de correo (el cliente de Iris en Backbone necesita el permiso de escritura de Mercury), no un error tuyo.
+
 ## 2. Sesión expirada
 _Pendiente — F2-06._
 
