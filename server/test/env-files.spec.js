@@ -67,6 +67,9 @@ test('the container serves Iris at the nginx address and never trusts self-signe
   assert.match(compose, /CORS_ORIGIN: \$\{IRIS_PUBLIC_ORIGIN:-https:\/\/iris\.tst\}/);
   // environment: wins over env_file, so a developer's secrets/local.env cannot switch TLS validation off in the container
   assert.match(compose, /BACKBONE_TLS_INSECURE: "false"/);
+  // the CA is trusted through NODE_EXTRA_CA_CERTS; a host path of UPSTREAM_CA_FILE from env_file must not reach the container
+  assert.match(compose, /UPSTREAM_CA_FILE: ""/);
+  assert.match(compose, /NODE_EXTRA_CA_CERTS: \/app\/ssl\/umdc-local-ca\.crt/);
 });
 
 test('the templates no longer ask for a Mercury alias or password', () => {
